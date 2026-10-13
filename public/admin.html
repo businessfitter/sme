@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Platform Admin</title>
+<script src="/vendor/supabase-2.45.4.js"></script>
+<script src="/api/config"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F5F7F9;--panel:#FFFFFF;--sunk:#F2F4F6;--ink:#1E242C;--muted:#5F6874;--line:#E3E6EA;--line-2:#CDD2D9;
+  --navy:#0E1B33;--blue:#1F5FD6;--blue-soft:#E8EFFC;--teal:#0E968C;--teal-soft:#E0F3F1;--pink:#D9488A;--blush:#FDF1F6;--amber:#A66300;--amber-soft:#FFF3DF;--ok:#1C7C4A;--ok-soft:#E2F4EA}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171B;--panel:#1D2228;--sunk:#22282F;--ink:#E7EAEE;--muted:#9AA3AE;--line:#2C333B;--line-2:#3A424C;
+  --navy:#0F1215;--blue:#5D93F2;--blue-soft:#1A2A45;--teal:#2EC0B3;--teal-soft:#123532;--pink:#F49AC1;--blush:#2A1E25;--amber:#F0B45A;--amber-soft:#2E2414;--ok:#5CC48A;--ok-soft:#163323}}
+:root[data-theme="dark"]{--bg:#14171B;--panel:#1D2228;--sunk:#22282F;--ink:#E7EAEE;--muted:#9AA3AE;--line:#2C333B;--line-2:#3A424C;
+  --navy:#0F1215;--blue:#5D93F2;--blue-soft:#1A2A45;--teal:#2EC0B3;--teal-soft:#123532;--pink:#F49AC1;--blush:#2A1E25;--amber:#F0B45A;--amber-soft:#2E2414;--ok:#5CC48A;--ok-soft:#163323}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Roboto,system-ui,sans-serif}
+header{background:var(--navy);color:#fff;padding:.9rem clamp(1rem,3vw,2rem);display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+header .brand{display:flex;align-items:center;gap:.6rem;font-weight:500}header .brand i{width:1.6rem;height:1.6rem;border-radius:.45rem;background:linear-gradient(135deg,#14B8A6,#1D3D7A)}
+header nav{display:flex;gap:.25rem;margin-left:auto;flex-wrap:wrap}
+header nav button{appearance:none;border:0;background:none;color:#C9CFD6;font:inherit;padding:.4rem .75rem;border-radius:8px;cursor:pointer}
+header nav button[aria-current="page"]{background:rgba(255,255,255,.12);color:#fff}
+header a{color:#C9CFD6;text-decoration:none;font-size:.9rem}
+main{padding:clamp(1rem,3vw,2rem);max-width:90rem;margin:0 auto}
+h1{font-size:1.35rem;margin:0 0 1rem;font-weight:500}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(10.5rem,1fr));gap:.8rem;margin-bottom:1.4rem}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:.85rem 1rem}
+.tile .k{color:var(--muted);font-size:.8rem}.tile .v{font-size:1.55rem;font-weight:500;margin-top:.15rem;font-variant-numeric:tabular-nums}.tile .s{color:var(--muted);font-size:.78rem}
+.bar{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line-2);border-radius:8px;padding:.45rem .6rem}
+input[type=search]{min-width:min(18rem,100%)}
+.btn{appearance:none;border:1px solid var(--line-2);background:var(--panel);color:var(--ink);border-radius:8px;padding:.45rem .8rem;font:inherit;cursor:pointer}
+.btn.primary{background:var(--blue);border-color:transparent;color:#fff}.btn.sm{padding:.25rem .55rem;font-size:.82rem}
+.wrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:.55rem .7rem;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:middle}
+th{font-weight:500;color:var(--muted);font-size:.8rem;background:var(--sunk);position:sticky;top:0}
+td.n,th.n{text-align:right}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--sunk)}
+.pill{display:inline-block;padding:.08rem .5rem;border-radius:99px;font-size:.78rem}
+.pill.trial{background:var(--blue-soft);color:var(--blue)}.pill.active{background:var(--ok-soft);color:var(--ok)}
+.pill.past_due{background:var(--amber-soft);color:var(--amber)}.pill.suspended,.pill.cancelled{background:var(--blush);color:var(--pink)}
+.pill.ending{background:var(--amber-soft);color:var(--amber)}
+.muted{color:var(--muted)}.sub{font-size:.8rem;color:var(--muted)}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);padding:1.2rem;width:min(34rem,calc(100vw - 2rem))}
+dialog::backdrop{background:rgba(10,14,20,.45)}
+dialog h2{margin:0 0 .2rem;font-size:1.15rem;font-weight:500}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:1rem}
+.grid label{display:flex;flex-direction:column;gap:.25rem;font-size:.8rem;color:var(--muted)}
+.grid .full{grid-column:1/-1}
+.acts{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.1rem;flex-wrap:wrap}
+.center{min-height:70vh;display:grid;place-items:center;text-align:center}
+.msg{min-height:1.2rem;color:var(--pink);font-size:.85rem;margin-top:.6rem}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><span class="brand"><i></i><span id="appname">SME Suite</span> · Platform admin</span>
+<nav id="nav" hidden><button type="button" data-v="companies" aria-current="page">Customers</button><button type="button" data-v="plans">Plans</button><button type="button" data-v="settings">Settings</button></nav>
+<a href="/">Open the app →</a></header>
+<main id="main"><div class="center"><p class="muted">Loading…</p></div></main>
+
+<dialog id="dlg"></dialog>
+
+<script>
+(() => {
+'use strict';
+const cfg = window.__SUPA || {};
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = (v) => (v == null ? '∞' : Number(v).toLocaleString());
+const day = (d) => (d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+const ago = (d) => { if (!d) return '—'; const m = (Date.now() - Date.parse(d)) / 6e4; return m < 60 ? Math.max(1, Math.round(m)) + 'm ago' : m < 1440 ? Math.round(m / 60) + 'h ago' : Math.round(m / 1440) + 'd ago'; };
+$('#appname').textContent = cfg.appName || 'SME Suite';
+if (!cfg.url || !window.supabase) { $('#main').innerHTML = '<div class="center"><p>Supabase is not configured on the server.</p></div>'; return; }
+const sb = window.supabase.createClient(cfg.url, cfg.anon, { auth: { persistSession: true, autoRefreshToken: true } });
+
+let orgs = [], plans = [], view = 'companies', q = '', fStatus = '';
+
+(async () => {
+  const { data } = await sb.auth.getSession();
+  if (!data.session) { $('#main').innerHTML = '<div class="center"><div><p>Sign in first.</p><a class="btn primary" href="/">Go to sign-in</a></div></div>'; return; }
+  const { data: info } = await sb.rpc('app_info');
+  if (!info || !info.is_platform_admin) {
+    $('#main').innerHTML = `<div class="center"><div><h1>Not a platform admin</h1><p class="muted">Signed in as ${esc(data.session.user.email)}. Add this account to platform_admins in Supabase to use this page.</p></div></div>`;
+    return;
+  }
+  $('#nav').hidden = false;
+  $('#nav').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; view = b.dataset.v; [...$('#nav').children].forEach((x) => x === b ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current')); render(); };
+  await reload(); render();
+})();
+
+async function reload() {
+  const [o, p] = await Promise.all([sb.rpc('admin_orgs'), sb.rpc('admin_plans')]);
+  if (o.error) throw o.error;
+  orgs = o.data || []; plans = p.data || [];
+}
+
+function render() { if (view === 'companies') companies(); else if (view === 'plans') plansView(); else settings(); }
+
+function companies() {
+  const now = Date.now(), wk = now + 7 * 864e5;
+  const price = Object.fromEntries(plans.map((p) => [p.id, p.price_month]));
+  const live = orgs.filter((o) => o.status !== 'cancelled');
+  const paying = orgs.filter((o) => o.status === 'active' && o.plan !== 'trial');
+  const trials = orgs.filter((o) => o.status === 'trial' && (!o.trial_ends_at || Date.parse(o.trial_ends_at) > now));
+  const ending = trials.filter((o) => o.trial_ends_at && Date.parse(o.trial_ends_at) < wk);
+  const expired = orgs.filter((o) => o.status === 'trial' && o.trial_ends_at && Date.parse(o.trial_ends_at) <= now);
+  const mrr = paying.reduce((s, o) => s + (+price[o.plan] || 0), 0);
+  const ai = live.reduce((s, o) => s + +o.ai_month, 0), tok = live.reduce((s, o) => s + +o.ai_tokens_month, 0);
+  const st = (o) => (o.status === 'trial' && o.trial_ends_at && Date.parse(o.trial_ends_at) <= now ? 'trial ended' : o.status.replace('_', ' '));
+  const list = orgs.filter((o) => (!q || (o.name + ' ' + (o.owner_email || '')).toLowerCase().includes(q.toLowerCase()))
+    && (!fStatus || (fStatus === 'ending' ? ending.includes(o) : fStatus === 'expired' ? expired.includes(o) : o.status === fStatus)));
+  $('#main').innerHTML = `<h1>Customers</h1>
+<div class="tiles">
+<div class="tile"><div class="k">Customer workspaces</div><div class="v">${nf(live.length)}</div><div class="s">${nf(orgs.length - live.length)} cancelled</div></div>
+<div class="tile"><div class="k">Paying</div><div class="v">${nf(paying.length)}</div><div class="s">${mrr ? 'Recurring ' + nf(Math.round(mrr)) + ' / month' : 'Set plan prices to see revenue'}</div></div>
+<div class="tile"><div class="k">On trial</div><div class="v">${nf(trials.length)}</div><div class="s">${nf(ending.length)} ending within 7 days</div></div>
+<div class="tile"><div class="k">Trials ended, not converted</div><div class="v">${nf(expired.length)}</div><div class="s">Read-only until you act</div></div>
+<div class="tile"><div class="k">AI calls this month</div><div class="v">${nf(ai)}</div><div class="s">${nf(Math.round(tok / 1000))}k tokens</div></div>
+</div>
+<div class="bar"><input type="search" id="q" placeholder="Search workspace or owner email" value="${esc(q)}">
+<select id="fs"><option value="">All statuses</option><option value="trial">Trial</option><option value="ending">Trial ending in 7 days</option><option value="expired">Trial ended</option><option value="active">Active</option><option value="past_due">Past due</option><option value="suspended">Suspended</option><option value="cancelled">Cancelled</option></select>
+<button class="btn" type="button" id="csv">Export CSV</button><button class="btn" type="button" id="rf">Refresh</button><span class="sub">${nf(list.length)} shown</span></div>
+<div class="wrap"><table><thead><tr><th>Workspace</th><th>Plan</th><th>Status</th><th>Trial ends</th><th class="n">Team</th><th class="n">Portal</th><th class="n">AI this month</th><th class="n">Files MB</th><th class="n">Records</th><th class="n">Data MB</th><th>Last activity</th><th>Created</th></tr></thead>
+<tbody>${list.map((o) => `<tr class="click" data-id="${esc(o.id)}"><td><b>${esc(o.name)}</b><div class="sub">${esc(o.owner_email || 'no owner')}</div></td>
+<td>${esc((plans.find((p) => p.id === o.plan) || {}).name || o.plan)}</td>
+<td><span class="pill ${ending.includes(o) ? 'ending' : expired.includes(o) ? 'suspended' : esc(o.status)}">${esc(st(o))}</span></td>
+<td>${o.status === 'trial' ? day(o.trial_ends_at) : '<span class="muted">—</span>'}</td>
+<td class="n">${nf(o.staff)}</td><td class="n">${nf(o.portal)}</td><td class="n">${nf(o.ai_month)}<div class="sub">${nf(Math.round(o.ai_tokens_month / 1000))}k tok</div></td><td class="n">${nf(o.storage_mb)}</td><td class="n">${nf(o.records)}</td><td class="n">${nf(o.data_mb)}</td>
+<td>${ago(o.last_activity)}</td><td>${day(o.created_at)}</td></tr>`).join('') || '<tr><td colspan="12" class="muted">No workspaces match.</td></tr>'}</tbody></table></div>`;
+  $('#fs').value = fStatus;
+  $('#q').oninput = (e) => { q = e.target.value; const pos = e.target.selectionStart; companies(); const i = $('#q'); i.focus(); i.setSelectionRange(pos, pos); };
+  $('#fs').onchange = (e) => { fStatus = e.target.value; companies(); };
+  $('#rf').onclick = async () => { await reload(); companies(); };
+  $('#csv').onclick = () => {
+    const cols = ['name', 'owner_email', 'plan', 'status', 'trial_ends_at', 'staff', 'portal', 'ai_month', 'ai_tokens_month', 'storage_mb', 'records', 'data_mb', 'last_activity', 'created_at', 'id'];
+    // customer-typed text could start with = + - @ and run as a spreadsheet formula: neutralise it
+    const cell = (v) => { let t = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
+    const csv = [cols.join(','), ...list.map((o) => cols.map((c) => cell(o[c])).join(','))].join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'customers-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
+  };
+  document.querySelectorAll('tr.click').forEach((tr) => tr.onclick = () => editOrg(orgs.find((o) => o.id === tr.dataset.id)));
+}
+
+function editOrg(o) {
+  const L = o.limits || {};
+  const lim = (k, label) => `<label>${label}<input type="number" min="0" data-lim="${k}" value="${L[k] == null ? '' : esc(L[k])}" placeholder="Plan default"></label>`;
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<h2>${esc(o.name)}</h2><div class="sub">${esc(o.owner_email || '')} · ${esc(o.id)}</div>
+<div class="grid">
+<label>Plan<select id="e-plan">${plans.map((p) => `<option value="${esc(p.id)}"${p.id === o.plan ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
+<label>Status<select id="e-status">${['trial', 'active', 'past_due', 'suspended', 'cancelled'].map((s) => `<option${s === o.status ? ' selected' : ''} value="${s}">${s.replace('_', ' ')}</option>`).join('')}</select></label>
+<label class="full">Trial ends<span style="display:flex;gap:.5rem"><input type="date" id="e-trial" value="${o.trial_ends_at ? o.trial_ends_at.slice(0, 10) : ''}" style="flex:1"><button class="btn sm" type="button" data-ext="7">+7 days</button><button class="btn sm" type="button" data-ext="14">+14 days</button></span></label>
+<div class="full sub" style="margin-top:.4rem">Overrides for this workspace only. Leave blank to use the plan's limit.</div>
+${lim('max_staff', 'Team logins')}${lim('max_portal', 'Portal logins')}${lim('max_entities', 'Entities')}${lim('ai_calls_month', 'AI calls / month')}${lim('ai_tokens_month', 'AI tokens / month')}${lim('data_mb', 'Records MB')}${lim('storage_mb', 'Files MB')}
+<label class="full">Internal notes (customers never see these)<textarea id="e-notes" rows="3">${esc(o.notes || '')}</textarea></label>
+</div><div class="msg" id="e-msg"></div>
+<div class="acts"><button class="btn" type="button" id="e-x">Close</button><button class="btn primary" type="button" id="e-save">Save</button></div>`;
+  dlg.querySelectorAll('[data-ext]').forEach((b) => b.onclick = () => {
+    const base = Math.max(Date.now(), Date.parse($('#e-trial').value || 0) || 0);
+    $('#e-trial').value = new Date(base + +b.dataset.ext * 864e5).toISOString().slice(0, 10);
+    $('#e-status').value = 'trial';
+  });
+  $('#e-x').onclick = () => dlg.close();
+  $('#e-save').onclick = async () => {
+    const limits = {}; dlg.querySelectorAll('[data-lim]').forEach((i) => { if (i.value !== '') limits[i.dataset.lim] = +i.value; });
+    const t = $('#e-trial').value;
+    const r = await sb.rpc('admin_update_org', { p_org: o.id, p_plan: $('#e-plan').value, p_status: $('#e-status').value,
+      p_trial_ends_at: t ? new Date(t + 'T23:59:59').toISOString() : null, p_limits: limits, p_notes: $('#e-notes').value });
+    if (r.error) { $('#e-msg').textContent = r.error.message; return; }
+    dlg.close(); await reload(); companies();
+  };
+  dlg.showModal();
+}
+
+function plansView() {
+  const cell = (p, k, type) => `<td class="${type === 'number' ? 'n' : ''}"><input data-k="${k}" type="${type}" value="${p[k] == null ? '' : esc(p[k])}" ${type === 'number' ? 'min="0" style="width:6.5rem;text-align:right" placeholder="∞"' : 'style="width:8rem"'}></td>`;
+  $('#main').innerHTML = `<h1>Plans</h1>
+<p class="muted">Limits apply per workspace per month. Leave a limit blank for unlimited. Customers see public plans and prices in Plan and usage. Billing is not connected yet, so a workspace's plan is changed from Customers.</p>
+<div class="wrap"><table><thead><tr><th>Id</th><th>Name</th><th class="n">Price / month</th><th>Currency</th><th class="n">Team logins</th><th class="n">Portal logins</th><th class="n">Entities</th><th class="n">AI calls</th><th class="n">AI tokens</th><th class="n">Records MB</th><th class="n">Files MB</th><th>Public</th><th class="n">Order</th><th></th></tr></thead>
+<tbody>${plans.map((p) => `<tr data-id="${esc(p.id)}"><td><b>${esc(p.id)}</b></td>${cell(p, 'name', 'text')}${cell(p, 'price_month', 'number')}${cell(p, 'currency', 'text')}${cell(p, 'max_staff', 'number')}${cell(p, 'max_portal', 'number')}${cell(p, 'max_entities', 'number')}${cell(p, 'ai_calls_month', 'number')}${cell(p, 'ai_tokens_month', 'number')}${cell(p, 'data_mb', 'number')}${cell(p, 'storage_mb', 'number')}
+<td><input type="checkbox" data-k="public"${p.public ? ' checked' : ''}></td>${cell(p, 'sort', 'number')}<td><button class="btn sm primary" type="button" data-save>Save</button></td></tr>`).join('')}</tbody></table></div>
+<div class="bar" style="margin-top:1rem"><input id="np" placeholder="new-plan-id" pattern="[a-z0-9-]+"><button class="btn" type="button" id="add">Add plan</button><span class="msg" id="pmsg"></span></div>`;
+  document.querySelectorAll('[data-save]').forEach((b) => b.onclick = async () => {
+    const tr = b.closest('tr'); const p = { id: tr.dataset.id };
+    tr.querySelectorAll('[data-k]').forEach((i) => { p[i.dataset.k] = i.type === 'checkbox' ? i.checked : i.value === '' ? null : i.value; });
+    const r = await sb.rpc('admin_save_plan', { p });
+    $('#pmsg').textContent = r.error ? r.error.message : 'Saved ' + p.id + '.';
+    if (!r.error) { await reload(); }
+  });
+  $('#add').onclick = async () => {
+    const id = $('#np').value.trim().toLowerCase(); if (!/^[a-z0-9-]{2,30}$/.test(id)) { $('#pmsg').textContent = 'Use 2–30 lowercase letters, digits or dashes.'; return; }
+    const r = await sb.rpc('admin_save_plan', { p: { id, name: id, public: false, sort: 9 } });
+    if (r.error) { $('#pmsg').textContent = r.error.message; return; }
+    await reload(); plansView();
+  };
+}
+
+async function settings() {
+  const { data, error } = await sb.rpc('admin_config');
+  if (error) { $('#main').innerHTML = `<p class="msg">${esc(error.message)}</p>`; return; }
+  const help = {
+    mode: '“saas” lets any business sign up. “single” is a dedicated install for one client: only one workspace can exist.',
+    trial_days: 'Length of the free trial for new workspaces.',
+    max_orgs_per_user: 'How many workspaces one person may create (stops repeated free trials).',
+    ai_calls_per_minute: 'Per person, across all servers.',
+    support_email: 'Shown to customers on “Contact us” buttons when a trial ends or a plan needs changing.',
+  };
+  $('#main').innerHTML = `<h1>Settings</h1><div class="wrap"><table><thead><tr><th>Setting</th><th>Value</th><th>What it does</th><th></th></tr></thead><tbody>
+${data.map((c) => `<tr data-k="${esc(c.key)}"><td><b>${esc(c.key)}</b></td><td>${c.key === 'mode' ? `<select>${['saas', 'single'].map((m) => `<option${m === c.value ? ' selected' : ''}>${m}</option>`).join('')}</select>` : `<input value="${esc(c.value)}">`}</td><td class="muted" style="white-space:normal">${esc(help[c.key] || '')}</td><td><button class="btn sm primary" type="button">Save</button></td></tr>`).join('')}
+</tbody></table></div><p class="msg" id="smsg"></p>`;
+  document.querySelectorAll('tr[data-k] button').forEach((b) => b.onclick = async () => {
+    const tr = b.closest('tr'); const v = tr.querySelector('input,select').value;
+    const r = await sb.rpc('admin_set_config', { p_key: tr.dataset.k, p_value: v });
+    $('#smsg').textContent = r.error ? r.error.message : 'Saved ' + tr.dataset.k + '.';
+  });
+}
+})();
+</script>
+</body>
+</html>
