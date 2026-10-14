@@ -515,7 +515,33 @@ ${role() === 'owner' ? `<p class="note">To ${u.status === 'trial' ? 'continue af
     box.querySelectorAll('table tr').forEach((tr) => { if (/Storage|Records/.test(tr.firstChild.textContent)) tr.querySelectorAll('td:not(:first-child)').forEach((td) => { const n = Number(td.textContent.replace(/,/g, '')); if (!isNaN(n)) td.textContent = (n / 1024).toLocaleString(undefined, { maximumFractionDigits: 1 }); }); });
   }
 
-  const NS = { db, user, sample, assets, downloads };
+  // Employee Lounge, attendance and signing helpers (all checks are in the database or the server)
+  const RPC_OK = ['att_status', 'att_punch', 'att_reset_device', 'sig_consume', 'sig_delete_mine', 'aml_screen'];
+  const platform = Object.freeze({
+    org: () => ORG,
+    async rpc(name, args) {
+      if (!RPC_OK.includes(name)) throw new Error('Not allowed');
+      const { data, error } = await sb.rpc(name, name === 'sig_delete_mine' ? {} : { p_org: ORG, ...(args || {}) });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    async punches(from, to) {
+      const { data, error } = await sb.from('attendance_punches').select('*').eq('org_id', ORG).gte('work_date', from).lte('work_date', to).order('at', { ascending: true }).limit(20000);
+      if (error) throw new Error(error.message);
+      return data || [];
+    },
+    async amlSources() { const { data } = await sb.from('sanctions_sources').select('*'); return data || []; },
+    async devices() { const { data } = await sb.from('attendance_devices').select('user_id,first_seen').eq('org_id', ORG); return data || []; },
+    async mySignature() { const { data } = await sb.from('user_signatures').select('image,updated_at').eq('user_id', session.user.id).maybeSingle(); return data || null; },
+    async api(path, body) {
+      const { data: s } = await sb.auth.getSession();
+      const r = await fetch('/api/' + path, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + ((s && s.session && s.session.access_token) || '') }, body: JSON.stringify(body || {}) });
+      let j = {}; try { j = await r.json(); } catch (e) { /* empty */ }
+      if (!r.ok) throw new Error(j.error || 'The server refused the request.');
+      return j;
+    },
+  });
+  const NS = { db, user, sample, assets, downloads, platform };
   window.claude = Object.freeze({
     use: async (name) => {
       await ready;

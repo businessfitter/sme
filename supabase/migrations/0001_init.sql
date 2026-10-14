@@ -94,6 +94,8 @@ create table if not exists public.members (
 alter table public.members add column if not exists status text not null default 'active' check (status in ('invited', 'active'));
 -- Companies (entities) inside the workspace this person may see; NULL = all companies, including future ones
 alter table public.members add column if not exists entities text[];
+-- Time-limited access (temporary staff, auditors, delegations): no access after this moment
+alter table public.members add column if not exists expires_at timestamptz;
 create index if not exists members_user_idx on public.members (user_id);
 
 create table if not exists public.platform_admins (
@@ -114,7 +116,7 @@ end $$;
 
 create or replace function public.my_role(p_org uuid) returns text
 language sql stable security definer set search_path = public as $$
-  select role from members where org_id = p_org and user_id = auth.uid() and status = 'active'
+  select role from members where org_id = p_org and user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
 $$;
 
 create or replace function public.is_platform_admin() returns boolean
@@ -159,7 +161,7 @@ create or replace function public.entity_allowed(p_org uuid, p_path text, p_enti
 language plpgsql stable security definer set search_path = public as $$
 declare ents text[];
 begin
-  select entities into ents from members where org_id = p_org and user_id = auth.uid() and status = 'active';
+  select entities into ents from members where org_id = p_org and user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now());
   if ents is null then return true; end if;
   if p_path like 'setup/main/entities/%' then return split_part(p_path, '/', 4) = any (ents); end if;
   if p_path = 'setup/main' or p_path like 'setup/main/journals/%' or p_path like 'setup/main/workflows/%'
@@ -167,6 +169,15 @@ begin
     return true;
   end if;
   return coalesce(nullif(p_entity, ''), 'main') = any (ents);
+end $$;
+
+-- The person's role inside the app (ceo, cfo, hr_mgr, accountant…), from the login the owner gave them
+create or replace function public.my_app_role(p_org uuid) returns text
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if my_role(p_org) = 'owner' then return 'owner'; end if;
+  if my_role(p_org) is null then return null; end if;
+  return (select data ->> 'role' from docs where org_id = p_org and path = 'setup/main/access/' || auth.uid()::text);
 end $$;
 
 drop function if exists public.can_read_doc(uuid, text) cascade;
@@ -177,7 +188,7 @@ language sql stable security definer set search_path = public as $$
     when 'owner'  then org_readable(p_org)
     when 'staff'  then org_readable(p_org) and entity_allowed(p_org, p_path, p_entity)
     when 'viewer' then org_readable(p_org) and entity_allowed(p_org, p_path, p_entity)
-    when 'portal' then org_readable(p_org) and own_portal(p_path)
+    when 'portal' then org_readable(p_org) and (own_portal(p_path) or (p_path like 'library/emp-%' and my_app_role(p_org) = 'employee'))
     else false end
 $$;
 
@@ -186,7 +197,9 @@ create or replace function public.can_write_doc(p_org uuid, p_path text, p_entit
 language sql stable security definer set search_path = public as $$
   select org_writable(p_org) and case my_role(p_org)
     when 'owner'  then true
-    when 'staff'  then p_path not like 'setup/main/access/%' and entity_allowed(p_org, p_path, p_entity)
+    when 'staff'  then (p_path not like 'setup/main/access/%'
+                        or (my_app_role(p_org) = 'ceo' and p_path <> 'setup/main/access/' || auth.uid()::text))
+                       and entity_allowed(p_org, p_path, p_entity)
     when 'portal' then own_portal(p_path)
     else false end
 $$;
@@ -271,7 +284,7 @@ begin
     end if;
   end if;
   -- employees, customers and suppliers: small records, and not too many
-  r := (select role from members where org_id = new.org_id and user_id = auth.uid() and status = 'active');
+  r := (select role from members where org_id = new.org_id and user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now()));
   if r = 'portal' then
     if octet_length(new.data::text) > 65536 then raise exception 'This item is too large.' using errcode = '54000'; end if;
     if tg_op = 'INSERT' and (select count(*) from docs where org_id = new.org_id
@@ -343,7 +356,8 @@ begin
   r := case
          when new.data ->> 'role' in ('employee', 'customer', 'supplier') then 'portal'
          when new.data ->> 'role' = 'auditor' then 'viewer'
-         when new.data ->> 'role' in ('admin', 'accountant', 'approver', 'tax', 'custom') then 'staff'  -- only the owner can grant logins
+         when new.data ->> 'role' in ('admin', 'accountant', 'approver', 'tax', 'custom', 'ceo', 'cfo', 'compliance', 'audit_mgr',
+                                      'fin_acc', 'hr_mgr', 'manager', 'officer') then 'staff'  -- only the owner (or the CEO) can grant logins
          else null end;
   if r is null then
     raise exception 'Unknown role "%".', coalesce(new.data ->> 'role', '') using errcode = '22023';
@@ -370,8 +384,9 @@ begin
     if ents is not null and 'all' = any (ents) then ents := null; end if;
   end if;
   -- New people are invited: they must accept before they can see anything.
-  insert into members (org_id, user_id, role, status, entities) values (new.org_id, uid, r, 'invited', ents)
-  on conflict (org_id, user_id) do update set role = excluded.role, entities = excluded.entities;
+  insert into members (org_id, user_id, role, status, entities, expires_at)
+  values (new.org_id, uid, r, 'invited', ents, case when coalesce(new.data ->> 'expires_at', '') ~ '^\d{4}-\d{2}-\d{2}' then (new.data ->> 'expires_at')::timestamptz end)
+  on conflict (org_id, user_id) do update set role = excluded.role, entities = excluded.entities, expires_at = excluded.expires_at;
   return new;
 end $$;
 drop trigger if exists docs_access_sync on public.docs;
@@ -407,7 +422,7 @@ create or replace function public.shares_org(p_user uuid) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from members a join members b on a.org_id = b.org_id
-     where a.user_id = auth.uid() and b.user_id = p_user and a.role in ('owner', 'staff', 'viewer') and a.status = 'active'
+     where a.user_id = auth.uid() and b.user_id = p_user and a.role in ('owner', 'staff', 'viewer') and a.status = 'active' and (a.expires_at is null or a.expires_at > now())
   )
 $$;
 
@@ -608,7 +623,7 @@ create or replace function public.ai_begin(p_org uuid, p_user uuid, p_tier text)
 language plpgsql security definer set search_path = public as $$
 declare r text; lim bigint; used bigint; per_min int := coalesce(cfg('ai_calls_per_minute')::int, 30); lid bigint;
 begin
-  select role into r from members where org_id = p_org and user_id = p_user and status = 'active';
+  select role into r from members where org_id = p_org and user_id = p_user and status = 'active' and (expires_at is null or expires_at > now());
   if r is null then return jsonb_build_object('ok', false, 'status', 403, 'message', 'You do not have access to this workspace.'); end if;
   if not org_writable(p_org) then
     return jsonb_build_object('ok', false, 'status', 402, 'message', 'AI agents are paused because this workspace''s trial or subscription has ended.');
@@ -648,7 +663,7 @@ $$;
 -- Portal users: only files referenced in their own portal records.
 create or replace function public.blob_allowed(p_org uuid, p_user uuid, p_id text) returns boolean
 language sql stable security definer set search_path = public as $$
-  select case (select role from members where org_id = p_org and user_id = p_user and status = 'active')
+  select case (select role from members where org_id = p_org and user_id = p_user and status = 'active' and (expires_at is null or expires_at > now()))
     when 'owner' then org_readable(p_org) when 'staff' then org_readable(p_org) when 'viewer' then org_readable(p_org)
     when 'portal' then org_readable(p_org) and exists (
       select 1 from docs d
@@ -657,7 +672,7 @@ language sql stable security definer set search_path = public as $$
          and position(p_id in d.data::text) > 0
          -- the link must have been placed by the owner or staff, not by the portal user
          and exists (select 1 from members s where s.org_id = p_org and s.user_id = d.updated_by
-                       and s.role in ('owner', 'staff') and s.status = 'active'))
+                       and s.role in ('owner', 'staff') and s.status = 'active' and (s.expires_at is null or s.expires_at > now())))
     else false end
 $$;
 
@@ -665,11 +680,512 @@ $$;
 create or replace function public.blob_locate(p_user uuid, p_id text) returns uuid
 language sql stable security definer set search_path = public, storage as $$
   select m.org_id from members m
-   where m.user_id = p_user and m.status = 'active'
+   where m.user_id = p_user and m.status = 'active' and (m.expires_at is null or m.expires_at > now())
      and exists (select 1 from storage.objects o where o.bucket_id = 'assets' and o.name = m.org_id::text || '/' || p_id)
      and blob_allowed(m.org_id, p_user, p_id)
    limit 1
 $$;
+
+-- ============================================================================
+-- 7b. Employee Lounge: verified attendance and portal write guard
+--     Check-ins are written only by att_punch(), which takes the time from the
+--     database clock, measures the distance to the chosen office itself and
+--     refuses anything outside the radius. Nobody can insert, edit or delete a
+--     check-in directly, not even the workspace owner; corrections are made as
+--     separate, signed records in the app.
+-- ============================================================================
+create table if not exists public.attendance_punches (
+  id           bigint generated always as identity primary key,
+  org_id       uuid not null references public.orgs (id) on delete cascade,
+  user_id      uuid not null,
+  employee_id  text not null,
+  entity       text not null default 'main',
+  site_id      text,
+  site_name    text,
+  kind         text not null check (kind in ('in', 'out', 'denied')),
+  reason       text,                                   -- why a denied attempt was refused
+  at           timestamptz not null default now(),     -- database clock, never the phone's
+  work_date    date not null,
+  local_time   text not null,
+  tz           text not null,
+  lat          double precision,
+  lng          double precision,
+  accuracy_m   real,
+  distance_m   real,
+  device       text,
+  flags        text[] not null default '{}'
+);
+create index if not exists attendance_punches_org_date on public.attendance_punches (org_id, work_date);
+create index if not exists attendance_punches_user on public.attendance_punches (org_id, user_id, at desc);
+
+create table if not exists public.attendance_devices (
+  org_id     uuid not null references public.orgs (id) on delete cascade,
+  user_id    uuid not null,
+  device     text not null,
+  first_seen timestamptz not null default now(),
+  primary key (org_id, user_id)
+);
+
+alter table public.attendance_punches enable row level security;
+alter table public.attendance_devices enable row level security;
+create or replace function public.punch_visible(p_org uuid, p_user uuid, p_entity text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select org_readable(p_org) and (
+    (p_user = auth.uid() and my_role(p_org) is not null)
+    or (my_role(p_org) in ('owner', 'staff', 'viewer') and entity_allowed(p_org, 'attendance/x', p_entity)))
+$$;
+drop policy if exists punches_read on public.attendance_punches;
+create policy punches_read on public.attendance_punches for select to authenticated using (punch_visible(org_id, user_id, entity));
+drop policy if exists devices_read on public.attendance_devices;
+create policy devices_read on public.attendance_devices for select to authenticated using (
+  user_id = auth.uid() or my_role(org_id) in ('owner', 'staff'));
+revoke insert, update, delete, truncate on public.attendance_punches, public.attendance_devices from anon, authenticated;
+grant select on public.attendance_punches, public.attendance_devices to authenticated;
+
+-- Great-circle distance in metres
+create or replace function public.geo_distance_m(lat1 float8, lng1 float8, lat2 float8, lng2 float8) returns float8
+language sql immutable as $$
+  select 2 * 6371000 * asin(sqrt(
+    power(sin(radians(lat2 - lat1) / 2), 2) +
+    cos(radians(lat1)) * cos(radians(lat2)) * power(sin(radians(lng2 - lng1) / 2), 2)))
+$$;
+
+-- The caller's employee link and company settings, read from the records the owner keeps
+create or replace function public.att_context(p_org uuid, out emp text, out ent text, out cfg jsonb, out tz text)
+language plpgsql stable security definer set search_path = public as $$
+declare acc jsonb;
+begin
+  if auth.uid() is null or my_role(p_org) is null then
+    raise exception 'You are not a member of this workspace.' using errcode = '42501';
+  end if;
+  select data into acc from docs where org_id = p_org and path = 'setup/main/access/' || auth.uid()::text;
+  emp := nullif(acc ->> 'employee_id', '');
+  if emp is null then
+    raise exception 'Your login is not linked to an employee record yet. Ask HR to link it in Logins and access.' using errcode = '42501';
+  end if;
+  ent := coalesce(nullif(acc ->> 'entity', ''), 'main');
+  select data into cfg from docs where org_id = p_org and path = 'setup/main/entities/' || ent;
+  cfg := coalesce(cfg, '{}'::jsonb);
+  tz := coalesce(nullif(cfg #>> '{att_geo,tz}', ''), 'Asia/Dubai');
+  if not exists (select 1 from pg_timezone_names where name = tz) then tz := 'Asia/Dubai'; end if;
+end $$;
+
+-- What the employee's check-in screen needs: offices, rules, server time, today's punches
+create or replace function public.att_status(p_org uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare c record; today date; sites jsonb;
+begin
+  select * into c from att_context(p_org);
+  today := (now() at time zone c.tz)::date;
+  select coalesce(jsonb_agg(jsonb_build_object('id', s ->> 'id', 'name', s ->> 'name', 'lat', (s ->> 'lat')::float8,
+           'lng', (s ->> 'lng')::float8, 'radius', least(greatest(coalesce((s ->> 'radius')::int, 500), 50), 1000), 'address', s ->> 'address')), '[]'::jsonb)
+    into sites
+    from jsonb_array_elements(coalesce(c.cfg -> 'att_sites', '[]'::jsonb)) s
+   where coalesce((s ->> 'active')::boolean, true) and s ? 'lat' and s ? 'lng';
+  return jsonb_build_object(
+    'server_time', now(), 'tz', c.tz, 'date', today, 'local_time', to_char(now() at time zone c.tz, 'HH24:MI:SS'),
+    'employee_id', c.emp, 'entity', c.ent, 'sites', sites,
+    'max_accuracy', least(greatest(coalesce((c.cfg #>> '{att_geo,max_accuracy}')::int, 100), 20), 500),
+    'device_lock', coalesce((c.cfg #>> '{att_geo,device_lock}')::boolean, false),
+    'shift', coalesce(c.cfg -> 'att_shift', '{}'::jsonb),
+    'leave_policy', coalesce(c.cfg -> 'leave_policy', '{}'::jsonb),
+    'punches', coalesce((select jsonb_agg(jsonb_build_object('kind', kind, 'local_time', local_time, 'site_name', site_name,
+                 'distance_m', round(distance_m), 'reason', reason, 'flags', flags) order by at)
+               from attendance_punches where org_id = p_org and user_id = auth.uid() and work_date = today), '[]'::jsonb));
+end $$;
+
+-- Check in or out. Returns {ok, kind, local_time, …} or {ok:false, reason, distance_m, …}.
+create or replace function public.att_punch(p_org uuid, p_site text, p_lat float8, p_lng float8, p_acc float8, p_device text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  c record; s jsonb; dist float8; radius int; max_acc int; today date; nowl text;
+  last_kind text; prev record; flags text[] := '{}'; dev text; known text; lock boolean;
+  speed float8; k text;
+begin
+  select * into c from att_context(p_org);
+  if not org_writable(p_org) then
+    raise exception 'This workspace is read-only, so attendance cannot be recorded.' using errcode = '42501';
+  end if;
+  if p_lat is null or p_lng is null or p_lat not between -90 and 90 or p_lng not between -180 and 180 then
+    raise exception 'Your location could not be read. Allow location access and try again.' using errcode = '22023';
+  end if;
+  perform pg_advisory_xact_lock(hashtext('att:' || p_org::text || auth.uid()::text));
+  today := (now() at time zone c.tz)::date;
+  nowl := to_char(now() at time zone c.tz, 'HH24:MI');
+  dev := left(coalesce(nullif(p_device, ''), 'unknown'), 80);
+
+  select el into s from jsonb_array_elements(coalesce(c.cfg -> 'att_sites', '[]'::jsonb)) el
+   where el ->> 'id' = p_site and coalesce((el ->> 'active')::boolean, true) and el ? 'lat' and el ? 'lng' limit 1;
+  if s is null then
+    raise exception 'Choose one of your office locations.' using errcode = '22023';
+  end if;
+  radius  := least(greatest(coalesce((s ->> 'radius')::int, 500), 50), 1000);
+  max_acc := least(greatest(coalesce((c.cfg #>> '{att_geo,max_accuracy}')::int, 100), 20), 500);
+  lock    := coalesce((c.cfg #>> '{att_geo,device_lock}')::boolean, false);
+  dist    := geo_distance_m(p_lat, p_lng, (s ->> 'lat')::float8, (s ->> 'lng')::float8);
+
+  -- one attempt a minute
+  if exists (select 1 from attendance_punches where org_id = p_org and user_id = auth.uid() and at > now() - interval '60 seconds') then
+    return jsonb_build_object('ok', false, 'reason', 'too_soon');
+  end if;
+
+  -- device: first phone is registered; another phone is flagged (or refused when locked)
+  select device into known from attendance_devices where org_id = p_org and user_id = auth.uid();
+  if known is null then
+    insert into attendance_devices (org_id, user_id, device) values (p_org, auth.uid(), dev);
+  elsif known <> dev then
+    flags := array_append(flags, 'new device');
+  end if;
+
+  -- implausible movement since the last check-in
+  select * into prev from attendance_punches where org_id = p_org and user_id = auth.uid() and lat is not null order by at desc limit 1;
+  if prev.id is not null then
+    speed := geo_distance_m(p_lat, p_lng, prev.lat, prev.lng) / 1000 / greatest(extract(epoch from now() - prev.at) / 3600, 1.0 / 60);
+    if speed > 250 and geo_distance_m(p_lat, p_lng, prev.lat, prev.lng) > 5000 then
+      flags := array_append(flags, 'impossible travel');
+    end if;
+  end if;
+
+  k := null;
+  if p_acc is null or p_acc <= 0 or p_acc > max_acc then k := 'accuracy';
+  elsif dist > radius then k := 'far';
+  elsif lock and known is not null and known <> dev then k := 'device';
+  end if;
+  if k is not null then
+    insert into attendance_punches (org_id, user_id, employee_id, entity, site_id, site_name, kind, reason, work_date, local_time, tz, lat, lng, accuracy_m, distance_m, device, flags)
+    values (p_org, auth.uid(), c.emp, c.ent, s ->> 'id', s ->> 'name', 'denied', k, today, nowl, c.tz, p_lat, p_lng, p_acc, dist, dev, flags);
+    return jsonb_build_object('ok', false, 'reason', k, 'distance_m', round(dist), 'radius', radius,
+      'accuracy_m', round(coalesce(p_acc, 0)), 'max_accuracy', max_acc, 'site_name', s ->> 'name', 'local_time', nowl);
+  end if;
+
+  select kind into last_kind from attendance_punches
+   where org_id = p_org and user_id = auth.uid() and work_date = today and kind in ('in', 'out') order by at desc limit 1;
+  k := case when last_kind = 'in' then 'out' else 'in' end;
+  insert into attendance_punches (org_id, user_id, employee_id, entity, site_id, site_name, kind, work_date, local_time, tz, lat, lng, accuracy_m, distance_m, device, flags)
+  values (p_org, auth.uid(), c.emp, c.ent, s ->> 'id', s ->> 'name', k, today, nowl, c.tz, p_lat, p_lng, p_acc, dist, dev, flags);
+  return jsonb_build_object('ok', true, 'kind', k, 'local_time', nowl, 'date', today, 'site_name', s ->> 'name',
+    'distance_m', round(dist), 'flags', flags);
+end $$;
+
+-- HR lets an employee register a new phone
+create or replace function public.att_reset_device(p_org uuid, p_user uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(my_role(p_org), '') not in ('owner', 'staff') or not org_writable(p_org) then
+    raise exception 'Only HR can reset a registered phone.' using errcode = '42501';
+  end if;
+  delete from attendance_devices where org_id = p_org and user_id = p_user;
+end $$;
+
+-- Employees, customers and suppliers may only add their own requests, leave, time, uploads,
+-- signatures, task updates and self-reviews. They cannot change what the company published to
+-- them (payslips, tasks, appraisals), record their own attendance, or approve their own requests.
+create or replace function public.docs_portal_guard() returns trigger
+language plpgsql set search_path = public as $$
+declare me text := coalesce(auth.uid()::text, '');
+begin
+  if coalesce(my_role(new.org_id), '') <> 'portal' then return new; end if;
+  if new.path !~ ('^portal/' || me || '/(concerns|leaves|requests|signatures|timesheets|uploads|task_updates|appraisal_self|quote_requests|quote_responses|payments|rfq_quotes)/[^/]+$') then
+    raise exception 'This record is kept by the company and cannot be changed from your dashboard.' using errcode = '42501';
+  end if;
+  if new.path ~ '/(leaves|requests)/' then
+    if tg_op = 'INSERT' and coalesce(new.data ->> 'status', 'submitted') <> 'submitted' then
+      raise exception 'New requests start as submitted.' using errcode = '42501';
+    end if;
+    if tg_op = 'UPDATE' and (new.data -> 'status') is distinct from (old.data -> 'status')
+       and not (old.data ->> 'status' = 'submitted' and new.data ->> 'status' = 'withdrawn') then
+      raise exception 'Only the company can decide a request.' using errcode = '42501';
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists docs_portal_guard on public.docs;
+create trigger docs_portal_guard before insert or update on public.docs for each row execute function public.docs_portal_guard();
+
+-- Delegations: only the person delegating (or the owner) can create or change one.
+-- Organogram: only the HR Manager, the CEO, the owner or the person they delegated to can approve it.
+create or replace function public.docs_role_guard() returns trigger
+language plpgsql set search_path = public as $$
+declare ar text := my_app_role(new.org_id); was text;
+begin
+  if new.path like 'delegations/%' then
+    if ar is distinct from 'owner' and ar is distinct from 'ceo' and coalesce(new.data ->> 'from_uid', '') <> coalesce(auth.uid()::text, '') then
+      raise exception 'Only the person delegating, the CEO or the owner can set up a delegation.' using errcode = '42501';
+    end if;
+    new.data := new.data || jsonb_build_object('set_by', auth.uid());
+  end if;
+  if new.path like 'org_charts/%' then
+    was := case when tg_op = 'UPDATE' then old.data ->> 'status' end;
+    if new.data ->> 'status' = 'approved' and was is distinct from 'approved' then
+      if not (ar in ('owner', 'ceo', 'hr_mgr') or coalesce(new.data ->> 'delegate_uid', '') = coalesce(auth.uid()::text, '')) then
+        raise exception 'Only the HR Manager, the CEO, the admin or their delegate can approve the organogram.' using errcode = '42501';
+      end if;
+      new.data := new.data || jsonb_build_object('approved_by', auth.uid(), 'approved_at', now());
+    end if;
+    if (new.data -> 'delegate_uid') is distinct from (case when tg_op = 'UPDATE' then old.data -> 'delegate_uid' end)
+       and ar not in ('owner', 'ceo') then
+      raise exception 'Only the CEO or the admin can delegate the organogram approval.' using errcode = '42501';
+    end if;
+  end if;
+  -- Policies and risk registers: only the CEO gives final approval (the admin when there is no CEO)
+  if new.path like 'policies/%' and new.data ->> 'status' = 'approved'
+     and (tg_op = 'INSERT' or old.data ->> 'status' is distinct from 'approved') then
+    if not (ar = 'ceo' or (ar = 'owner' and not exists (select 1 from docs d where d.org_id = new.org_id and d.collection = 'setup/main/access' and d.data ->> 'role' = 'ceo'))) then
+      raise exception 'Only the CEO can give the final approval of a policy.' using errcode = '42501';
+    end if;
+    new.data := new.data || jsonb_build_object('approved_by', auth.uid(), 'approved_at', now());
+  end if;
+  return new;
+end $$;
+drop trigger if exists docs_role_guard on public.docs;
+create trigger docs_role_guard before insert or update on public.docs for each row execute function public.docs_role_guard();
+
+-- ============================================================================
+-- 7c. Saved signatures and email-code signing
+--     A person's saved signature is only stored, and only released for signing,
+--     by the server after they enter a one-time code sent to their sign-in email.
+--     Each verified signing leaves an attestation (server time, document
+--     fingerprint, signature fingerprint) that is used once.
+-- ============================================================================
+create table if not exists public.user_signatures (
+  user_id    uuid primary key,
+  image      text not null check (image like 'data:image/png;base64,%' and length(image) <= 400000),
+  method     text,
+  updated_at timestamptz not null default now()
+);
+create table if not exists public.sign_attestations (
+  id          uuid primary key default gen_random_uuid(),
+  org_id      uuid not null references public.orgs (id) on delete cascade,
+  user_id     uuid not null,
+  req         text not null,
+  signer_key  text not null,
+  doc_hash    text not null,
+  image_sha   text not null,
+  stamp       boolean not null default true,
+  saved       boolean not null default false,
+  verified_at timestamptz not null default now(),
+  used_at     timestamptz
+);
+create table if not exists public.sign_code_log (
+  user_id uuid not null,
+  at      timestamptz not null default now(),
+  ok      boolean not null
+);
+create index if not exists sign_code_log_user on public.sign_code_log (user_id, at);
+alter table public.user_signatures enable row level security;
+alter table public.sign_attestations enable row level security;
+alter table public.sign_code_log enable row level security;
+drop policy if exists usig_read on public.user_signatures;
+create policy usig_read on public.user_signatures for select to authenticated using (user_id = auth.uid());
+revoke all on public.user_signatures, public.sign_attestations, public.sign_code_log from anon, authenticated;
+grant select on public.user_signatures to authenticated;
+
+-- Server only: too many wrong codes in an hour locks signing for that hour
+create or replace function public.sig_code_gate(p_user uuid) returns boolean
+language sql security definer set search_path = public as $$
+  select (select count(*) from sign_code_log where user_id = p_user and not ok and at > now() - interval '1 hour') < 5
+$$;
+create or replace function public.sig_code_result(p_user uuid, p_ok boolean) returns void
+language sql security definer set search_path = public as $$
+  insert into sign_code_log (user_id, ok) values (p_user, p_ok)
+$$;
+
+-- Server only: store the saved signature (after the code was verified)
+create or replace function public.sig_save(p_user uuid, p_image text, p_method text) returns void
+language sql security definer set search_path = public as $$
+  insert into user_signatures (user_id, image, method, updated_at) values (p_user, p_image, left(p_method, 40), now())
+  on conflict (user_id) do update set image = excluded.image, method = excluded.method, updated_at = now()
+$$;
+create or replace function public.sig_saved(p_user uuid) returns text
+language sql stable security definer set search_path = public as $$
+  select image from user_signatures where user_id = p_user
+$$;
+
+-- Server only: record a verified signing for one signer of one request in one workspace
+create or replace function public.sig_attest(p_user uuid, p_org uuid, p_req text, p_key text, p_doc_hash text,
+  p_image_sha text, p_stamp boolean, p_saved boolean) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare r record; role text;
+begin
+  select m.role into role from members m where m.org_id = p_org and m.user_id = p_user and m.status = 'active' and (m.expires_at is null or m.expires_at > now());
+  if role is null then raise exception 'Not a member of this workspace.' using errcode = '42501'; end if;
+  if not org_writable(p_org) then raise exception 'This workspace is read-only.' using errcode = '42501'; end if;
+  insert into sign_attestations (org_id, user_id, req, signer_key, doc_hash, image_sha, stamp, saved)
+  values (p_org, p_user, left(p_req, 80), left(p_key, 80), left(p_doc_hash, 80), left(p_image_sha, 80), coalesce(p_stamp, true), coalesce(p_saved, false))
+  returning * into r;
+  return jsonb_build_object('id', r.id, 'verified_at', r.verified_at);
+end $$;
+
+-- Staff applying a signature: check the attestation matches and use it up
+create or replace function public.sig_consume(p_org uuid, p_id uuid, p_user uuid, p_req text, p_key text, p_doc_hash text, p_image_sha text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare r record;
+begin
+  if coalesce(my_role(p_org), '') not in ('owner', 'staff') and not (p_user = auth.uid() and my_role(p_org) is not null) then
+    raise exception 'Not allowed.' using errcode = '42501';
+  end if;
+  select * into r from sign_attestations where id = p_id and org_id = p_org for update;
+  if r.id is null then return jsonb_build_object('ok', false, 'why', 'email code was not verified'); end if;
+  if r.used_at is not null then return jsonb_build_object('ok', false, 'why', 'this verification was already used'); end if;
+  if r.verified_at < now() - interval '1 day' then return jsonb_build_object('ok', false, 'why', 'the verification expired'); end if;
+  if r.user_id <> p_user or r.req <> p_req or r.signer_key <> p_key then return jsonb_build_object('ok', false, 'why', 'the verification belongs to someone else'); end if;
+  if r.doc_hash <> p_doc_hash then return jsonb_build_object('ok', false, 'why', 'document fingerprint does not match the verification'); end if;
+  if r.image_sha <> p_image_sha then return jsonb_build_object('ok', false, 'why', 'signature does not match the one verified'); end if;
+  update sign_attestations set used_at = now() where id = p_id;
+  return jsonb_build_object('ok', true, 'verified_at', r.verified_at, 'stamp', r.stamp, 'saved', r.saved);
+end $$;
+
+create or replace function public.sig_delete_mine() returns void
+language sql security definer set search_path = public as $$
+  delete from user_signatures where user_id = auth.uid()
+$$;
+
+-- ============================================================================
+-- 7d. Sales: quotes customers open by link, outgoing email log, payment reminders
+-- ============================================================================
+-- Server only: the public view of a quote sent by link (token = 32+ random characters)
+create or replace function public.quote_public(p_token text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare d record; ent jsonb;
+begin
+  if p_token is null or length(p_token) < 32 then return null; end if;
+  select org_id, path, data into d from docs where collection = 'quotes' and data ->> 'public_token' = p_token limit 1;
+  if d.path is null then return null; end if;
+  select data into ent from docs where org_id = d.org_id and path = 'setup/main/entities/' || coalesce(nullif(d.data ->> 'entity', ''), 'main');
+  return jsonb_build_object('id', split_part(d.path, '/', 2), 'quote', d.data - 'public_token' - 'history' - 'created_by' - 'internal_notes' - 'approved_by',
+    'company', jsonb_build_object('name', ent ->> 'name', 'address', ent ->> 'address', 'email', ent ->> 'email', 'phone', ent ->> 'phone', 'trn', ent ->> 'trn', 'logo', ent #>> '{brand,logo}', 'color', ent #>> '{brand,color}'),
+    'org_ok', exists (select 1 from orgs where id = d.org_id and status <> 'cancelled'));
+end $$;
+
+-- Server only: the customer accepts, asks for changes or declines through the link
+create or replace function public.quote_public_answer(p_token text, p_action text, p_name text, p_comment text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare d record; st text; ev jsonb;
+begin
+  if p_action not in ('accept', 'changes', 'decline') then raise exception 'Unknown answer.'; end if;
+  select id, org_id, data into d from docs where collection = 'quotes' and data ->> 'public_token' = p_token and length(p_token) >= 32 for update;
+  if d.id is null then return jsonb_build_object('ok', false, 'why', 'This quote link is not valid.'); end if;
+  if d.data ->> 'status' <> 'sent' then return jsonb_build_object('ok', false, 'why', 'This quote is no longer open: ' || coalesce(d.data ->> 'status', '')); end if;
+  if coalesce(d.data ->> 'valid_until', '9999-12-31') < to_char(now(), 'YYYY-MM-DD') then return jsonb_build_object('ok', false, 'why', 'This quote has expired. Ask for a new one.'); end if;
+  if not org_writable(d.org_id) then return jsonb_build_object('ok', false, 'why', 'The company cannot take answers right now.'); end if;
+  if btrim(coalesce(p_name, '')) = '' then return jsonb_build_object('ok', false, 'why', 'Enter your name.'); end if;
+  st := case p_action when 'accept' then 'accepted' when 'changes' then 'change_requested' else 'declined' end;
+  ev := jsonb_build_object('at', now(), 'what', case p_action when 'accept' then 'Accepted by the customer (link)' when 'changes' then 'Customer asked for changes (link)' else 'Declined by the customer (link)' end,
+                           'by_name', left(btrim(p_name), 120), 'comment', left(coalesce(p_comment, ''), 4000), 'via', 'link');
+  update docs set data = data || jsonb_build_object('status', st, 'answered_at', now(), 'answered_by_name', left(btrim(p_name), 120), 'customer_comment', left(coalesce(p_comment, ''), 4000),
+         'history', coalesce(data -> 'history', '[]'::jsonb) || jsonb_build_array(ev)) where id = d.id;
+  return jsonb_build_object('ok', true, 'status', st);
+end $$;
+
+-- Outgoing email (quotes, agreements, reminders): a daily cap per workspace
+create table if not exists public.email_log (
+  id bigint generated always as identity primary key,
+  org_id uuid not null references public.orgs (id) on delete cascade,
+  user_id uuid,
+  kind text,
+  to_addr text,
+  at timestamptz not null default now()
+);
+create index if not exists email_log_org on public.email_log (org_id, at);
+alter table public.email_log enable row level security;
+create or replace function public.email_gate(p_org uuid, p_user uuid, p_kind text, p_to text) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_user is not null and not exists (select 1 from members where org_id = p_org and user_id = p_user and status = 'active' and (expires_at is null or expires_at > now()) and role in ('owner', 'staff')) then return false; end if;
+  if (select count(*) from email_log where org_id = p_org and at > now() - interval '1 day') >= 300 then return false; end if;
+  insert into email_log (org_id, user_id, kind, to_addr) values (p_org, p_user, left(p_kind, 40), left(p_to, 200));
+  return true;
+end $$;
+
+-- ============================================================================
+-- 7e. Purchasing: suppliers quote through a private link (RFQ invitations)
+-- ============================================================================
+create or replace function public.rfq_public(p_token text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare d record; inv jsonb; ent jsonb;
+begin
+  if p_token is null or length(p_token) < 32 then return null; end if;
+  select org_id, path, data into d from docs where collection = 'rfqs' and data -> 'invites' @> jsonb_build_array(jsonb_build_object('token', p_token)) limit 1;
+  if d.path is null then return null; end if;
+  select x into inv from jsonb_array_elements(d.data -> 'invites') x where x ->> 'token' = p_token;
+  select data into ent from docs where org_id = d.org_id and path = 'setup/main/entities/' || coalesce(nullif(d.data ->> 'entity', ''), 'main');
+  return jsonb_build_object('rfq', jsonb_build_object('number', d.data ->> 'number', 'title', d.data ->> 'title', 'details', d.data ->> 'details', 'lines', d.data -> 'lines', 'due', d.data ->> 'due', 'status', d.data ->> 'status', 'currency', d.data ->> 'currency'),
+    'invite', jsonb_build_object('supplier', inv ->> 'supplier', 'status', inv ->> 'status', 'quote', inv -> 'quote'),
+    'company', jsonb_build_object('name', ent ->> 'name', 'address', ent ->> 'address', 'email', ent ->> 'email', 'logo', ent #>> '{brand,logo}'),
+    'org_ok', exists (select 1 from orgs where id = d.org_id and status <> 'cancelled'));
+end $$;
+create or replace function public.rfq_public_submit(p_token text, p_quote jsonb) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare d record; arr jsonb; i int;
+begin
+  select id, org_id, data into d from docs where collection = 'rfqs' and data -> 'invites' @> jsonb_build_array(jsonb_build_object('token', p_token)) and length(p_token) >= 32 for update;
+  if d.id is null then return jsonb_build_object('ok', false, 'why', 'This link is not valid.'); end if;
+  if d.data ->> 'status' <> 'open' then return jsonb_build_object('ok', false, 'why', 'This request for quotation is closed.'); end if;
+  if coalesce(d.data ->> 'due', '9999-12-31') < to_char(now(), 'YYYY-MM-DD') then return jsonb_build_object('ok', false, 'why', 'The deadline for quotations has passed.'); end if;
+  if not org_writable(d.org_id) then return jsonb_build_object('ok', false, 'why', 'The company cannot take quotations right now.'); end if;
+  if octet_length(p_quote::text) > 700000 then return jsonb_build_object('ok', false, 'why', 'The attachment is too large (max about 500 KB).'); end if;
+  arr := d.data -> 'invites';
+  for i in 0 .. jsonb_array_length(arr) - 1 loop
+    if arr -> i ->> 'token' = p_token then
+      arr := jsonb_set(arr, array[i::text], (arr -> i) || jsonb_build_object('status', 'quoted', 'quote', p_quote || jsonb_build_object('submitted_at', now(), 'via', 'link')));
+    end if;
+  end loop;
+  update docs set data = data || jsonb_build_object('invites', arr) where id = d.id;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- ============================================================================
+-- 7f. AML screening: official sanctions lists, refreshed daily by the server
+-- ============================================================================
+create extension if not exists pg_trgm;
+create table if not exists public.sanctions_entries (
+  id         bigint generated always as identity primary key,
+  source     text not null,          -- un, ofac, uk, eu, uae
+  ext_id     text,
+  name       text not null,
+  name_norm  text not null,
+  kind       text,                   -- individual, entity, vessel…
+  program    text,
+  country    text,
+  listed_on  text,
+  extra      text
+);
+create index if not exists sanctions_name_trgm on public.sanctions_entries using gin (name_norm gin_trgm_ops);
+create index if not exists sanctions_source on public.sanctions_entries (source);
+create table if not exists public.sanctions_sources (
+  source text primary key, title text, url text, fetched_at timestamptz, entries int, status text, note text
+);
+alter table public.sanctions_entries enable row level security;
+alter table public.sanctions_sources enable row level security;
+drop policy if exists sources_read on public.sanctions_sources;
+create policy sources_read on public.sanctions_sources for select to authenticated using (true);
+revoke all on public.sanctions_entries, public.sanctions_sources from anon, authenticated;
+grant select on public.sanctions_sources to authenticated;
+
+create or replace function public.aml_norm(t text) returns text language sql immutable as $$
+  select btrim(regexp_replace(regexp_replace(lower(translate(coalesce(t, ''), 'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖòóôõöÙÚÛÜùúûüÇçÑñ', 'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNn')),
+    '\m(llc|l\.l\.c|ltd|limited|co|company|inc|fze|fzco|fz|est|establishment|trading|group|holding|holdings|the|mr|mrs|ms|dr|al|el|bin|ibn|abu)\M|[^a-z0-9 ]', ' ', 'g'), '\s+', ' ', 'g'))
+$$;
+-- Team members screen names against the lists (the lists are public; only scores and matches are returned)
+create or replace function public.aml_screen(p_org uuid, p_names text[]) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare out jsonb := '[]'::jsonb; n text; nn text; m jsonb;
+begin
+  if coalesce(my_role(p_org), '') not in ('owner', 'staff', 'viewer') then raise exception 'Not allowed.' using errcode = '42501'; end if;
+  if array_length(p_names, 1) > 200 then raise exception 'Screen at most 200 names at a time.'; end if;
+  foreach n in array p_names loop
+    nn := aml_norm(n);
+    if length(nn) < 3 then out := out || jsonb_build_array(jsonb_build_object('name', n, 'matches', '[]'::jsonb)); continue; end if;
+    select coalesce(jsonb_agg(x order by (x ->> 'score')::numeric desc), '[]'::jsonb) into m from (
+      select jsonb_build_object('source', source, 'name', name, 'kind', kind, 'program', program, 'country', country, 'listed_on', listed_on, 'ext_id', ext_id,
+             'score', round(greatest(similarity(name_norm, nn), word_similarity(nn, name_norm))::numeric, 2)) x
+        from sanctions_entries where name_norm % nn or nn <% name_norm
+        order by greatest(similarity(name_norm, nn), word_similarity(nn, name_norm)) desc limit 5) s
+      where (x ->> 'score')::numeric >= 0.55;
+    out := out || jsonb_build_array(jsonb_build_object('name', n, 'matches', m));
+  end loop;
+  return out;
+end $$;
 
 -- ============================================================================
 -- 8. Platform admin console (your own view across all companies — metadata only,
@@ -812,6 +1328,20 @@ revoke execute on function public.org_limit(uuid, text)                   from a
 revoke execute on function public.org_storage_bytes(uuid)                 from authenticated;
 revoke execute on function public.org_readable(uuid)                      from authenticated;
 revoke execute on function public.org_writable(uuid)                      from authenticated;
+revoke execute on function public.att_context(uuid)                       from public, anon, authenticated;
+revoke execute on function public.rfq_public(text), public.rfq_public_submit(text, jsonb) from public, anon, authenticated;
+grant  execute on function public.rfq_public(text), public.rfq_public_submit(text, jsonb) to service_role;
+revoke execute on function public.quote_public(text)                      from public, anon, authenticated;
+revoke execute on function public.quote_public_answer(text, text, text, text) from public, anon, authenticated;
+revoke execute on function public.email_gate(uuid, uuid, text, text)      from public, anon, authenticated;
+grant  execute on function public.quote_public(text), public.quote_public_answer(text, text, text, text), public.email_gate(uuid, uuid, text, text) to service_role;
+revoke execute on function public.sig_code_gate(uuid)                     from public, anon, authenticated;
+revoke execute on function public.sig_code_result(uuid, boolean)          from public, anon, authenticated;
+revoke execute on function public.sig_save(uuid, text, text)              from public, anon, authenticated;
+revoke execute on function public.sig_saved(uuid)                         from public, anon, authenticated;
+revoke execute on function public.sig_attest(uuid, uuid, text, text, text, text, boolean, boolean) from public, anon, authenticated;
+grant  execute on function public.sig_code_gate(uuid), public.sig_code_result(uuid, boolean), public.sig_save(uuid, text, text),
+       public.sig_saved(uuid), public.sig_attest(uuid, uuid, text, text, text, text, boolean, boolean) to service_role;
 revoke execute on function public.ai_begin(uuid, uuid, text)              from public, anon, authenticated;
 revoke execute on function public.ai_finish(bigint, text, int, int, boolean) from public, anon, authenticated;
 revoke execute on function public.blob_allowed(uuid, uuid, text)          from public, anon, authenticated;
@@ -822,8 +1352,10 @@ grant  execute on function public.ai_begin(uuid, uuid, text)              to ser
 grant  execute on function public.ai_finish(bigint, text, int, int, boolean) to service_role;
 grant  execute on function public.blob_allowed(uuid, uuid, text)          to service_role;
 grant  execute on function public.cfg(text)                               to service_role;
+revoke all on public.email_log from anon, authenticated;
+revoke all on public.sanctions_entries from anon, authenticated;
 revoke all on public.ai_log, public.platform_config, public.platform_admins,
-              public.org_counters, public.lookup_log from anon, authenticated;
+              public.org_counters, public.lookup_log, public.sign_attestations, public.sign_code_log, public.email_log from anon, authenticated;
 
 -- Recompute record counters (safe to re-run)
 insert into public.org_counters (org_id, docs, bytes)

@@ -4,11 +4,20 @@ const { createClient } = require('@supabase/supabase-js');
 const URL_ = process.env.SUPABASE_URL;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 let client = null;
+let anon = null;
 
 function admin() {
   if (!URL_ || !SERVICE) throw Object.assign(new Error('SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set on the server.'), { status: 503 });
   if (!client) client = createClient(URL_, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
   return client;
+}
+
+// A public (anon) client, used to send and check one-time email codes through Supabase Auth
+function publicClient() {
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!URL_ || !key) throw Object.assign(new Error('SUPABASE_URL or SUPABASE_ANON_KEY is not set on the server.'), { status: 503 });
+  if (!anon) anon = createClient(URL_, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+  return anon;
 }
 
 // Returns { user, sb } or throws { status }.
@@ -28,4 +37,4 @@ function cookie(req, name) {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-module.exports = { admin, verify, cookie, UUID };
+module.exports = { admin, publicClient, verify, cookie, UUID };

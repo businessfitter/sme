@@ -1,14 +1,23 @@
 {
+  "id": "/",
   "name": "Orzio",
   "short_name": "Orzio",
   "description": "Your business, run by AI agents and approved by you.",
-  "start_url": "/",
+  "start_url": "/?source=app",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0E1B33",
   "theme_color": "#0E1B33",
+  "categories": ["business", "finance", "productivity"],
   "icons": [
-    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "/brand/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "Check in", "url": "/?source=app#mylounge", "icons": [{ "src": "/brand/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Dashboard", "url": "/?source=app#dash", "icons": [{ "src": "/brand/icon-192.png", "sizes": "192x192" }] }
   ]
 }

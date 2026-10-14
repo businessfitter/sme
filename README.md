@@ -1,6 +1,22 @@
 # Orzio
 
-Your whole business, run by AI agents and approved by you: accounting, sales and purchases, banking, payroll, recruitment, attendance, projects, documents and e-signatures, CRM, marketing, website, reports and tax, in one app.
+Your whole business, run by AI agents and approved by you, in eleven modules:
+
+| Module | What it covers |
+|---|---|
+| **Accounting** | Ledger, banking, assets, schedules, month-end close, financial statements under the framework you choose (IFRS, IFRS for SMEs, US GAAP, FRS 102, SOCPA, Ind AS, cash basis…), approved statements kept on record and compared month, quarter and year, budgets and forecasts |
+| **Sales** | Quotes prepared by the agent from CRM or customers' requests, sent by link or portal, accepted or changed online; service agreements drafted by the agent, e-signed with the company stamp; invoices, customer payments, projects and billing, statements, aging, reminders, three-way match |
+| **Purchasing & Inventory** | Suppliers, requests for quotation by link or portal, agent comparison, LPOs with approval, goods received, bills matched to LPO and receipt, payables reports (aging, supplier ledgers, commitments, GRNI, payment schedule), stock at weighted-average cost |
+| **HR** | Organogram drafted by the HR agent and approved by the HR Manager, payroll and employees, recruitment |
+| **Employee Lounge** | Geo-verified check-in from the phone (500 m, server time), leave, requests, assigned tasks, daily and monthly summaries, performance reviews, the employee's library |
+| **CRM** | Pipeline and leads, customer and supplier queries, marketing, website |
+| **Documents & e-sign** | Files, letters, e-signatures placed on the page, with or without a date-and-time stamp, saved signatures confirmed by an email code, manager approval before employees sign |
+| **Tax** | VAT and corporate tax |
+| **Compliance** | Law register built by the compliance agent and refreshed monthly, obligations and regulator due dates, licences and documents with expiry dates, AML screening against official sanctions lists (and World-Check One when connected), every module's policies and procedures, policy exceptions found in your transactions, monthly CEO summary |
+| **Entity Risk Management** | Risk management policy, department risk registers, the entity register of key risks, risk appetite set by the CEO, key risk indicators from your data, ERM agent |
+| **Internal Audit** | Activity logs, controls and period locks, access matrix and delegations, AI agents |
+
+Every module has its own **Settings** (module, company, group and personal levels) and its own **Policies & risks**: a policies and procedures manual and a risk register (COSO 2013, COSO ERM, ISO 31000, IIA standards, IFRS and local law), reviewed by the agent every month, approved by the manager and then the CEO, and downloadable in Word and PDF. A **Knowledge library** in every login holds the manuals for that person's functions and industry knowledge for the country and internationally, and answers questions using the company's own records within the person's rights.
 
 This edition is built to be sold. One codebase runs either way:
 
@@ -24,6 +40,14 @@ This edition is built to be sold. One codebase runs either way:
 | `api/ai.js` | Vercel function | Calls Claude with your Anthropic key after checking workspace status, the per-person rate limit and the plan's monthly AI quota, and logs usage |
 | `api/blob/[id].js` | Vercel function | Opens uploaded files with a two-minute signed link, only for people allowed to see them |
 | `api/config.js` | Vercel function | Gives the browser the public settings (never the secret keys) |
+| `api/sign.js` | Vercel function | Email codes for signing and saving signatures; records the one-use signing attestation |
+| `api/quote.js`, `public/q.html` | Vercel function + page | Customers open, accept or ask for changes to a quote from the link, without logging in |
+| `api/rfq.js`, `public/r.html` | Vercel function + page | Suppliers submit quotations from the link |
+| `api/email.js`, `api/_mail.js` | Vercel function | Sends quotes, agreements, statements and RFQs by email (Resend), capped per workspace per day |
+| `api/reminders.js` | Vercel Cron, daily | Payment reminders before and after due dates |
+| `api/sanctions.js` | Vercel Cron, daily | Downloads the official sanctions lists for AML screening |
+| `api/worldcheck.js` | Vercel function | Optional LSEG World-Check One screening |
+| `public/sw.js` | Browser | Makes Orzio installable on phones and desktops |
 | `supabase/migrations/0001_init.sql` | Supabase | Database, access rules, plans, limits, usage log, file storage, admin functions |
 
 ## 1. Put it on GitHub
@@ -44,8 +68,9 @@ git push -u origin main
 2. **SQL Editor**: paste all of `supabase/migrations/0001_init.sql` and press **Run**.
 3. **Authentication → URL Configuration**: set **Site URL** to your domain (step 3) and add `https://<your-domain>/**` under **Redirect URLs**. Password-reset links come back to `/?reset`.
 4. **Authentication → Providers → Email**: keep **Confirm email** on.
-5. **Authentication → SMTP Settings**: connect your own email sender (for example Resend, Postmark or Amazon SES). Supabase's built-in sender only allows a few emails an hour and is not meant for production. Without your own sender, sign-up confirmations will stall once real customers arrive.
-6. **Project Settings → API**: copy the **Project URL**, the **anon public** key and the **service_role** key.
+5. **Authentication → Email Templates → Magic Link**: add the one-time code so people can confirm signatures, for example `Your Orzio code is {{ .Token }}`. (Codes for signing use this template.)
+6. **Authentication → SMTP Settings**: connect your own email sender (for example Resend, Postmark or Amazon SES). Supabase's built-in sender only allows a few emails an hour and is not meant for production. Without your own sender, sign-up confirmations will stall once real customers arrive.
+7. **Project Settings → API**: copy the **Project URL**, the **anon public** key and the **service_role** key.
 
 ## 3. Deploy on Vercel
 
@@ -55,6 +80,12 @@ git push -u origin main
    - `ANTHROPIC_API_KEY`, needed for the AI agents
    - `TERMS_URL`, `PRIVACY_URL`: links shown at sign-up. Leave them empty until your legal pages exist.
    - `APP_NAME`: the product name shown on sign-in and in the admin console (default `Orzio`)
+   - `GOOGLE_MAPS_API_KEY` (optional): a browser key for the office-location maps and address search. Restrict it to your domain in Google Cloud and enable *Maps JavaScript API* and *Places API*. Without it the maps use OpenStreetMap.
+   - `RESEND_API_KEY` and `EMAIL_FROM` (optional but recommended): to email quotes, agreements, statements, requests for quotation and payment reminders from the server (resend.com; `EMAIL_FROM` like `Orzio <billing@yourdomain.com>` on a verified domain). Without them the app opens the user's own email program with the message ready.
+   - `CRON_SECRET`: any long random text. Vercel sends it to `/api/reminders` every morning (see `vercel.json`, `crons`) so payment reminders go out automatically.
+   - `APP_URL`: your site address, e.g. `https://app.orzio.ai`, used in reminder emails.
+   - `UAE_LOCAL_LIST_URL` (optional): a CSV export of the UAE Local Terrorist List if you host one. Otherwise upload the EOCN Excel in Compliance → AML screening.
+   - `WC1_API_KEY`, `WC1_API_SECRET`, `WC1_GROUP_ID` (optional): LSEG World-Check One credentials. Built to LSEG's published API but not tested without credentials.
 3. **Deploy**, then add your domain under **Settings → Domains**.
 
 ## 4. Make yourself platform admin
@@ -104,6 +135,33 @@ Limits are enforced by the database and the AI function. When a customer hits on
 - **AI tokens** are what Anthropic bills you for, so they're the real cost cap. Calls stop a burst of small requests. Free trials and portal users never reach the most expensive model, and each call is capped in size and reply length.
 - **Records** is the size of the books themselves (every entry, invoice, employee…). Saving a smaller version or deleting always works, even when a workspace is over its limit.
 - Employees, customers and suppliers can store at most 2,000 items of up to 64 KB each in their own portal.
+
+## Employee check-in (geo-fenced) — how it is protected
+
+- Each company sets its office locations in **Employee Lounge → Settings → Office locations** (map, 500 m radius by default, up to 1 km).
+- On the phone the employee picks the office and presses **Check in**. The **database** reads its own clock, measures the distance to the office and refuses anything outside the radius or less precise than the limit (±100 m by default). Refused attempts are logged.
+- Nobody can insert, edit or delete a check-in directly, not even the owner. Corrections are separate records with a reason.
+- The first phone is registered; another phone is flagged, or refused when *phone registration* is on. HR can reset it.
+- Far from the office? The screen says so and opens Leave with *Work from another location*.
+- Limits: a browser cannot detect a rooted phone that fakes GPS. The server-side radius, precision limit, phone registration, impossible-travel flags and the HR review of flags make this much harder, but if you need certainty add a selfie or a kiosk at the door.
+
+## Signatures
+
+- Mark where each person signs on the PDF. Choose: date and time printed with the signature, no stamp, or the signer chooses.
+- Every signature is confirmed with a code sent to the signer's email (Supabase Auth email, see step 2.5). Saved signatures are stored only after a code and used only with a code. The server records a one-use attestation (server time, document and signature fingerprints).
+- Documents sent to an employee need their manager's approval before the employee can sign.
+- Agreements signed by the company carry the company stamp (upload yours in Sales → Settings or use the generated digital stamp).
+- These are simple electronic signatures with a tamper-evident audit trail, not qualified signatures (UAE PASS / eIDAS QES).
+
+## AML screening
+
+The server downloads the official, free sanctions lists every night (`/api/sanctions`, Vercel Cron): UN Security Council consolidated list, US OFAC SDN (with aliases), UK Sanctions List (FCDO) and the EU consolidated financial sanctions list. The UAE Local Terrorist List is published by the EOCN (uaeiec.gov.ae) as Excel/PDF without a stable file address, so upload it in Compliance → AML screening (or set `UAE_LOCAL_LIST_URL`). The platform admin can refresh the lists by calling `/api/sanctions` with their login.
+
+Customers, suppliers, employees, leads and the shareholders/UBOs you list are screened by name with fuzzy matching, monthly and on demand. Possible matches go to the Compliance Manager, who confirms (and the CEO is told) or clears them with a reason. A name match is not an identification: confirm with date of birth, nationality and documents. World-Check One is LSEG's paid database; it is used only when you add your own credentials.
+
+## Installing on phones
+
+Orzio is an installable web app. On Android/Chrome an **Install app** button appears; on iPhone use Share → *Add to Home Screen*. It opens full-screen with the Orzio icon. Data always comes live from the server.
 
 ## Updating an existing installation
 
@@ -161,6 +219,10 @@ The first person to sign up sets up the workspace on the unlimited Dedicated pla
 - [ ] `support_email` set in /admin → Settings, and plan prices decided
 - [ ] `vercel.json` ships a **report-only** Content-Security-Policy. After a week with no violations in the browser console, rename the header to `Content-Security-Policy` to enforce it.
 - [ ] A test customer taken through sign-up → setup wizard → invite → trial end → activation on your live domain
+
+## Roles and access
+
+The person who creates the workspace is the **Admin**. Position roles (CEO, CFO, Compliance Manager, Internal Audit Manager, Financial Accountant, HR Manager, department manager, officer) come with access presets you can adjust per module (view, edit, approve, delete), per company, with an end date and an approval limit. The CEO sees every module and log, can grant logins (not their own), gives final approval of policies, and receives the agent's daily summary. Delegations lend rights for a period and are recorded by the database. **Internal Audit → Settings → Access matrix** shows everyone's rights at a glance.
 
 ## Known limits of this release
 
