@@ -92,6 +92,8 @@ create table if not exists public.members (
   primary key (org_id, user_id)
 );
 alter table public.members add column if not exists status text not null default 'active' check (status in ('invited', 'active'));
+-- Companies (entities) inside the workspace this person may see; NULL = all companies, including future ones
+alter table public.members add column if not exists entities text[];
 create index if not exists members_user_idx on public.members (user_id);
 
 create table if not exists public.platform_admins (
@@ -150,22 +152,41 @@ language sql stable as $$
   select auth.uid() is not null and (p = 'portal/' || auth.uid()::text or p like 'portal/' || auth.uid()::text || '/%')
 $$;
 
-create or replace function public.can_read_doc(p_org uuid, p_path text) returns boolean
+-- Company-level access: a person limited to some companies only reaches records of those companies.
+-- A record's company is data.entity (none = the main company, as in the app); shared set-up
+-- (group settings, journals, workflows, exchange rates, logins) is visible to every member.
+create or replace function public.entity_allowed(p_org uuid, p_path text, p_entity text) returns boolean
+language plpgsql stable security definer set search_path = public as $$
+declare ents text[];
+begin
+  select entities into ents from members where org_id = p_org and user_id = auth.uid() and status = 'active';
+  if ents is null then return true; end if;
+  if p_path like 'setup/main/entities/%' then return split_part(p_path, '/', 4) = any (ents); end if;
+  if p_path = 'setup/main' or p_path like 'setup/main/journals/%' or p_path like 'setup/main/workflows/%'
+     or p_path like 'setup/main/fx/%' or p_path like 'setup/main/access/%' or p_path like 'setup/main/access_log/%' then
+    return true;
+  end if;
+  return coalesce(nullif(p_entity, ''), 'main') = any (ents);
+end $$;
+
+drop function if exists public.can_read_doc(uuid, text) cascade;
+drop function if exists public.can_write_doc(uuid, text) cascade;
+create or replace function public.can_read_doc(p_org uuid, p_path text, p_entity text) returns boolean
 language sql stable security definer set search_path = public as $$
   select case my_role(p_org)
     when 'owner'  then org_readable(p_org)
-    when 'staff'  then org_readable(p_org)
-    when 'viewer' then org_readable(p_org)
+    when 'staff'  then org_readable(p_org) and entity_allowed(p_org, p_path, p_entity)
+    when 'viewer' then org_readable(p_org) and entity_allowed(p_org, p_path, p_entity)
     when 'portal' then org_readable(p_org) and own_portal(p_path)
     else false end
 $$;
 
 -- Only owners grant or change logins; the access log is append-only (see policies).
-create or replace function public.can_write_doc(p_org uuid, p_path text) returns boolean
+create or replace function public.can_write_doc(p_org uuid, p_path text, p_entity text) returns boolean
 language sql stable security definer set search_path = public as $$
   select org_writable(p_org) and case my_role(p_org)
     when 'owner'  then true
-    when 'staff'  then p_path not like 'setup/main/access/%'
+    when 'staff'  then p_path not like 'setup/main/access/%' and entity_allowed(p_org, p_path, p_entity)
     when 'portal' then own_portal(p_path)
     else false end
 $$;
@@ -283,13 +304,13 @@ drop policy if exists docs_read   on public.docs;
 drop policy if exists docs_insert on public.docs;
 drop policy if exists docs_update on public.docs;
 drop policy if exists docs_delete on public.docs;
-create policy docs_read   on public.docs for select using (public.can_read_doc(org_id, path));
-create policy docs_insert on public.docs for insert with check (public.can_write_doc(org_id, path));
+create policy docs_read   on public.docs for select using (public.can_read_doc(org_id, path, data ->> 'entity'));
+create policy docs_insert on public.docs for insert with check (public.can_write_doc(org_id, path, data ->> 'entity'));
 create policy docs_update on public.docs for update
-  using (public.can_write_doc(org_id, path) and collection <> 'setup/main/access_log')
-  with check (public.can_write_doc(org_id, path));
+  using (public.can_write_doc(org_id, path, data ->> 'entity') and collection <> 'setup/main/access_log')
+  with check (public.can_write_doc(org_id, path, data ->> 'entity'));
 create policy docs_delete on public.docs for delete
-  using (public.can_write_doc(org_id, path) and collection <> 'setup/main/access_log');
+  using (public.can_write_doc(org_id, path, data ->> 'entity') and collection <> 'setup/main/access_log');
 
 -- Partial update merging top-level fields (runs with the caller's rights, so the rules apply)
 create or replace function public.doc_update(p_org uuid, p_path text, p_patch jsonb) returns void
@@ -307,7 +328,7 @@ end $$;
 -- ============================================================================
 create or replace function public.sync_access() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare uid uuid; r text; cur text; lim bigint; n bigint; k text;
+declare uid uuid; r text; cur text; lim bigint; n bigint; k text; ents text[];
 begin
   if tg_op = 'DELETE' then
     if old.collection = 'setup/main/access' then
@@ -343,9 +364,14 @@ begin
       end if;
     end if;
   end if;
+  -- Companies this person may reach: data.entities = ["main","ksa"]; missing, empty or "all" = every company
+  if r <> 'portal' and jsonb_typeof(new.data -> 'entities') = 'array' and jsonb_array_length(new.data -> 'entities') > 0 then
+    select array_agg(distinct x) into ents from jsonb_array_elements_text(new.data -> 'entities') x where btrim(x) <> '';
+    if ents is not null and 'all' = any (ents) then ents := null; end if;
+  end if;
   -- New people are invited: they must accept before they can see anything.
-  insert into members (org_id, user_id, role, status) values (new.org_id, uid, r, 'invited')
-  on conflict (org_id, user_id) do update set role = excluded.role;
+  insert into members (org_id, user_id, role, status, entities) values (new.org_id, uid, r, 'invited', ents)
+  on conflict (org_id, user_id) do update set role = excluded.role, entities = excluded.entities;
   return new;
 end $$;
 drop trigger if exists docs_access_sync on public.docs;
@@ -457,12 +483,13 @@ end $$;
 drop function if exists public.my_orgs();
 create or replace function public.my_orgs() returns table (
   id uuid, name text, role text, status text, plan text, plan_name text,
-  trial_ends_at timestamptz, writable boolean, invited boolean, invited_by text
+  trial_ends_at timestamptz, writable boolean, invited boolean, invited_by text, entities text[]
 )
 language sql stable security definer set search_path = public as $$
   select o.id, o.name, m.role, o.status, o.plan, p.name, o.trial_ends_at, org_writable(o.id), m.status = 'invited',
          case when m.status = 'invited' then (select coalesce(pr.full_name, pr.email) from members x join profiles pr on pr.id = x.user_id
-                                               where x.org_id = o.id and x.role = 'owner' order by x.created_at limit 1) end
+                                               where x.org_id = o.id and x.role = 'owner' order by x.created_at limit 1) end,
+         m.entities
     from members m join orgs o on o.id = m.org_id join plans p on p.id = o.plan
    where m.user_id = auth.uid() and o.status <> 'cancelled'
    order by o.created_at

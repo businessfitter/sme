@@ -4,7 +4,7 @@ module.exports = (req, res) => {
   const cfg = {
     url: process.env.SUPABASE_URL || '',
     anon: process.env.SUPABASE_ANON_KEY || '',
-    appName: process.env.APP_NAME || 'SME Suite',
+    appName: process.env.APP_NAME || 'Orzio',
     termsUrl: process.env.TERMS_URL || '',
     privacyUrl: process.env.PRIVACY_URL || '',
   };

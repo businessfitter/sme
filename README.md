@@ -105,9 +105,13 @@ Limits are enforced by the database and the AI function. When a customer hits on
 - **Records** is the size of the books themselves (every entry, invoice, employee…). Saving a smaller version or deleting always works, even when a workspace is over its limit.
 - Employees, customers and suppliers can store at most 2,000 items of up to 64 KB each in their own portal.
 
+## Updating an existing installation
+
+When a new version changes `supabase/migrations/0001_init.sql`, run the whole file again in the Supabase SQL Editor. It is written to be re-run safely: it keeps all data and only adds or replaces rules and functions.
+
 ## 6. How customers use it
 
-1. **Sign up** at your domain → **Set up your workspace** (name) → the app's own setup wizard builds their company, chart of accounts and taxes.
+1. **Sign up** at your domain → **Set up your workspace** (name) → the setup wizard builds their company, chart of accounts and taxes (the trade licence upload is optional; progress is saved, so leaving half-way resumes on the same step). After that, everyone lands on the **executive dashboard**; the **Modules** tab in the top bar opens every module.
 2. **Invite people**: the person creates an account at your domain and confirms their email first. The owner then opens **Settings → Logins and access**, types the person's full email, and picks a role. The person sees **You're invited**, and nothing in the workspace is visible to them until they press **Accept**. Partial searches only show people already in that workspace. A full-email lookup shows only the email, never the person's name, and is limited to 30 an hour. So nobody can browse or harvest your other customers' users.
 3. **Switch workspaces** (accountants serving several clients, groups) from the workspace button next to **Sign out**. The same button shows **Plan and usage**.
 
@@ -119,6 +123,8 @@ Limits are enforced by the database and the AI function. When a customer hits on
 | Admin preset, accountant, finance lead, tax consultant, custom | staff | Read and change the books. **Cannot** grant logins; only the owner can. |
 | Auditor | viewer | Read everything, change nothing |
 | Employee, customer, supplier | portal | Only their own dashboard (`portal/<their id>/…`) and files shared to it |
+
+**Companies (entities) per login.** In **Settings → Logins and access**, each staff login is given *All companies* (including ones added later) or a chosen set, e.g. only the KSA company of a group. This is enforced by the database: records of other companies never reach that person, and they cannot create or move records into them. A record belongs to the company in its `entity` field; records without one belong to the main company. Shared set-up (group settings, journals, workflows, exchange rates) is visible to every staff login.
 
 The finer per-area tick boxes in **Logins and access** (view/edit/approve/delete per module) are applied by the app's screens. The database enforces the four roles above, isolation between workspaces, read-only status and plan limits. The access log is append-only, so even the owner cannot edit or delete it.
 

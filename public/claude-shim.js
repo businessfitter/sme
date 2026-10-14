@@ -195,15 +195,16 @@ ${info.can_create_org && info.mode !== 'single' ? '<button class="sw" type="butt
     if (qs.get('workspace')) { store.set('sme-org', qs.get('workspace')); qs.delete('workspace'); history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs : '') + location.hash); }
     const want = store.get('sme-org');
     org = orgs.find((x) => x.id === want) || orgs[0];
-    ORG = org.id; store.set('sme-org', ORG);
+    ORG = org.id; store.set('sme-org', ORG); window.__orzioOrg = ORG;
     whenDom().then(mountChrome);
     return true;
   })();
 
   // sign out also ends the Supabase session
   document.addEventListener('click', async (e) => {
-    const b = e.target.closest && e.target.closest('#signout,#psignout,.lh-btn');
-    if (b && /sign out/i.test(b.textContent || '')) {
+    const b = e.target.closest && e.target.closest('button, a');
+    if (b && !b.closest('#sb-auth') && /^\s*sign out\s*$/i.test(b.textContent || '')) {
+      e.preventDefault(); e.stopPropagation();
       try { sessionStorage.removeItem('aifd-in'); } catch (x) {}
       await sb.auth.signOut(); setCookie(null); location.reload();
     }
