@@ -3,11 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%230E1B33%22/%3E%3Cpath d=%22M9 12h14M9 16h14M9 20h9%22 stroke=%22%2314B8A6%22 stroke-width=%222.4%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
+<link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0E1B33">
+<meta name="description" content="Orzio runs your business with AI agents you approve: accounting, sales, payroll, HR, CRM, documents and more in one app.">
 <script src="/vendor/supabase-2.45.4.js"></script>
 <script src="/api/config"></script>
 <script src="/claude-shim.js"></script>
-<title>SME Suite</title>
+<title>Orzio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -545,6 +550,10 @@ body.homemode #main{padding:0!important;max-width:none!important}
 .themechip i{width:1.2rem;height:1.2rem;border-radius:50%;background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%)}.themechip.on{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal-soft)}
 details.card>summary{cursor:pointer;font-weight:500;margin-bottom:.4rem}
 @media (max-width:980px){.webgrid{grid-template-columns:1fr}.webprev{position:static}.siteprev{height:60vh}}
+
+/* Orzio brand mark */
+.mark,.pv-mark{background:url("/brand/app-icon.svg") center/cover no-repeat!important;border-radius:22%!important}
+.mark::before,.mark::after,.pv-mark::before,.pv-mark::after{content:none!important;display:none!important}
 </style>
 
 
@@ -552,16 +561,16 @@ details.card>summary{cursor:pointer;font-weight:500;margin-bottom:.4rem}
 <body>
 <div class="login l2" id="login" hidden>
   <section class="lside">
-    <div class="lbrand"><span class="mark" aria-hidden="true"></span>SME Suite</div>
+    <div class="lbrand"><span class="mark" aria-hidden="true"></span>Orzio</div>
     <div class="lmain"><div class="lcopy"><h1>Your whole business, run by AI agents and approved by you.</h1><p class="sub">Finance, people, projects, documents and signatures in one place, with back-office costs cut by up to 80%. Everything ready in one click.</p></div>
     <div class="lcard" id="lcard"></div></div>
     <div class="ltrust"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>Built for SME service providers</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>Global</span></div>
   </section>
-  <section class="lart" aria-label="Modules in SME Suite"><div class="pv"><div class="pv-head"><span class="pv-mark" aria-hidden="true"></span><div><b>Your company</b><span>16 modules in one suite</span></div></div><div class="pv-g fin"><p class="pv-gl">Finance</p><ul><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>Accounting</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h6M9 8h3"/></svg></span>Sales</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg></span>Banking</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 14l6-6M9.5 8.5h.01M14.5 13.5h.01"/></svg></span>Tax &amp; VAT</li></ul></div><div class="pv-g ppl"><p class="pv-gl">People and projects</p><ul><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.8-3.2 3-5 5.5-5s4.7 1.8 5.5 5M16 6h5M16 10h5M17 14h4"/></svg></span>Payroll</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5"/><path d="M18 8v6M15 11h6"/></svg></span>Recruitment</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="14" rx="2"/><path d="M9 6V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V6M3.5 12h17M10 12v2h4v-2"/></svg></span>Projects</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13l2.5-8h11L20 13v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/></svg></span>Requests</li></ul></div><div class="pv-g doc"><p class="pv-gl">Documents and reporting</p><ul><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h4"/></svg></span>Documents</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19c3-1 4-6 6-6s1 4 3 4 2-3 4-3 2 1 3 2"/><path d="M14 3l5 5-7 7H7v-5z"/></svg></span>E-signatures</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M4 9h16M4 13h16M10 5v14"/></svg></span>Reports</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>Audit</li></ul></div><div class="pv-g grow"><p class="pv-gl">People and growth</p><ul><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg></span>Attendance</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></span>CRM</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4l11 5V5z"/><path d="M14 8a4 4 0 0 1 0 8M7 15l1 5"/></svg></span>Marketing</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg></span>Website</li></ul></div><div class="pv-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div><b>Prepared by agents</b><span>Approved by you</span></div></div></div><div class="lart-foot"><span><b>Agents</b> prepare the work</span><span><b>You</b> approve it</span><span><b>Auditors</b> see every step</span></div></section>
+  <section class="lart" aria-label="Modules in Orzio"><div class="pv"><div class="pv-head"><span class="pv-mark" aria-hidden="true"></span><div><b>Your company</b><span>16 modules in one suite</span></div></div><div class="pv-g fin"><p class="pv-gl">Finance</p><ul><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>Accounting</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h6M9 8h3"/></svg></span>Sales</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg></span>Banking</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 14l6-6M9.5 8.5h.01M14.5 13.5h.01"/></svg></span>Tax &amp; VAT</li></ul></div><div class="pv-g ppl"><p class="pv-gl">People and projects</p><ul><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.8-3.2 3-5 5.5-5s4.7 1.8 5.5 5M16 6h5M16 10h5M17 14h4"/></svg></span>Payroll</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5"/><path d="M18 8v6M15 11h6"/></svg></span>Recruitment</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="14" rx="2"/><path d="M9 6V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V6M3.5 12h17M10 12v2h4v-2"/></svg></span>Projects</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13l2.5-8h11L20 13v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/></svg></span>Requests</li></ul></div><div class="pv-g doc"><p class="pv-gl">Documents and reporting</p><ul><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h4"/></svg></span>Documents</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19c3-1 4-6 6-6s1 4 3 4 2-3 4-3 2 1 3 2"/><path d="M14 3l5 5-7 7H7v-5z"/></svg></span>E-signatures</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M4 9h16M4 13h16M10 5v14"/></svg></span>Reports</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>Audit</li></ul></div><div class="pv-g grow"><p class="pv-gl">People and growth</p><ul><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg></span>Attendance</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></span>CRM</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4l11 5V5z"/><path d="M14 8a4 4 0 0 1 0 8M7 15l1 5"/></svg></span>Marketing</li><li><span class="pv-i"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg></span>Website</li></ul></div><div class="pv-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div><b>Prepared by agents</b><span>Approved by you</span></div></div></div><div class="lart-foot"><span><b>Agents</b> prepare the work</span><span><b>You</b> approve it</span><span><b>Auditors</b> see every step</span></div></section>
 </div>
 <div class="shell" id="shell" hidden>
   <aside class="side" id="side" aria-label="Main navigation">
-    <div class="sbrand"><span class="mark" aria-hidden="true"></span>SME Suite</div>
+    <div class="sbrand"><span class="mark" aria-hidden="true"></span>Orzio</div>
     <label class="sent">Entity<select id="ent-sel" aria-label="Entity"></select></label>
     <nav class="snav" id="tabs" role="tablist" aria-orientation="vertical"></nav>
     <div class="sgap"></div>
@@ -576,7 +585,7 @@ details.card>summary{cursor:pointer;font-weight:500;margin-bottom:.4rem}
   </div>
 </div>
 <div id="portalwrap" hidden>
-  <div class="portalbar"><span class="pb" id="pbrand">SME Suite</span><span class="pw" id="pwho"></span><button type="button" class="iconbtn" id="pthemebtn" aria-label="Switch theme"></button><button type="button" class="btn sm" id="psignout">Sign out</button></div>
+  <div class="portalbar"><span class="pb" id="pbrand">Orzio</span><span class="pw" id="pwho"></span><button type="button" class="iconbtn" id="pthemebtn" aria-label="Switch theme"></button><button type="button" class="btn sm" id="psignout">Sign out</button></div>
   <main class="portal" id="portal"></main>
 </div>
 
@@ -907,7 +916,7 @@ function schedule(){if(!S.isEditor) return;if(pending) return;pending=true;reque
 function refreshHeader(){const es=$('#ent-sel');const ids=Object.keys(S.ent).sort((a,b)=>(S.ent[a].name||'')<(S.ent[b].name||'')?-1:1);es.textContent='';
   if(ids.length>1) es.append(h('option',{value:'all'},'All entities, consolidated'));ids.forEach(id=>es.append(h('option',{value:id},S.ent[id].name)));if(!ids.length) es.append(h('option',{value:''},'No company yet'));es.value=S.entity||'';
   const chip=$('#curchip');chip.hidden=!ids.length;chip.textContent=`Amounts in ${S.viewCur||S.baseCur}`;chip.title='Change this in Settings, Display';
-  const c=$('#company');c.textContent='';if(!S.settings){c.append(h('b',{},'SME Suite'));return;}
+  const c=$('#company');c.textContent='';if(!S.settings){c.append(h('b',{},'Orzio'));return;}
   c.append(h('b',{},S.settings.company),h('span',{style:'margin-left:10px'},S.entity==='all'?`${ids.length} entities, consolidated in ${groupCur()}`:`${(COUNTRIES[S.settings.country]||{}).name||''}. Books in ${S.baseCur}, locked to ${fmtDate(S.settings.lock_date)}`));}
 function refreshActive(){if(!S.signedIn){drawLogin();return;}refreshHeader();
   if(S.loaded.entities&&!Object.keys(S.ent).length&&!S.signup&&!S.pendingEntity){openSignup(true);return;}
@@ -2680,7 +2689,7 @@ async function pdfTable(title,sub,head,rows,numCols){await loadScript(JSPDF_URL,
   const header=()=>{d.setFillColor(31,95,214);d.rect(0,0,W,5,'F');d.setFillColor(14,150,140);d.rect(W*0.7,0,W*0.3,5,'F');d.setTextColor(30,36,44);d.setFont('helvetica','bold');d.setFontSize(13);d.text(`${e.name||''}: ${title}`,M,30);
     d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(95,104,116);d.text(sub,M,44);y=64;d.setFontSize(8);d.setTextColor(30,36,44);let x=M;head.forEach((c,i)=>{cell(c,i,x,true);x+=cw[i];});y+=5;d.setDrawColor(160);d.line(M,y,W-M,y);y+=12;};
   header();rows.forEach(r=>{const row=Array.isArray(r)?{c:r}:r;if(y>H-34){d.addPage();header();}if(row.g){d.setFillColor(238,242,247);d.rect(M,y-9,W-2*M,13,'F');}let x=M;row.c.forEach((c,i)=>{cell(c,i,x,row.b||row.g);x+=cw[i];});if(row.b){d.setDrawColor(200);d.line(M,y+4,W-M,y+4);}y+=14;});
-  const n=d.getNumberOfPages();for(let i=1;i<=n;i++){d.setPage(i);d.setFontSize(7.5);d.setTextColor(120);d.text(`Generated ${fmtTime(nowISO())} by the SME Suite. Page ${i} of ${n}.`,M,H-16);}
+  const n=d.getNumberOfPages();for(let i=1;i<=n;i++){d.setPage(i);d.setFontSize(7.5);d.setTextColor(120);d.text(`Generated ${fmtTime(nowISO())} by Orzio. Page ${i} of ${n}.`,M,H-16);}
   return d.output('blob');}
 const drcr=v=>Math.abs(v)<0.005?'0.00':money2(Math.abs(v))+(v>0?' Dr':' Cr');
 const isPLacct=c=>{const t=typeOf(c);return isIncome(t)||isCost(t)||isOpex(t);};
@@ -3639,7 +3648,7 @@ async function newLead(d){const c=crmCfg();const team=d.team||c.teams[0].name;co
     value:+d.value||0,currency:d.currency||S.baseCur,expected_close:d.expected_close||null,team,stage:d.stage||t.stages[0],status:'open',owner:d.owner||nextOwner(d.source||'Website'),tags:d.tags||[],notes:d.notes||'',activities:[{at:nowISO(),by:S.me,type:'note',text:`Created from ${d.via||'manual entry'}`}],created_by:S.me,created_at:nowISO()};
   const ref=db.collection('leads').doc();await ref.set(doc);const x={id:ref.id,...doc};(S.raw.leads=S.raw.leads||[]).push(x);return x;}
 function icsFor(l,when,mins,title){const st=new Date(when),en=new Date(st.getTime()+mins*60000);const f=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
-  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SME Suite//CRM//EN','BEGIN:VEVENT',`UID:${l.id}-${Date.now()}@sme-suite`,`DTSTAMP:${f(new Date())}`,`DTSTART:${f(st)}`,`DTEND:${f(en)}`,`SUMMARY:${title.replace(/[,;]/g,' ')}`,l.email?`ATTENDEE;CN=${(l.contact||l.email).replace(/[,;:]/g,' ')}:mailto:${l.email}`:null,`DESCRIPTION:${(l.title||'').replace(/[,;]/g,' ')}`,'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');}
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Orzio//CRM//EN','BEGIN:VEVENT',`UID:${l.id}-${Date.now()}@orzio`,`DTSTAMP:${f(new Date())}`,`DTSTART:${f(st)}`,`DTEND:${f(en)}`,`SUMMARY:${title.replace(/[,;]/g,' ')}`,l.email?`ATTENDEE;CN=${(l.contact||l.email).replace(/[,;:]/g,' ')}:mailto:${l.email}`:null,`DESCRIPTION:${(l.title||'').replace(/[,;]/g,' ')}`,'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');}
 function parseMcpItems(res){const out=[];const take=t=>{let depth=0,st=-1,inStr=false,esc=false;for(let i=0;i<t.length;i++){const ch=t[i];if(inStr){if(esc) esc=false;else if(ch==='\\') esc=true;else if(ch==='"') inStr=false;continue;}if(ch==='"'){inStr=true;continue;}if(ch==='{'){if(!depth) st=i;depth++;}else if(ch==='}'){depth--;if(!depth&&st>=0){try{out.push(JSON.parse(t.slice(st,i+1)));}catch(e){}st=-1;}}}};
   (res&&res.content||[]).forEach(b=>{if(b.type==='text'&&b.text) take(b.text);});if(!out.length&&res&&res.payload&&typeof res.payload==='object') out.push(...(Array.isArray(res.payload)?res.payload:[res.payload]));return out.filter(x=>x&&x.subject!==undefined);}
 let mcpCap=null;
@@ -3985,7 +3994,7 @@ function appNavHead(A){const ic=document.createElementNS(SVGNS,'svg');ic.setAttr
 function appMetrics(A){const ms=A.tabs.map(t=>BUILD[t]&&roleAllows(t)?homeMetric(t):null).filter(Boolean);const w=ms.filter(m=>m[1]==='warn');return (w.length?w:ms).slice(0,2);}
 BUILD.home=()=>{const el=h('section',{class:'launch'});const hi=h('h1',{}),sub=h('p',{class:'lh-sub'});const ent=h('select',{'aria-label':'Company',onchange:e=>switchEntity(e.target.value)});const grid=h('div',{class:'appgrid'});const soon=h('div',{class:'appgrid soon'});
   const out=h('button',{class:'lh-btn',type:'button',onclick:()=>{const b=$('#signout');if(b) b.click();}},'Sign out');
-  el.append(h('header',{class:'lhero2'},h('div',{class:'lh-top'},h('div',{class:'lh-brand'},h('span',{class:'mark','aria-hidden':'true'}),'SME Suite'),h('div',{class:'lh-acts'},h('label',{class:'lh-ent'},h('span',{},'Company'),ent),out)),h('div',{class:'lh-copy'},hi,sub)),
+  el.append(h('header',{class:'lhero2'},h('div',{class:'lh-top'},h('div',{class:'lh-brand'},h('span',{class:'mark','aria-hidden':'true'}),'Orzio'),h('div',{class:'lh-acts'},h('label',{class:'lh-ent'},h('span',{},'Company'),ent),out)),h('div',{class:'lh-copy'},hi,sub)),
     h('div',{class:'launch-body'},grid,HOME_SOON.length?h('h2',{class:'lsec'},'Coming next'):null,soon));
   function refresh(){const hr=new Date().getHours();hi.textContent=`Good ${hr<12?'morning':hr<17?'afternoon':'evening'}${S.myName?', '+S.myName.split(' ')[0]:''}`;
     sub.textContent=S.entity==='all'?`You’re looking at all ${Object.keys(S.ent).length} companies together. Open a module to start.`:`${S.settings?S.settings.company+'.':'Loading your company…'} Open a module to start.`;
@@ -4040,7 +4049,7 @@ function templateFor(industry){const ind=INDUSTRIES[industry]||INDUSTRIES.genera
   return Object.values(map).sort((a,b)=>a.code<b.code?-1:1);}
 BUILD.signup=()=>{const el=h('section',{class:'stack wiz'});
   function refresh(){const W=S.signup;if(!W) return;el.textContent='';const steps=[['company','Company'],['business','Business'],['working','Agent sets up'],['review','Review']];
-    el.append(h('div',{class:'row',style:'justify-content:space-between'},h('div',{class:'sbrand',style:'color:var(--ink);padding:0'},h('span',{class:'mark','aria-hidden':'true'}),'SME Suite'),!W.first?h('button',{class:'btn ghost',type:'button',onclick:closeSignup},'Cancel'):h('button',{class:'btn ghost',type:'button',onclick:()=>{try{sessionStorage.removeItem('aifd-in');}catch(e){}S.signup=null;showLogin();}},'Sign out')),
+    el.append(h('div',{class:'row',style:'justify-content:space-between'},h('div',{class:'sbrand',style:'color:var(--ink);padding:0'},h('span',{class:'mark','aria-hidden':'true'}),'Orzio'),!W.first?h('button',{class:'btn ghost',type:'button',onclick:closeSignup},'Cancel'):h('button',{class:'btn ghost',type:'button',onclick:()=>{try{sessionStorage.removeItem('aifd-in');}catch(e){}S.signup=null;showLogin();}},'Sign out')),
       h('div',{},h('h1',{},W.first?'Set up your company':'Add an entity'),h('p',{class:'lede'},'Start with the country and company type, upload the trade licence if you have it, then pick the industry. The setup agent builds the chart of accounts, taxes, currency and bank list from your answers. You can change everything later in Settings.')),
       h('div',{class:'steps'},steps.map(([k,l],i)=>h('span',{class:W.step===k?'on':''},`${i+1}. ${l}`))));
     if(!S.canEdit) el.append(h('div',{class:'banner warn'},'Only the owner or an editor of this page can set up companies. Ask them to share edit access.'));
@@ -4190,7 +4199,7 @@ const reqPill=r=>{const s=REQ_STATUS[r.status]||[r.status||'—',''];return pill
 // ================= portal views =================
 function portalLogout(){try{sessionStorage.removeItem('aifd-in');}catch(e){}$('#portalwrap').hidden=true;showLogin();}
 function drawPortal(){const P=S.portal;const wrap=$('#portalwrap');$('#login').hidden=true;$('#shell').hidden=true;wrap.hidden=false;const el=$('#portal');el.textContent='';
-  $('#pbrand').textContent=P&&P.company?P.company:'SME Suite';{const old=$('#pweb');if(old) old.remove();const wu=P&&P.company_info&&P.company_info.website;if(wu&&/^https:\/\//i.test(wu)) $('#pwho').before(h('a',{id:'pweb',class:'btn ghost sm',href:wu,target:'_blank',rel:'noopener',style:'color:#fff'},'Visit website'));}$('#pwho').textContent=S.myName||'';
+  $('#pbrand').textContent=P&&P.company?P.company:'Orzio';{const old=$('#pweb');if(old) old.remove();const wu=P&&P.company_info&&P.company_info.website;if(wu&&/^https:\/\//i.test(wu)) $('#pwho').before(h('a',{id:'pweb',class:'btn ghost sm',href:wu,target:'_blank',rel:'noopener',style:'color:#fff'},'Visit website'));}$('#pwho').textContent=S.myName||'';
   if(!P){el.append(h('div',{class:'card stack'},h('h1',{},'Nothing here yet'),h('p',{class:'lede'},S.loaded.portal?'Your login works, but the company hasn’t published your dashboard yet. Ask them to give you access in their Settings and publish it.':'Loading your dashboard…')));return;}
   S.ent={portal:{...(P.company_info||{name:P.company}),currency:P.currency}};S.entity='portal';S.settings={company:P.company,currency:P.currency};S.baseCur=P.currency;
   if(P.kind==='employee') drawEmployeePortal(el,P);else drawPartnerPortal(el,P);}
@@ -4318,7 +4327,7 @@ function initials(n){const p=String(n||'').trim().split(/\s+/).filter(Boolean);r
 function wsText(){if(!S.booted) return 'Connecting…';if(!db) return 'The workspace isn’t available. Check the server setup.';if(!S.isEditor) return S.portal?`${S.portal.company}: your ${S.portal.kind==='employee'?'employee':S.portal.kind} dashboard.`:'Your personal dashboard.';
   if(!S.loaded.entities) return 'Loading your workspace…';const n=Object.keys(S.ent).length;return n?`${(S.group&&S.group.group_name)||'Your workspace'}: ${n} ${n===1?'company':'companies'}.`:'No company is set up yet.';}
 function drawLogin(){const c=$('#lcard');if(!c) return;c.textContent='';const nm=S.myName||'';
-  c.append(h('h2',{},'Sign in'),h('p',{class:'lede'},'You’re signed in to SME Suite with your work email.'),
+  c.append(h('h2',{},'Sign in'),h('p',{class:'lede'},'You’re signed in to Orzio with your work email.'),
     h('div',{class:'who'},h('span',{class:'avatar'},initials(nm)),h('div',{style:'min-width:0'},h('div',{style:'font-weight:500'},nm||'Your account'),h('div',{class:'ws'},wsText()),S.role&&S.role!=='none'?h('div',{class:'mini mut'},'Signing in as '+(ROLES[S.role]||S.role)):null)),
     h('button',{class:'btn primary block',type:'button',onclick:enter},nm?`Continue as ${nm.split(' ')[0]}`:'Continue'),
     S.canEdit&&S.loaded.entities&&Object.keys(S.ent).length?h('button',{class:'btn block',type:'button',onclick:()=>{enter();openSignup(false);}},'Set up another company'):null,
@@ -4435,7 +4444,7 @@ SET.access=()=>{const el=h('div',{class:'stack'});const later=lazyRefresh(el,()=
     review.append(h('div',{class:'cardhead'},h('div',{},h('h3',{},'Access review'),h('p',{class:'note'},'What an auditor asks for: who can do what, conflicts of duties, and every change to access.')),exp),
       h('div',{class:'stack',style:'gap:.4rem'},F2.map(f=>h('div',{class:'row',style:'align-items:flex-start;flex-wrap:nowrap'},pill(f.sev==='pass'?'Pass':f.sev==='medium'?'Medium':'Low',f.sev==='pass'?'ok':f.sev==='medium'?'warn':'acc'),h('div',{},h('div',{},f.title),f.detail?h('div',{class:'mini mut'},f.detail):null)))),
       h('h3',{},'Change log'),log.length?h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},h('th',{},'When'),h('th',{},'By'),h('th',{},'Person'),h('th',{},'What'))),h('tbody',{},log.slice(0,50).map(x=>h('tr',{},h('td',{class:'mini',style:'white-space:nowrap'},fmtTime(x.at)),h('td',{},x.by_name||who(x.by)),h('td',{},x.target_name||'—'),h('td',{},x.what,x.after&&x.after.role?h('span',{class:'mini mut'},` → ${ROLES[x.after.role]||x.after.role}`):null)))))):emptyNote('No changes logged yet.'));}
-  el.append(h('div',{class:'card'},h('h3',{},'Give someone a login'),h('p',{class:'note'},'Everyone signs in with their own SME Suite account; ask them to create one first. Choose the person, their role, then tick exactly what they may view, edit, approve and delete in each area.'),h('div',{class:'row'},q),res,form),
+  el.append(h('div',{class:'card'},h('h3',{},'Give someone a login'),h('p',{class:'note'},'Everyone signs in with their own Orzio account; ask them to create one first. Choose the person, their role, then tick exactly what they may view, edit, approve and delete in each area.'),h('div',{class:'row'},q),res,form),
     h('div',{class:'card'},h('h3',{},'Who has access'),h('p',{class:'note'},'Owners and Editors with no role here have full rights. You can’t change your own rights.'),list),h('div',{class:'card'},review),
     h('div',{class:'card'},h('h3',{},'How the rights work'),h('ul',{class:'bul mini'},ACTS.map(([k,l])=>h('li',{},h('b',{style:'font-weight:500'},l+': '),ACT_HELP[k]+'.')),
       h('li',{},'Posted entries are never deleted. “Delete, reject or reverse” lets someone reject pending items and reverse posted entries; both stay in the audit trail.'),

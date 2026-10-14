@@ -1,4 +1,4 @@
-# SME Suite — commercial edition
+# Orzio
 
 Your whole business, run by AI agents and approved by you: accounting, sales and purchases, banking, payroll, recruitment, attendance, projects, documents and e-signatures, CRM, marketing, website, reports and tax, in one app.
 
@@ -19,28 +19,29 @@ This edition is built to be sold. One codebase runs either way:
 | `public/claude-shim.js` | Vercel (static) | Connects the app to Supabase. Handles sign-up, workspace setup, the workspace switcher, plan and usage, and trial/read-only notices |
 | `public/admin.html` | Vercel (static), at `/admin` | **Your** console: all customers, plans, trials, usage, suspend/activate |
 | `public/vendor/` | Vercel (static) | Supabase client library, bundled so the app doesn't depend on a public CDN |
+| `public/brand/` | Vercel (static) | Orzio logo, app icons and favicons (SVG + PNG); `logo.svg` / `logo-white.svg` for your website and documents |
+| `public/site.webmanifest` | Vercel (static) | Lets phones add Orzio to the home screen with its icon |
 | `api/ai.js` | Vercel function | Calls Claude with your Anthropic key after checking workspace status, the per-person rate limit and the plan's monthly AI quota, and logs usage |
 | `api/blob/[id].js` | Vercel function | Opens uploaded files with a two-minute signed link, only for people allowed to see them |
 | `api/config.js` | Vercel function | Gives the browser the public settings (never the secret keys) |
 | `supabase/migrations/0001_init.sql` | Supabase | Database, access rules, plans, limits, usage log, file storage, admin functions |
-| `supabase/seed_sample.sql` | Supabase | The sample business that new trials can start from |
 
 ## 1. Put it on GitHub
 
-Create a **private** repository (for example `sme-suite`) and upload the contents of this folder, or:
+Create a **private** repository (for example `orzio`) and upload the contents of this folder, or:
 
 ```bash
-cd sme-suite
-git init && git add . && git commit -m "SME Suite commercial edition"
+cd orzio
+git init && git add . && git commit -m "Orzio commercial edition"
 git branch -M main
-git remote add origin https://github.com/<you>/sme-suite.git
+git remote add origin https://github.com/<you>/orzio.git
 git push -u origin main
 ```
 
 ## 2. Set up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com). For UAE/GCC customers pick Frankfurt or Mumbai, and check your customers' data-residency needs (see the launch checklist).
-2. **SQL Editor**: paste all of `supabase/migrations/0001_init.sql` and press **Run**. Then do the same with `supabase/seed_sample.sql`.
+2. **SQL Editor**: paste all of `supabase/migrations/0001_init.sql` and press **Run**.
 3. **Authentication → URL Configuration**: set **Site URL** to your domain (step 3) and add `https://<your-domain>/**` under **Redirect URLs**. Password-reset links come back to `/?reset`.
 4. **Authentication → Providers → Email**: keep **Confirm email** on.
 5. **Authentication → SMTP Settings**: connect your own email sender (for example Resend, Postmark or Amazon SES). Supabase's built-in sender only allows a few emails an hour and is not meant for production. Without your own sender, sign-up confirmations will stall once real customers arrive.
@@ -53,7 +54,7 @@ git push -u origin main
    - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
    - `ANTHROPIC_API_KEY`, needed for the AI agents
    - `TERMS_URL`, `PRIVACY_URL`: links shown at sign-up. Leave them empty until your legal pages exist.
-   - `APP_NAME`: the product name shown on sign-in and in the admin console (default `SME Suite`)
+   - `APP_NAME`: the product name shown on sign-in and in the admin console (default `Orzio`)
 3. **Deploy**, then add your domain under **Settings → Domains**.
 
 ## 4. Make yourself platform admin
@@ -106,7 +107,7 @@ Limits are enforced by the database and the AI function. When a customer hits on
 
 ## 6. How customers use it
 
-1. **Sign up** at your domain → **Set up your workspace** (name, optional sample data) → the app's own setup wizard builds their company, chart of accounts and taxes.
+1. **Sign up** at your domain → **Set up your workspace** (name) → the app's own setup wizard builds their company, chart of accounts and taxes.
 2. **Invite people**: the person creates an account at your domain and confirms their email first. The owner then opens **Settings → Logins and access**, types the person's full email, and picks a role. The person sees **You're invited**, and nothing in the workspace is visible to them until they press **Accept**. Partial searches only show people already in that workspace. A full-email lookup shows only the email, never the person's name, and is limited to 30 an hour. So nobody can browse or harvest your other customers' users.
 3. **Switch workspaces** (accountants serving several clients, groups) from the workspace button next to **Sign out**. The same button shows **Plan and usage**.
 

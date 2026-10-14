@@ -4,7 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Platform Admin</title>
+<title>Orzio Admin</title>
+<link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<meta name="theme-color" content="#0E1B33">
 <script src="/vendor/supabase-2.45.4.js"></script>
 <script src="/api/config"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,7 +24,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Roboto,system-ui,sans-serif}
 header{background:var(--navy);color:#fff;padding:.9rem clamp(1rem,3vw,2rem);display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
-header .brand{display:flex;align-items:center;gap:.6rem;font-weight:500}header .brand i{width:1.6rem;height:1.6rem;border-radius:.45rem;background:linear-gradient(135deg,#14B8A6,#1D3D7A)}
+header .brand{display:flex;align-items:center;gap:.6rem;font-weight:500}header .brand img{width:1.7rem;height:1.7rem;display:block}
 header nav{display:flex;gap:.25rem;margin-left:auto;flex-wrap:wrap}
 header nav button{appearance:none;border:0;background:none;color:#C9CFD6;font:inherit;padding:.4rem .75rem;border-radius:8px;cursor:pointer}
 header nav button[aria-current="page"]{background:rgba(255,255,255,.12);color:#fff}
@@ -59,7 +63,7 @@ dialog h2{margin:0 0 .2rem;font-size:1.15rem;font-weight:500}
 </style>
 </head>
 <body>
-<header><span class="brand"><i></i><span id="appname">SME Suite</span> · Platform admin</span>
+<header><span class="brand"><img src="/brand/app-icon.svg" alt=""><span id="appname">Orzio</span> · Platform admin</span>
 <nav id="nav" hidden><button type="button" data-v="companies" aria-current="page">Customers</button><button type="button" data-v="plans">Plans</button><button type="button" data-v="settings">Settings</button></nav>
 <a href="/">Open the app →</a></header>
 <main id="main"><div class="center"><p class="muted">Loading…</p></div></main>
@@ -75,7 +79,7 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 const nf = (v) => (v == null ? '∞' : Number(v).toLocaleString());
 const day = (d) => (d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 const ago = (d) => { if (!d) return '—'; const m = (Date.now() - Date.parse(d)) / 6e4; return m < 60 ? Math.max(1, Math.round(m)) + 'm ago' : m < 1440 ? Math.round(m / 60) + 'h ago' : Math.round(m / 1440) + 'd ago'; };
-$('#appname').textContent = cfg.appName || 'SME Suite';
+$('#appname').textContent = cfg.appName || 'Orzio';
 if (!cfg.url || !window.supabase) { $('#main').innerHTML = '<div class="center"><p>Supabase is not configured on the server.</p></div>'; return; }
 const sb = window.supabase.createClient(cfg.url, cfg.anon, { auth: { persistSession: true, autoRefreshToken: true } });
 

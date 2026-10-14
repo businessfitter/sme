@@ -1,8 +1,8 @@
 {
-  "name": "sme-suite",
+  "name": "orzio",
   "version": "2.0.0",
   "private": true,
-  "description": "SME Suite commercial edition (multi-workspace SaaS or dedicated install): finance, people, CRM, marketing, documents and website for small and medium businesses, run by AI agents and approved by you.",
+  "description": "Orzio (multi-workspace SaaS or dedicated install): finance, people, CRM, marketing, documents and website for small and medium businesses, run by AI agents and approved by you.",
   "engines": { "node": ">=18" },
   "scripts": {
     "dev": "vercel dev"

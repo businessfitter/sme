@@ -1,5 +1,5 @@
 /*
- * SME Suite platform layer — commercial, multi-company edition (Supabase + Vercel).
+ * Orzio platform layer — commercial, multi-company edition (Supabase + Vercel).
  *
  * The app talks to its platform only through `window.claude.use(name)`.
  * This file provides those namespaces on your own stack, scoped to ONE company at a time:
@@ -20,7 +20,7 @@
     window.claude = { use: async () => null };
     return;
   }
-  const APP = cfg.appName || 'SME Suite';
+  const APP = cfg.appName || 'Orzio';
   const sb = window.supabase.createClient(cfg.url, cfg.anon, { auth: { persistSession: true, autoRefreshToken: true } });
   window.__sb = sb;
 
@@ -49,7 +49,7 @@
 #sb-auth button{width:100%;margin-top:1rem;padding:.8rem;border-radius:12px;border:0;background:#0E1B33;color:#fff;font:inherit;font-weight:500;cursor:pointer}
 #sb-auth button:disabled{opacity:.6;cursor:default}
 #sb-auth .alt{background:#fff;color:#0E1B33;border:1px solid #E4E7EE}#sb-auth .msg{min-height:1.2rem;font-size:.85rem;color:#B84A7C;margin-top:.8rem}
-#sb-auth .brand{display:flex;gap:.6rem;align-items:center;font-weight:500}#sb-auth .brand i{width:1.8rem;height:1.8rem;border-radius:.5rem;background:linear-gradient(135deg,#14B8A6,#1D3D7A)}
+#sb-auth .brand{display:flex;gap:.6rem;align-items:center;font-weight:500}#sb-auth .brand img{width:1.9rem;height:1.9rem;display:block}#sb-auth .brand{font-weight:600;font-size:1.05rem}
 #sb-auth .sw{background:none;border:0;color:#0F9488;width:auto;padding:0;margin-top:1rem;font-size:.9rem}
 #sb-auth .legal{font-size:.8rem;color:#5B6472;margin-top:.9rem}#sb-auth .legal a{color:#0F9488}
 #sb-auth .box{background:#F5F7F9;border-radius:12px;padding:.8rem .9rem;font-size:.88rem;color:#2B3340;margin-top:1.2rem;line-height:1.45}
@@ -60,7 +60,7 @@
   function screen(html) {
     const wrap = document.createElement('div');
     wrap.id = 'sb-auth';
-    wrap.innerHTML = `<style>${SCREEN_CSS}</style><div class="c"><div class="brand"><i></i>${esc(APP)}</div>${html}</div>`;
+    wrap.innerHTML = `<style>${SCREEN_CSS}</style><div class="c"><div class="brand"><img src="/brand/app-icon.svg" alt="">${esc(APP)}</div>${html}</div>`;
     document.body.append(wrap);
     return wrap;
   }
@@ -134,7 +134,6 @@
     const email = (session && session.user.email) || '';
     const create = info.can_create_org ? `
 <form id="sb-f"><label for="sb-c">Workspace name — usually your business name</label><input id="sb-c" autocomplete="organization" maxlength="120" required placeholder="e.g. Al Noor Trading">
-${info.has_sample ? '<label class="ck"><input type="checkbox" id="sb-sm"> <span>Start with sample data so I can explore every module first (you can start a clean workspace later)</span></label>' : ''}
 <button type="submit" id="sb-go">${info.mode === 'single' ? 'Set up the workspace' : 'Start free trial'}</button></form>${legalLine('continuing')}` : '';
     const wrap = screen(`<h1>${opts.another ? 'Add another workspace' : info.can_create_org ? 'Set up your workspace' : 'Waiting for access'}</h1>
 <p>${info.can_create_org
@@ -149,7 +148,7 @@ ${info.has_sample ? '<label class="ck"><input type="checkbox" id="sb-sm"> <span>
     $('sb-so').onclick = async () => { await sb.auth.signOut(); setCookie(null); location.reload(); };
     if ($('sb-f')) $('sb-f').onsubmit = async (e) => {
       e.preventDefault(); msg(''); $('sb-go').disabled = true;
-      const r = await sb.rpc('create_org', { p_name: $('sb-c').value.trim(), p_sample: !!($('sb-sm') && $('sb-sm').checked) });
+      const r = await sb.rpc('create_org', { p_name: $('sb-c').value.trim() });
       if (r.error) { $('sb-go').disabled = false; return msg(r.error.message); }
       store.set('sme-org', r.data);
       try { sessionStorage.setItem('aifd-in', '1'); } catch (x) {}

@@ -1,9 +1,8 @@
--- SME Suite — commercial, multi-company edition.
+-- Orzio — commercial, multi-company edition.
 -- Database, access rules, plans and limits, usage metering, realtime, private file storage
 -- and the platform admin console's functions.
 --
 -- Run once on a NEW Supabase project: SQL Editor → paste this whole file → Run.
--- Then run seed_sample.sql (loads the sample company that new trials can start from).
 --
 -- One codebase, two ways to sell it (platform_config.mode):
 --   'saas'   — any business signs up on your domain and gets its own walled-off company.
@@ -409,17 +408,7 @@ create policy plans_read on public.plans for select using (auth.uid() is not nul
 -- platform_config and platform_admins: no policies → only security-definer functions and the server.
 
 -- ============================================================================
--- 7. Sample company (new trials can start with it) — filled by seed_sample.sql
--- ============================================================================
-create table if not exists public.sample_docs (
-  path       text primary key,
-  collection text not null,
-  data       jsonb not null
-);
-alter table public.sample_docs enable row level security;
-
--- ============================================================================
--- 8. Functions the app calls
+-- 7. Functions the app calls
 -- ============================================================================
 create or replace function public.app_info() returns jsonb
 language sql stable security definer set search_path = public as $$
@@ -431,12 +420,12 @@ language sql stable security definer set search_path = public as $$
        when cfg('mode') = 'single' then not exists (select 1 from orgs)
        else (select count(*) from orgs where created_by = auth.uid()) < coalesce(cfg('max_orgs_per_user')::int, 3)
          or is_platform_admin()
-     end,
-    'has_sample', exists (select 1 from sample_docs)
+     end
   )
 $$;
 
-create or replace function public.create_org(p_name text, p_sample boolean default false) returns uuid
+drop function if exists public.create_org(text, boolean);
+create or replace function public.create_org(p_name text) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare oid uuid; single boolean := cfg('mode') = 'single';
 begin
@@ -462,10 +451,6 @@ begin
           auth.uid())
   returning id into oid;
   insert into members (org_id, user_id, role) values (oid, auth.uid(), 'owner');
-  if p_sample then
-    insert into docs (org_id, path, collection, scope, data)
-    select oid, path, collection, '', data from sample_docs;
-  end if;
   return oid;
 end $$;
 
@@ -660,7 +645,7 @@ language sql stable security definer set search_path = public, storage as $$
 $$;
 
 -- ============================================================================
--- 9. Platform admin console (your own view across all companies — metadata only,
+-- 8. Platform admin console (your own view across all companies — metadata only,
 --    never the companies' books)
 -- ============================================================================
 create or replace function public.admin_orgs() returns table (
@@ -745,14 +730,14 @@ begin
 end $$;
 
 -- ============================================================================
--- 10. Realtime for live updates between users (rules above apply to every event)
+-- 9. Realtime for live updates between users (rules above apply to every event)
 -- ============================================================================
 do $$ begin
   alter publication supabase_realtime add table public.docs;
 exception when duplicate_object then null; end $$;
 
 -- ============================================================================
--- 11. Private file storage: assets/<company id>/<file id>
+-- 10. Private file storage: assets/<company id>/<file id>
 -- ============================================================================
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('assets', 'assets', false, 20971520)
@@ -791,7 +776,7 @@ create policy assets_org_read on storage.objects for select
   using (bucket_id = 'assets' and public.can_read_asset(name));
 
 -- ============================================================================
--- 12. Who may call what (kept last so it covers every function above)
+-- 11. Who may call what (kept last so it covers every function above)
 -- ============================================================================
 -- Nothing for anonymous visitors; signed-in users get the app's functions; then the exceptions below.
 revoke execute on all functions in schema public from public, anon;
@@ -810,7 +795,7 @@ grant  execute on function public.ai_begin(uuid, uuid, text)              to ser
 grant  execute on function public.ai_finish(bigint, text, int, int, boolean) to service_role;
 grant  execute on function public.blob_allowed(uuid, uuid, text)          to service_role;
 grant  execute on function public.cfg(text)                               to service_role;
-revoke all on public.ai_log, public.platform_config, public.platform_admins, public.sample_docs,
+revoke all on public.ai_log, public.platform_config, public.platform_admins,
               public.org_counters, public.lookup_log from anon, authenticated;
 
 -- Recompute record counters (safe to re-run)
