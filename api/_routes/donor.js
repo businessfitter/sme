@@ -1,6 +1,6 @@
 // /api/donor?t=<token> — a donor opens the clinic's dashboard from a public link, without logging in.
 // Returns only the summary the clinic published; nothing after the link expires or is revoked.
-const { admin } = require('./_auth');
+const { admin } = require('../_auth');
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Robots-Tag', 'noindex');

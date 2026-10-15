@@ -1,5 +1,5 @@
 // /api/rfq?t=<token> — a supplier opens a request for quotation from the link and submits a quotation, without logging in.
-const { admin } = require('./_auth');
+const { admin } = require('../_auth');
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Robots-Tag', 'noindex');
   let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } } b = b || {};

@@ -6,7 +6,7 @@
 //                                        records a one-use attestation with the server time and returns it
 // The code is checked by Supabase Auth; the attestation can only be written here, with the service key.
 const crypto = require('crypto');
-const { verify, publicClient, UUID } = require('./_auth');
+const { verify, publicClient, UUID } = require('../_auth');
 
 const PNG = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');

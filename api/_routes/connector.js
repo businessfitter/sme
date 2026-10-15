@@ -2,7 +2,7 @@
 //   POST {action:'save', org, store, platform, url, token|key+secret, location, webhook_secret}   owner or team
 //   POST {action:'status'|'test'|'push', org, store, skus?}                                         owner or team
 const crypto = require('crypto');
-const { admin, verify, UUID } = require('./_auth');
+const { admin, verify, UUID } = require('../_auth');
 const bearer = (req) => (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
 const SHOPIFY_V = '2024-07';
 const shopBase = (u) => { const h = String(u || '').replace(/^https?:\/\//, '').replace(/\/.*$/, ''); if (!/^[a-z0-9-]+\.myshopify\.com$/i.test(h)) throw Object.assign(new Error('Use the shop’s myshopify.com address, for example yourshop.myshopify.com.'), { status: 400 }); return 'https://' + h; };

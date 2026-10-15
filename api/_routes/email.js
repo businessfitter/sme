@@ -1,7 +1,7 @@
 // POST /api/email — a team member sends a quote, agreement, statement or reminder to a customer.
 // Body: {org, to, subject, text, link, link_label, kind}. Only owners and team members of that workspace; capped per day.
-const { verify, UUID } = require('./_auth');
-const { sendMail, EMAIL, htmlMail } = require('./_mail');
+const { verify, UUID } = require('../_auth');
+const { sendMail, EMAIL, htmlMail } = require('../_mail');
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });

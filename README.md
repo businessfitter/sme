@@ -43,19 +43,20 @@ This edition is built to be sold. One codebase runs either way:
 | `public/brand/` | Vercel (static) | Orzio logo, app icons and favicons (SVG + PNG); `logo.svg` / `logo-white.svg` for your website and documents |
 | `public/site.webmanifest` | Vercel (static) | Lets phones add Orzio to the home screen with its icon |
 | `api/ai.js` | Vercel function | Calls Claude with your Anthropic key after checking workspace status, the per-person rate limit and the plan's monthly AI quota, and logs usage |
-| `api/blob/[id].js` | Vercel function | Opens uploaded files with a two-minute signed link, only for people allowed to see them |
-| `api/config.js` | Vercel function | Gives the browser the public settings (never the secret keys) |
-| `api/sign.js` | Vercel function | Email codes for signing and saving signatures; records the one-use signing attestation |
-| `api/quote.js`, `public/q.html` | Vercel function + page | Customers open, accept or ask for changes to a quote from the link, without logging in |
-| `api/rfq.js`, `public/r.html` | Vercel function + page | Suppliers submit quotations from the link |
-| `api/email.js`, `api/_mail.js` | Vercel function | Sends quotes, agreements, statements and RFQs by email (Resend), capped per workspace per day |
+| `api/[route].js` + `api/_routes/` | One Vercel function | Runs the smaller endpoints below (Vercel's Hobby plan allows 12 functions per deployment; this keeps Orzio at 4) |
+| `api/_routes/blob.js` | via `api/[route].js` | Opens uploaded files with a two-minute signed link, only for people allowed to see them |
+| `api/_routes/config.js` | Vercel function | Gives the browser the public settings (never the secret keys) |
+| `api/_routes/sign.js` | Vercel function | Email codes for signing and saving signatures; records the one-use signing attestation |
+| `api/_routes/quote.js`, `public/q.html` | Vercel function + page | Customers open, accept or ask for changes to a quote from the link, without logging in |
+| `api/_routes/rfq.js`, `public/r.html` | Vercel function + page | Suppliers submit quotations from the link |
+| `api/_routes/email.js`, `api/_mail.js` | Vercel function | Sends quotes, agreements, statements and RFQs by email (Resend), capped per workspace per day |
 | `api/reminders.js` | Vercel Cron, daily | Payment reminders before and after due dates |
 | `api/sanctions.js` | Vercel Cron, daily | Downloads the official sanctions lists for AML screening |
-| `api/worldcheck.js` | Vercel function | Optional LSEG World-Check One screening |
+| `api/_routes/worldcheck.js` | Vercel function | Optional LSEG World-Check One screening |
 | `public/sw.js` | Browser | Makes Orzio installable on phones and desktops |
-| `api/store.js`, `public/store.js`, `public/shop.html`, `public/track.html` | Vercel function + pages | Your customers' online shop: live catalogue and stock, orders that reserve stock at once, order tracking, Shopify/WooCommerce order webhooks |
-| `api/connector.js` | Vercel function | Pushes stock levels to Shopify and WooCommerce |
-| `api/contact.js` | Vercel function | The website's contact form |
+| `api/_routes/store.js`, `public/store.js`, `public/shop.html`, `public/track.html` | Vercel function + pages | Your customers' online shop: live catalogue and stock, orders that reserve stock at once, order tracking, Shopify/WooCommerce order webhooks |
+| `api/_routes/connector.js` | Vercel function | Pushes stock levels to Shopify and WooCommerce |
+| `api/_routes/contact.js` | Vercel function | The website's contact form |
 | `public/site/` | Vercel (static) | The Orzio marketing website (home, product, industries, pricing, security, partners, about, contact, privacy, terms) |
 | `supabase/migrations/0001_init.sql` | Supabase | Database, access rules, plans, limits, usage log, file storage, admin functions |
 

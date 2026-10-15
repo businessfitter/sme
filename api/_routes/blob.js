@@ -1,4 +1,4 @@
-// GET /_blob/<id> (rewritten to /api/blob/<id>) — serves an uploaded document or logo.
+// GET /_blob/<id> (rewritten to /api/blob?id=<id>) — serves an uploaded document or logo.
 // Files live in a private bucket at assets/<company id>/<file id>. Staff of that company get a
 // two-minute signed link; employees, customers and suppliers only for files shared to their portal.
 const { verify, cookie } = require('../_auth');

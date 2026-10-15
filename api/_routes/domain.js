@@ -2,7 +2,7 @@
 //   GET  ?host=<domain>                        public: which workspace a verified domain opens (name and logo only)
 //   POST {action:list|add|check|remove, org, domain}   owners only: manage the workspace's own domain on Vercel
 // Needs VERCEL_TOKEN and VERCEL_PROJECT_ID (and VERCEL_TEAM_ID for a team project) in the server settings.
-const { admin, verify, UUID } = require('./_auth');
+const { admin, verify, UUID } = require('../_auth');
 const API = () => process.env.VERCEL_API_BASE || 'https://api.vercel.com';
 const DOMAIN = /^(?=.{4,253}$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const bearer = (req) => (req.headers.authorization || '').replace(/^Bearer\s+/i, '');

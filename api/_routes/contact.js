@@ -1,6 +1,6 @@
 // POST /api/contact — the website's contact form. Sends the message to CONTACT_EMAIL (or the platform's support_email).
-const { admin } = require('./_auth');
-const { sendMail, EMAIL } = require('./_mail');
+const { admin } = require('../_auth');
+const { sendMail, EMAIL } = require('../_mail');
 const hits = new Map();
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');

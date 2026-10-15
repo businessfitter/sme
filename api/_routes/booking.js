@@ -1,6 +1,6 @@
 // /api/booking?t=<clinic booking token> — patients ask for an appointment without logging in.
 // GET returns the clinic and its doctors; POST {t, name, phone, doctor, date, note} records a request the front desk confirms.
-const { admin } = require('./_auth');
+const { admin } = require('../_auth');
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Robots-Tag', 'noindex');
   let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } } b = b || {};

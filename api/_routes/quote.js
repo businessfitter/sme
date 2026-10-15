@@ -1,6 +1,6 @@
 // /api/quote?t=<token> — a customer opens a quote from the link in their email, without logging in.
 // GET returns the quote; POST {t, action: accept|changes|decline, name, comment} records the answer.
-const { admin } = require('./_auth');
+const { admin } = require('../_auth');
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Robots-Tag', 'noindex');

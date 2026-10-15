@@ -1,5 +1,5 @@
 // /api/share?t=<token> — a patient opens their prescription or lab report from a link that expires.
-const { admin } = require('./_auth');
+const { admin } = require('../_auth');
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Robots-Tag', 'noindex');
   if (req.method !== 'GET') return res.status(405).json({ error: 'Not allowed' });

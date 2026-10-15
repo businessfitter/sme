@@ -5,7 +5,7 @@
 //   POST ?k=<store key>&src=shopify      Shopify "orders/create" webhook (signed with the store's webhook secret)
 //   POST ?k=<store key>&src=woo          WooCommerce "order.created" webhook (signed with the store's webhook secret)
 const crypto = require('crypto');
-const { admin } = require('./_auth');
+const { admin } = require('../_auth');
 const KEY = /^[A-Za-z0-9_-]{24,128}$/;
 async function rawBody(req) {
   if (typeof req.rawBody === 'string') return req.rawBody;

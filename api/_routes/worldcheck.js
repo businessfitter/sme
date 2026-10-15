@@ -2,7 +2,7 @@
 // WC1_API_KEY, WC1_API_SECRET, WC1_GROUP_ID (and optionally WC1_HOST, default api-worldcheck.refinitiv.com).
 // Built to LSEG's published API (v2, HMAC-SHA256 request signing). Not testable without credentials.
 const crypto = require('crypto');
-const { verify, UUID } = require('./_auth');
+const { verify, UUID } = require('../_auth');
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const key = process.env.WC1_API_KEY, secret = process.env.WC1_API_SECRET, group = process.env.WC1_GROUP_ID;
