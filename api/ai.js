@@ -35,6 +35,9 @@ module.exports = async (req, res) => {
   try { who = await verify((req.headers.authorization || '').replace(/^Bearer\s+/i, '')); }
   catch (e) { return res.status(e.status || 401).json({ error: { message: e.message } }); }
 
+  // Industry packs: a platform admin runs Orzio's agents once per industry and country (no workspace, no customer quota)
+  if (String(req.headers['x-mode'] || '') === 'pack') return packRun(req, res, who);
+
   const org = String(req.headers['x-org'] || '');
   if (!UUID.test(org)) return res.status(400).json({ error: { message: 'No company selected.' } });
 
@@ -80,3 +83,28 @@ module.exports = async (req, res) => {
     return res.status(502).json({ error: { message: 'Could not reach the AI service.' } });
   }
 };
+
+async function packRun(req, res, who) {
+  const { data: adm } = await who.sb.from('platform_admins').select('user_id').eq('user_id', who.user.id).maybeSingle();
+  if (!adm) return res.status(403).json({ error: { message: 'Platform admins only.' } });
+  let body;
+  try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); }
+  catch (e) { return res.status(400).json({ error: { message: 'Bad request.' } }); }
+  const { messages } = clean(body);
+  if (!messages.length) return res.status(400).json({ error: { message: 'No messages.' } });
+  const tier = MODELS[body.tier] ? body.tier : 'complex';
+  const payload = { model: MODELS[tier], max_tokens: Math.max(1024, Math.min(+body.max_tokens || 16000, 32000)), messages };
+  if (typeof body.system === 'string') payload.system = body.system.slice(0, 40000);
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify(payload),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(r.status === 429 ? 429 : 502).json({ error: { message: (j.error && j.error.message) || 'The AI service returned an error.' } });
+    return res.status(200).json({ content: j.content, stop_reason: j.stop_reason, usage: j.usage, model: payload.model });
+  } catch (e) {
+    return res.status(502).json({ error: { message: 'Could not reach the AI service.' } });
+  }
+}

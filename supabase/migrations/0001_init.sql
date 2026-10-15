@@ -1606,6 +1606,137 @@ begin
 end $$;
 
 -- ============================================================================
+-- 7j. Industry packs: prepared once per industry and country by Orzio's agents,
+--     approved and published by a platform admin, then offered to every customer
+--     in that industry and country (each customer's admin approves before applying).
+-- ============================================================================
+create table if not exists public.industry_packs (
+  id           uuid primary key default gen_random_uuid(),
+  industry     text not null check (industry ~ '^[a-z_]{2,30}$'),
+  country      text not null check (country ~ '^([A-Z]{2}|\*)$'),
+  version      int  not null default 1,
+  status       text not null default 'draft' check (status in ('draft', 'review', 'published', 'retired', 'rejected')),
+  content      jsonb not null default '{}',
+  sections     jsonb not null default '{}',
+  notes        text,
+  generated_by text,
+  created_by   uuid references auth.users (id) on delete set null,
+  approved_by  uuid references auth.users (id) on delete set null,
+  approved_at  timestamptz,
+  published_at timestamptz,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  unique (industry, country, version)
+);
+alter table public.industry_packs enable row level security;  -- reached only through the functions below
+create index if not exists industry_packs_pub on public.industry_packs (industry, country, status, version desc);
+create table if not exists public.industry_pack_requests (
+  industry   text not null,
+  country    text not null,
+  orgs       uuid[] not null default '{}',
+  requests   int not null default 1,
+  last_at    timestamptz not null default now(),
+  primary key (industry, country)
+);
+alter table public.industry_pack_requests enable row level security;
+
+-- customers: the latest published pack for their industry and country (falls back to the all-countries pack)
+create or replace function public.pack_get(p_org uuid, p_industry text, p_country text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare r industry_packs;
+begin
+  if coalesce(my_role(p_org), '') not in ('owner', 'staff') and not is_platform_admin() then return null; end if;
+  select * into r from industry_packs where industry = p_industry and status = 'published' and country in (upper(p_country), '*')
+   order by (country = upper(p_country)) desc, version desc limit 1;
+  if r.id is null then return null; end if;
+  return jsonb_build_object('id', r.id, 'industry', r.industry, 'country', r.country, 'version', r.version, 'content', r.content, 'published_at', r.published_at);
+end $$;
+
+-- countries with a published pack (adds them to the sign-up list with their tax defaults)
+create or replace function public.pack_countries(p_org uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if coalesce(my_role(p_org), '') not in ('owner', 'staff') and not is_platform_admin() then return '[]'::jsonb; end if;
+  return coalesce((select jsonb_agg(x) from (
+    select distinct on (country) jsonb_build_object('country', country, 'name', content->'profile'->>'country_name', 'currency', content->'profile'->>'currency',
+      'vat', content->'profile'->'vat', 'ct', content->'profile'->'ct', 'thr', content->'profile'->'thr', 'note', content->'profile'->>'note', 'banks', content->'profile'->'banks') as x
+    from industry_packs where status = 'published' and country <> '*' order by country, published_at desc) q), '[]'::jsonb);
+end $$;
+
+-- customers ask for a pack that does not exist yet
+create or replace function public.pack_request(p_org uuid, p_industry text, p_country text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(my_role(p_org), '') not in ('owner', 'staff') then return; end if;
+  if p_industry !~ '^[a-z_]{2,30}$' or upper(p_country) !~ '^[A-Z]{2}$' then return; end if;
+  insert into industry_pack_requests (industry, country, orgs) values (p_industry, upper(p_country), array[p_org])
+  on conflict (industry, country) do update set
+    orgs = case when p_org = any(industry_pack_requests.orgs) then industry_pack_requests.orgs else (industry_pack_requests.orgs || p_org)[1:500] end,
+    requests = industry_pack_requests.requests + 1, last_at = now();
+end $$;
+
+-- platform admins: list, save drafts, approve and publish
+create or replace function public.admin_packs() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not is_platform_admin() then raise exception 'Platform admins only.' using errcode = '42501'; end if;
+  return jsonb_build_object(
+    'packs', coalesce((select jsonb_agg(jsonb_build_object('id', id, 'industry', industry, 'country', country, 'version', version, 'status', status, 'sections', sections, 'notes', notes,
+        'generated_by', generated_by, 'approved_at', approved_at, 'published_at', published_at, 'updated_at', updated_at,
+        'size', length(content::text), 'counts', jsonb_build_object('accounts', jsonb_array_length(coalesce(content->'accounts'->'add', '[]')), 'laws', jsonb_array_length(coalesce(content->'laws'->'laws', '[]')),
+          'templates', jsonb_array_length(coalesce(content->'templates', '[]')), 'faqs', jsonb_array_length(coalesce(content->'faqs', '[]'))),
+        'in_use', (select count(*) from docs d where d.collection = 'pack_applied' and d.data->>'pack_id' = p.id::text))
+      order by industry, country, version desc) from industry_packs p), '[]'::jsonb),
+    'requests', coalesce((select jsonb_agg(jsonb_build_object('industry', industry, 'country', country, 'orgs', cardinality(orgs), 'requests', requests, 'last_at', last_at) order by last_at desc) from industry_pack_requests), '[]'::jsonb));
+end $$;
+
+create or replace function public.admin_pack_get(p_id uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not is_platform_admin() then raise exception 'Platform admins only.' using errcode = '42501'; end if;
+  return (select to_jsonb(p) from industry_packs p where id = p_id);
+end $$;
+
+create or replace function public.admin_pack_save(p_id uuid, p_industry text, p_country text, p_content jsonb, p_sections jsonb, p_notes text, p_generated_by text default null) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare r industry_packs; v int; id_ uuid;
+begin
+  if not is_platform_admin() then raise exception 'Platform admins only.' using errcode = '42501'; end if;
+  if length(p_content::text) > 3000000 then raise exception 'The pack is too large (3 MB at most).'; end if;
+  if p_id is null then
+    select coalesce(max(version), 0) + 1 into v from industry_packs where industry = p_industry and country = upper(p_country);
+    insert into industry_packs (industry, country, version, content, sections, notes, generated_by, created_by)
+    values (p_industry, case when p_country = '*' then '*' else upper(p_country) end, v, coalesce(p_content, '{}'), coalesce(p_sections, '{}'), p_notes, p_generated_by, auth.uid()) returning id into id_;
+    return id_;
+  end if;
+  select * into r from industry_packs where id = p_id for update;
+  if r.id is null then raise exception 'Pack not found.'; end if;
+  if r.status in ('published', 'retired') then raise exception 'A published pack cannot be changed. Start a new version.'; end if;
+  update industry_packs set content = coalesce(p_content, content), sections = coalesce(p_sections, sections), notes = coalesce(p_notes, notes),
+    generated_by = coalesce(p_generated_by, generated_by), status = case when status = 'rejected' then 'draft' else status end, updated_at = now() where id = p_id;
+  return p_id;
+end $$;
+
+create or replace function public.admin_pack_status(p_id uuid, p_status text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare r industry_packs;
+begin
+  if not is_platform_admin() then raise exception 'Platform admins only.' using errcode = '42501'; end if;
+  if p_status not in ('draft', 'review', 'published', 'rejected', 'retired') then raise exception 'Unknown status.'; end if;
+  select * into r from industry_packs where id = p_id for update;
+  if r.id is null then raise exception 'Pack not found.'; end if;
+  if p_status = 'published' then
+    if exists (select 1 from jsonb_each_text(r.sections) s where s.value <> 'approved') or r.sections = '{}'::jsonb then
+      raise exception 'Approve every section before publishing.' using errcode = 'P0001'; end if;
+    update industry_packs set status = 'retired', updated_at = now() where industry = r.industry and country = r.country and status = 'published' and id <> r.id;
+    update industry_packs set status = 'published', approved_by = auth.uid(), approved_at = now(), published_at = now(), updated_at = now() where id = p_id;
+  else
+    update industry_packs set status = p_status, updated_at = now() where id = p_id;
+  end if;
+  return (select jsonb_build_object('id', id, 'status', status, 'version', version) from industry_packs where id = p_id);
+end $$;
+
+-- ============================================================================
 -- 9. Realtime for live updates between users (rules above apply to every event)
 -- ============================================================================
 do $$ begin
@@ -1697,6 +1828,10 @@ revoke all on public.email_log from anon, authenticated;
 revoke all on public.sanctions_entries from anon, authenticated;
 revoke all on public.ai_log, public.platform_config, public.platform_admins,
               public.org_counters, public.lookup_log, public.sign_attestations, public.sign_code_log, public.email_log from anon, authenticated;
+
+grant  execute on function public.pack_get(uuid, text, text), public.pack_countries(uuid), public.pack_request(uuid, text, text),
+       public.admin_packs(), public.admin_pack_get(uuid), public.admin_pack_save(uuid, text, text, jsonb, jsonb, text, text), public.admin_pack_status(uuid, text) to authenticated;
+revoke all on public.industry_packs, public.industry_pack_requests from anon, authenticated;
 
 -- Recompute record counters (safe to re-run)
 insert into public.org_counters (org_id, docs, bytes)

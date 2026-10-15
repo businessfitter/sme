@@ -25,7 +25,7 @@
       "destination": "/site/index"
     },
     {
-      "source": "/:page(features|industries|pricing|security|partners|about|contact|privacy|terms)",
+      "source": "/:page(features|industries|pricing|security|partners|about|contact|privacy|terms|clinics|insurance-brokers|ecommerce|software-houses|consultancies|accounting-firms|fire-safety|holding-companies)",
       "has": [
         {
           "type": "host",

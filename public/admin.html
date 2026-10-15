@@ -64,7 +64,7 @@ dialog h2{margin:0 0 .2rem;font-size:1.15rem;font-weight:500}
 </head>
 <body>
 <header><span class="brand"><img src="/brand/app-icon.svg" alt=""><span id="appname">Orzio</span> · Platform admin</span>
-<nav id="nav" hidden><button type="button" data-v="companies" aria-current="page">Customers</button><button type="button" data-v="plans">Plans</button><button type="button" data-v="support">Support</button><button type="button" data-v="settings">Settings</button></nav>
+<nav id="nav" hidden><button type="button" data-v="companies" aria-current="page">Customers</button><button type="button" data-v="plans">Plans</button><button type="button" data-v="packs">Industry packs</button><button type="button" data-v="support">Support</button><button type="button" data-v="settings">Settings</button></nav>
 <a href="/app">Open the app →</a></header>
 <main id="main"><div class="center"><p class="muted">Loading…</p></div></main>
 
@@ -104,7 +104,7 @@ async function reload() {
   orgs = o.data || []; plans = p.data || [];
 }
 
-function render() { if (view === 'companies') companies(); else if (view === 'plans') plansView(); else if (view === 'support') support(); else settings(); }
+function render() { if (view === 'companies') companies(); else if (view === 'plans') plansView(); else if (view === 'support') support(); else if (view === 'packs') packsView(); else settings(); }
 
 // Support: tickets your customers' IT teams escalated from their Help desk
 let tickets = [], tFilter = 'open';
@@ -135,6 +135,147 @@ ${(t.messages || []).map((m) => `<div style="white-space:pre-wrap;padding:.6rem;
   document.body.append(d); d.showModal();
   d.querySelector('#tr-x').onclick = () => { d.close(); d.remove(); };
   d.querySelector('#tr-go').onclick = async () => { const r = await sb.rpc('support_reply', { p_id: t.id, p_text: d.querySelector('#tr-text').value, p_status: d.querySelector('#tr-st').value }); if (r.error) { d.querySelector('#tr-m').textContent = r.error.message; return; } d.close(); d.remove(); support(); };
+}
+
+// Industry packs: Orzio's agents prepare setup content once per industry and country; you review each section,
+// approve it and publish. Every customer in that industry and country is then offered the same pack.
+const PK_IND = {clinic:'Medical clinic',broker:'Insurance broking',ecommerce:'E-commerce',softwarehouse:'Software house',consulting:'Management consultancy',accounting:'Accounting practice',firesafety:'Fire and safety',holding:'Holding company',
+  services:'Professional services',technology:'Software and technology',media:'Media and creative',education:'Education',healthcare:'Healthcare',beauty:'Beauty, wellness and fitness',hospitality:'Hospitality and food service',logistics:'Logistics and transport',realestate:'Real estate',construction:'Construction and contracting',finance:'Financial and holding companies',retail:'Retail and e-commerce',trading:'Trading and distribution',automotive:'Automotive',manufacturing:'Manufacturing',agriculture:'Agriculture and food production',general:'Other or general'};
+const PK_EDITIONS = ['clinic','broker','ecommerce','softwarehouse','consulting','accounting','firesafety','holding'];
+const PK_BRIEF = {
+  clinic:'Outpatient medical clinics, dispensaries and charity-funded welfare clinics: consultations, pharmacy, laboratory, billing to patients, insurers and corporate panels, charity and donor funds.',
+  broker:'Licensed insurance brokers and intermediaries: placing general, medical, life and specialty insurance with insurers, issuing debit notes, collecting premiums into a client money account, remitting to insurers net of commission, renewals and claims assistance.',
+  ecommerce:'Online stores and marketplace sellers: own website, Shopify or WooCommerce, marketplaces, warehouses and fulfilment, couriers and cash on delivery, payment gateways, returns.',
+  softwarehouse:'Software houses: SaaS subscriptions, licences, custom development projects, implementation, support and maintenance, hosting costs, development cost capitalisation.',
+  consulting:'Management consultancies: strategy, finance, HR, IT and transformation advisory billed by time, fixed fee or retainer under engagement letters.',
+  accounting:'Accounting practices: bookkeeping, VAT and tax returns, payroll bureau, annual accounts and statutory audit for small business clients, with recurring statutory deadlines and AML duties.',
+  firesafety:'Fire protection and life safety contractors: maintenance contracts (AMC) for extinguishers, fire alarms, sprinklers, hose reels, emergency lighting, pumps and suppression systems; installation projects; inspections, certificates to the civil defence or fire authority.',
+  holding:'Holding companies, investment holdings and family offices: subsidiaries and associates, financial investments, dividends, intercompany loans and management fees, board governance and group consolidation.'};
+const PK_MODULE = {broker:'broking',firesafety:'fire',accounting:'practice',consulting:'practice',softwarehouse:'saas',holding:'holdings',clinic:'clinic'};
+const PK_TYPES = 'asset_cash, asset_receivable, asset_current, asset_prepayments, asset_fixed, asset_non_current, liability_payable, liability_current, liability_non_current, equity, income, income_other, expense_direct_cost, expense, expense_depreciation';
+const PK_BASE = '1000 Petty cash, 1010 Bank current account, 1100 Accounts receivable, 1150 Allowance for doubtful debts, 1180 Due from related companies, 1300 Prepayments, 1350 Employee advances, 1400 VAT recoverable, 1500 Property, plant and equipment, 1550 Accumulated depreciation, 1600 Intangible assets, 1990 Bank suspense, 2000 Accounts payable, 2100 Accrued expenses, 2180 Due to related companies, 2200 VAT payable, 2300 Corporate tax payable, 2350 Salaries payable, 2360 Employee claims payable, 2370 Social security payable, 2380 Payroll tax withheld, 2400 Employee end-of-service benefits, 2500 Bank loans, 3000 Share capital, 3100 Retained earnings, 4900 Other income, 4950 Intercompany income, 6000 Salaries and benefits, 6020 Employer social security, 6030 Air tickets and leave allowances, 6100 Rent and utilities, 6150 Telecom and internet, 6200 Depreciation, 6300 IT and software, 6400 Marketing and advertising, 6500 Professional fees, 6600 Bank charges, 6700 Travel, 6800 Interest expense, 6850 Foreign exchange gains and losses, 6900 Other operating expenses, 6950 Intercompany charges, 7000 Income tax expense';
+const PK_SETTINGS = {
+  broker:'{"classes":[{"code":"MOT","name":"Motor","commission_pct":number,"premium_tax_pct":number}] (10-16 classes common in the country, with typical market commission and any premium tax, levy or VAT on premium),"insurers":[{"name":"","short":""}] (insurers licensed by the regulator, best known first, up to 60),"regulator":"","client_money_rule":"what the rules say about premiums held for insurers","remit_days":number}',
+  firesafety:'{"authority":"the fire or civil defence authority","asset_types":[{"code":"EXT-CO2","name":"","standard":"standards used in the country","service_months":number,"test_years":number|null,"test":"extended test name","checks":["..."]}] (cover CO2, dry powder, foam, water and wet chemical extinguishers, fire blanket, alarm panel, detectors, call points, sounders, sprinklers, hose reels, fire pumps, gas suppression, emergency lights, exit signage; keep these codes: EXT-CO2, EXT-DCP, EXT-FOAM, EXT-WATER, EXT-WET, FB, FA-PANEL, FA-DET, FA-MCP, FA-SND, SPK, HR, FP, SUP, EL, EXITS),"certificate":{"title":"","statement":"use {authority} where the authority is named"}}',
+  accounting:'{"services":[{"code":"BK-M","name":"","frequency":"monthly|quarterly|yearly|once","due":{"due_day":1-28,"offset_months":number,"months_after_ye":number},"basis":"retainer|fixed|time"}] (the recurring statutory and client services with this country’s real deadlines: VAT/GST returns, payroll and social security filings, withholding tax, corporate tax return, annual accounts filing, audit, beneficial ownership or annual return),"levels":[{"code":"P","name":"Partner","rate":number}] (typical hourly rates in local currency)}',
+  consulting:'{"levels":[{"code":"P","name":"Partner / director","rate":number}] (5-6 levels with typical hourly rates in local currency)}',
+  softwarehouse:'{"plans":[{"code":"","name":"","month":number,"year":number}] (example price points in local currency),"revenue_policy":"one paragraph on IFRS 15 for SaaS, licences and services","capitalisation":"one paragraph on IAS 38 development costs"}',
+  holding:'{"dividend_wht_pct":number (withholding tax on dividends received from local companies, 0 if none),"intercompany_note":"interest and transfer pricing rules for intercompany loans and management fees","participation_exemption":"rules on dividends and capital gains from subsidiaries"}',
+  clinic:'{"services":[{"code":"","name":"","fee":number}] (typical clinic services and fees in local currency),"regulator":"health authority","drug_regulator":""}',
+  ecommerce:'{"carriers":["couriers operating in the country"],"marketplaces":["marketplaces popular in the country"],"consumer_rules":"returns, cooling-off and e-commerce consumer protection rules"}'};
+const PK_SECTIONS = [
+  ['profile','Country profile, tax and banks',(c)=>`{"country_name":"","currency":"ISO 4217 code","fx_per_usd":number (units of currency per 1 US dollar, approximate),"language":"main business language, ISO 639-1","vat":number|null (standard VAT or GST rate %),"ct":number|null (headline corporate tax %),"thr":number|null (profit taxed at 0% below this, in local currency, 0 if none),"note":"one line on corporate tax","tax_notes":["3 to 6 short points on VAT, corporate tax, withholding tax, zakat or industry-specific tax rules for this industry, ending with a reminder to confirm with a tax adviser"],"banks":["licensed commercial banks, best known first, up to 40"],"summary":"2 sentences on what this pack covers for this industry in ${c}"}`],
+  ['accounts','Chart of accounts',()=>`{"add":[{"code":"4 digits, not already used","name":"English name","type":"one of: ${PK_TYPES}","reason":"short"}] (up to 25 accounts this industry needs in this country, on top of the base and industry accounts already in the app),"remove":["codes from the base list that do not apply here, e.g. VAT accounts where there is no VAT; never 1010, 1100, 1990, 2000, 3100, 7000"],"local_names":{"<language code, only if the main language is not English>":{"<code>":"name"}}}`],
+  ['laws','Laws, regulators and due dates',()=>`{"laws":[{"name":"","authority":"","jurisdiction":"national|state|free zone|international","area":"","applies_because":"","requirements":[""],"obligations":[{"what":"","frequency":"monthly|quarterly|yearly|once|on event","due_day":1-28,"offset_months":number (months after the period end),"due_month":1-12 (for yearly)}],"documents_required":[""],"penalties":""}],"summary":"one paragraph for the CEO"} (10 to 25 laws: company law, licensing and the sector regulator, tax, labour and social security, AML/CFT if the business is designated, data protection, consumer protection, health and safety, and anything specific to this industry)`],
+  ['licences','Licences and permits',()=>`[{"name":"","authority":"","renewal":"annual|every 2 years|...","note":""}] (the trade, professional and sector licences, permits and registrations a business in this industry needs)`],
+  ['catalogue','Services and products',()=>`[{"code":"","name":"","unit":"","basis":"","description":""}] (10 to 25 typical services or products this kind of business sells)`],
+  ['checklists','Checklists and standards',()=>`[{"key":"","name":"","applies_to":"","standard":"","items":["..."]}] (6 to 15 operational checklists used in this industry, e.g. client onboarding and KYC, inspection checklists per equipment type, month-end, quality reviews; cite the standard where one applies)`],
+  ['templates','Letters, contracts and certificates',()=>`[{"key":"","name":"","category":"customer|supplier|employee|general","subject":"","body":"full text with placeholders {{client.name}}, {{company.name}}, {{date}}, {{fee}}, {{scope}}, {{title}}, {{start}}"}] (4 to 8 documents this industry needs, e.g. engagement letter, terms of business, maintenance contract, renewal notice, certificate wording; plain, fair and suited to the country)`],
+  ['settings','Edition settings',(c,ind)=>PK_SETTINGS[ind]||'{} (nothing specific for this industry)'],
+  ['policies','Policies and risks',(c,ind)=>PK_MODULE[ind]?`{"${PK_MODULE[ind]}":{"purpose":"","scope":"","policies":["8 to 12 policy statements"],"procedures":[["procedure title",["step","step"]]],"controls":["key controls"],"records":"retention rule for this country","refs":"laws, regulator rules and standards in this country","risks":[["risk","cause","impact",likelihood 1-5,impact 1-5,"controls","owner role"]]}}`:'{}'],
+  ['kpis','Industry KPIs',()=>`[{"name":"","definition":"","target":"typical healthy range"}] (6 to 10 KPIs owners in this industry watch)`],
+  ['faqs','Help desk answers',()=>`[{"q":"","a":"","cat":""}] (12 to 20 short questions staff of this kind of business ask about their work and local rules, with practical answers)`]];
+const PK_COUNTRIES = {AE:'United Arab Emirates',SA:'Saudi Arabia',BH:'Bahrain',OM:'Oman',QA:'Qatar',KW:'Kuwait',EG:'Egypt',JO:'Jordan',IN:'India',PK:'Pakistan',GB:'United Kingdom',US:'United States',DE:'Germany',SG:'Singapore',FR:'France',NL:'Netherlands',IE:'Ireland',ES:'Spain',IT:'Italy',CA:'Canada',AU:'Australia',NZ:'New Zealand',ZA:'South Africa',NG:'Nigeria',KE:'Kenya',MA:'Morocco',TR:'Türkiye',MY:'Malaysia',ID:'Indonesia',PH:'Philippines',BD:'Bangladesh',LK:'Sri Lanka',HK:'Hong Kong',JP:'Japan',BR:'Brazil',MX:'Mexico','*':'All countries (fallback)'};
+let packs = { packs: [], requests: [] };
+async function packsView() {
+  const r = await sb.rpc('admin_packs'); if (r.error) { $('#main').innerHTML = `<p class="msg">${esc(r.error.message)}</p>`; return; }
+  packs = r.data || { packs: [], requests: [] };
+  const pub = packs.packs.filter((p) => p.status === 'published');
+  const cov = (ind) => pub.filter((p) => p.industry === ind).map((p) => p.country).sort();
+  const reqOpen = packs.requests.filter((q) => !pub.some((p) => p.industry === q.industry && (p.country === q.country)));
+  $('#main').innerHTML = `<h1>Industry packs</h1>
+<p class="muted" style="max-width:62rem">Orzio’s agents prepare a pack once for each industry and country: country tax profile and banks, chart of accounts, laws and due dates, licences, catalogue, checklists, templates, edition settings, policies, KPIs and help desk answers. Review and approve every section, then publish. Customers in that industry and country get the same pack, and their admin approves it before it is applied. Nothing is generated per customer.</p>
+<div class="tiles"><div class="tile"><div class="k">Published packs</div><div class="v">${nf(pub.length)}</div><div class="s">${nf(new Set(pub.map((p) => p.country)).size)} countries</div></div>
+<div class="tile"><div class="k">In preparation</div><div class="v">${nf(packs.packs.filter((p) => ['draft', 'review'].includes(p.status)).length)}</div><div class="s">Drafts and in review</div></div>
+<div class="tile"><div class="k">Requested by customers</div><div class="v">${nf(reqOpen.length)}</div><div class="s">${nf(reqOpen.reduce((s, q) => s + q.orgs, 0))} workspaces waiting</div></div></div>
+<div class="wrap" style="padding:1rem;margin-bottom:1rem"><h2 style="margin:0 0 .6rem;font-size:1.05rem;font-weight:500">Prepare a pack</h2>
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));margin-top:0">
+<label>Industry<select id="pk-ind">${Object.entries(PK_IND).map(([k, n]) => `<option value="${k}">${PK_EDITIONS.includes(k) ? '★ ' : ''}${esc(n)}</option>`).join('')}</select></label>
+<label>Country<select id="pk-c">${Object.entries(PK_COUNTRIES).map(([k, n]) => `<option value="${k}">${esc(n)} (${k})</option>`).join('')}<option value="other">Another country…</option></select></label>
+<label>Other country code (ISO, 2 letters)<input id="pk-oc" maxlength="2" placeholder="e.g. KE"></label>
+<label>Other country name<input id="pk-on" placeholder="e.g. Kenya"></label>
+<label class="full">Notes for the agents (optional)<input id="pk-note" placeholder="e.g. focus on DIFC and mainland rules; include Islamic banks"></label></div>
+<div class="acts" style="justify-content:flex-start"><button class="btn primary" id="pk-go" type="button">Run the agents</button><span class="sub" id="pk-log"></span></div></div>
+${reqOpen.length ? `<div class="wrap" style="margin-bottom:1rem"><table><thead><tr><th>Requested</th><th>Country</th><th class="n">Workspaces</th><th>Last asked</th><th></th></tr></thead><tbody>${reqOpen.map((q) => `<tr><td>${esc(PK_IND[q.industry] || q.industry)}</td><td>${esc(PK_COUNTRIES[q.country] || q.country)}</td><td class="n">${nf(q.orgs)}</td><td class="sub">${new Date(q.last_at).toLocaleDateString()}</td><td><button class="btn sm" data-req="${esc(q.industry)}|${esc(q.country)}" type="button">Prepare</button></td></tr>`).join('')}</tbody></table></div>` : ''}
+<div class="wrap"><table><thead><tr><th>Industry</th><th>Country</th><th class="n">Version</th><th>Status</th><th>Sections approved</th><th class="n">Workspaces using</th><th>Updated</th></tr></thead><tbody>
+${packs.packs.map((p) => { const S = Object.values(p.sections || {}); return `<tr class="click" data-id="${p.id}"><td>${esc(PK_IND[p.industry] || p.industry)}</td><td>${esc(PK_COUNTRIES[p.country] || p.country)}</td><td class="n">v${p.version}</td><td><span class="pill ${p.status === 'published' ? 'active' : p.status === 'rejected' || p.status === 'retired' ? 'cancelled' : 'trial'}">${esc(p.status)}</span></td><td>${S.filter((x) => x === 'approved').length} of ${S.length}</td><td class="n">${nf(p.in_use)}</td><td class="sub">${new Date(p.updated_at).toLocaleString()}</td></tr>`; }).join('') || '<tr><td colspan="7" class="muted">No packs yet.</td></tr>'}
+</tbody></table></div>
+<p class="sub" style="margin-top:.8rem">Coverage: ${PK_EDITIONS.map((k) => `${esc(PK_IND[k])} ${cov(k).length ? cov(k).join(', ') : '—'}`).join(' · ')}</p>`;
+  $('#pk-go').onclick = () => { const c = $('#pk-c').value === 'other' ? $('#pk-oc').value.trim().toUpperCase() : $('#pk-c').value; const name = $('#pk-c').value === 'other' ? $('#pk-on').value.trim() : PK_COUNTRIES[c]; if (!/^([A-Z]{2}|\*)$/.test(c) || !name) { $('#pk-log').textContent = 'Enter a 2-letter country code and the country name.'; return; } runPack($('#pk-ind').value, c, name, $('#pk-note').value.trim()); };
+  $('#main').querySelectorAll('[data-req]').forEach((b) => b.onclick = () => { const [i, c] = b.dataset.req.split('|'); $('#pk-ind').value = i; if (PK_COUNTRIES[c]) $('#pk-c').value = c; else { $('#pk-c').value = 'other'; $('#pk-oc').value = c; } window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  $('#main').querySelectorAll('tr.click').forEach((tr) => tr.onclick = () => packDialog(tr.dataset.id));
+}
+async function agentJSON(system, prompt) {
+  const { data } = await sb.auth.getSession(); const tok = data.session && data.session.access_token;
+  const r = await fetch('/api/ai', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok, 'x-mode': 'pack' }, body: JSON.stringify({ system, messages: [{ role: 'user', content: prompt }], tier: 'complex', max_tokens: 16000 }) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error((j.error && j.error.message) || 'The agent failed.');
+  const txt = (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('');
+  const m = txt.replace(/^```(?:json)?/m, '').replace(/```\s*$/m, '').trim(); const a = Math.min(...['{', '['].map((ch) => { const i = m.indexOf(ch); return i < 0 ? 1e9 : i; }));
+  const b = Math.max(m.lastIndexOf('}'), m.lastIndexOf(']')); return JSON.parse(m.slice(a, b + 1));
+}
+function packSystem(ind, country, name, note) {
+  return `You are Orzio's industry-pack agent. Orzio is an AI-agent business suite (accounting, sales, procurement, inventory, HR, compliance, help desk and industry modules) sold worldwide to small and medium businesses. You prepare reusable setup content for one industry in one country, used unchanged by every customer in that industry and country after Orzio's team approves it.
+Industry: ${PK_IND[ind] || ind}. ${PK_BRIEF[ind] || ''}
+Country: ${name} (${country === '*' ? 'generic, for countries without their own pack: use international standards and common practice' : country}).
+Rules: be accurate and practical. Use only what is generally known as of your knowledge; where you are not sure of a rate, deadline, threshold or the name of an authority, say "check" in the text instead of guessing. Plain English. No marketing. Return ONLY valid JSON in exactly the requested shape, with no commentary.${note ? '\nNotes from Orzio: ' + note : ''}`;
+}
+async function runPack(ind, country, name, note, existing) {
+  const log = $('#pk-log') || { textContent: '' }; const go = $('#pk-go'); if (go) go.disabled = true;
+  const content = existing ? existing.content : {}; const sections = existing ? existing.sections : Object.fromEntries(PK_SECTIONS.map(([k]) => [k, 'pending']));
+  let id = existing ? existing.id : null;
+  try {
+    if (!id) { const r = await sb.rpc('admin_pack_save', { p_id: null, p_industry: ind, p_country: country, p_content: {}, p_sections: sections, p_notes: note || null, p_generated_by: 'agents' }); if (r.error) throw r.error; id = r.data; }
+    const sys = packSystem(ind, country, name, note);
+    for (const [k, label, schema] of PK_SECTIONS) {
+      if (existing && existing.only && !existing.only.includes(k)) continue;
+      log.textContent = `Preparing ${label.toLowerCase()}…`;
+      let extra = '';
+      if (k === 'accounts') extra = `\nBase accounts already in the app: ${PK_BASE}.`;
+      if (k === 'laws' && content.profile) extra = `\nCountry profile already prepared: VAT ${content.profile.vat}, corporate tax ${content.profile.ct}.`;
+      try { content[k] = await agentJSON(sys, `Prepare the "${label}" section of the pack.${extra}\nReturn JSON in this shape:\n${schema(name, ind)}`); sections[k] = 'generated'; }
+      catch (e) { sections[k] = 'failed'; log.textContent = `${label}: ${e.message}`; }
+      const s = await sb.rpc('admin_pack_save', { p_id: id, p_industry: ind, p_country: country, p_content: content, p_sections: sections, p_notes: null, p_generated_by: null }); if (s.error) throw s.error;
+    }
+    log.textContent = 'Done. Review and approve each section, then publish.';
+    if (!existing) packsView(); return id;
+  } catch (e) { log.textContent = e.message; } finally { if (go) go.disabled = false; }
+}
+function pkPreview(k, v) {
+  if (v == null) return '<p class="muted">Not prepared yet.</p>';
+  const li = (a, f) => `<ul style="margin:.3rem 0;padding-left:1.2rem">${(a || []).slice(0, 80).map((x) => `<li>${f(x)}</li>`).join('')}</ul>`;
+  try {
+    if (k === 'profile') return `<p>${esc(v.country_name)} · ${esc(v.currency)} (${esc(v.fx_per_usd)} per USD) · VAT ${esc(v.vat)}% · corporate tax ${esc(v.ct)}%${v.thr ? ` above ${nf(v.thr)}` : ''} · language ${esc(v.language)}</p>${li(v.tax_notes, esc)}<p class="sub">${(v.banks || []).length} banks: ${esc((v.banks || []).slice(0, 12).join(', '))}</p>`;
+    if (k === 'accounts') return li(v.add, (a) => `${esc(a.code)} ${esc(a.name)} <span class="sub">${esc(a.type)} — ${esc(a.reason || '')}</span>`) + (v.remove && v.remove.length ? `<p class="sub">Leave out: ${esc(v.remove.join(', '))}</p>` : '');
+    if (k === 'laws') return li(v.laws, (l) => `<b>${esc(l.name)}</b> <span class="sub">${esc(l.authority || '')}</span>${(l.obligations || []).length ? `<div class="sub">${(l.obligations || []).map((o) => esc(`${o.what} (${o.frequency}${o.due_day ? `, day ${o.due_day}` : ''}${o.offset_months != null ? ` +${o.offset_months}m` : ''}${o.due_month ? `, month ${o.due_month}` : ''})`)).join('; ')}</div>` : ''}`);
+    if (k === 'licences') return li(v, (x) => `${esc(x.name)} <span class="sub">${esc(x.authority || '')} · ${esc(x.renewal || '')}</span>`);
+    if (k === 'catalogue') return li(v, (x) => `${esc(x.code || '')} ${esc(x.name)} <span class="sub">${esc(x.unit || '')} ${esc(x.description || '')}</span>`);
+    if (k === 'checklists') return li(v, (x) => `<b>${esc(x.name)}</b> <span class="sub">${esc(x.standard || '')} · ${(x.items || []).length} checks</span>`);
+    if (k === 'templates') return li(v, (x) => `<b>${esc(x.name)}</b> <span class="sub">${esc(x.subject || '')}</span><div class="sub" style="white-space:pre-wrap;max-height:6rem;overflow:hidden">${esc(String(x.body || '').slice(0, 400))}…</div>`);
+    if (k === 'kpis') return li(v, (x) => `<b>${esc(x.name)}</b> ${esc(x.target ? '· ' + x.target : '')}<div class="sub">${esc(x.definition || '')}</div>`);
+    if (k === 'faqs') return li(v, (x) => `<b>${esc(x.q)}</b><div class="sub">${esc(x.a)}</div>`);
+  } catch (e) { /* fall through */ }
+  return `<pre style="white-space:pre-wrap;max-height:22rem;overflow:auto;font-size:.8rem">${esc(JSON.stringify(v, null, 2))}</pre>`;
+}
+async function packDialog(id) {
+  const r = await sb.rpc('admin_pack_get', { p_id: id }); if (r.error || !r.data) return; const P = r.data; const locked = ['published', 'retired'].includes(P.status);
+  const d = document.createElement('dialog'); d.style.width = 'min(64rem,calc(100vw - 2rem))';
+  const draw = () => {
+    const S = P.sections || {}; const all = PK_SECTIONS.every(([k]) => S[k] === 'approved');
+    d.innerHTML = `<h2>${esc(PK_IND[P.industry] || P.industry)} · ${esc(PK_COUNTRIES[P.country] || P.country)} · v${P.version}</h2><p class="sub">Status: ${esc(P.status)}${P.published_at ? ' · published ' + new Date(P.published_at).toLocaleString() : ''}. ${locked ? 'Published packs cannot be changed: start a new version.' : 'Approve every section to publish.'}</p>
+<div style="max-height:62vh;overflow:auto;margin:.8rem 0">${PK_SECTIONS.map(([k, label]) => `<details style="border:1px solid var(--line);border-radius:10px;padding:.6rem .8rem;margin-bottom:.5rem"><summary><b>${esc(label)}</b> <span class="pill ${S[k] === 'approved' ? 'active' : S[k] === 'failed' ? 'cancelled' : 'trial'}">${esc(S[k] || 'pending')}</span></summary>
+<div style="margin-top:.5rem">${pkPreview(k, (P.content || {})[k])}</div>${locked ? '' : `<details><summary class="sub">Edit the JSON</summary><textarea data-json="${k}" rows="10" style="width:100%;font-family:monospace;font-size:.8rem">${esc(JSON.stringify((P.content || {})[k] ?? null, null, 2))}</textarea></details>
+<div class="acts" style="justify-content:flex-start"><button class="btn sm primary" data-ok="${k}" type="button">Approve</button><button class="btn sm" data-save="${k}" type="button">Save the edited JSON</button><button class="btn sm" data-regen="${k}" type="button">Prepare again</button></div>`}</details>`).join('')}</div>
+<div class="msg" id="pd-m"></div><div class="acts"><button class="btn" id="pd-x" type="button">Close</button>${locked ? '<button class="btn" id="pd-new" type="button">Start a new version from this one</button>' : `<button class="btn" id="pd-rej" type="button">Reject</button><button class="btn primary" id="pd-pub" type="button" ${all ? '' : 'disabled'}>Publish to customers</button>`}</div>`;
+    const m = d.querySelector('#pd-m'); const save = async () => { const s = await sb.rpc('admin_pack_save', { p_id: P.id, p_industry: P.industry, p_country: P.country, p_content: P.content, p_sections: P.sections, p_notes: null, p_generated_by: null }); if (s.error) { m.textContent = s.error.message; return false; } return true; };
+    d.querySelector('#pd-x').onclick = () => { d.close(); d.remove(); packsView(); };
+    d.querySelectorAll('[data-ok]').forEach((b) => b.onclick = async () => { const k = b.dataset.ok; if ((P.content || {})[k] == null) { m.textContent = 'Prepare this section first.'; return; } P.sections[k] = 'approved'; if (await save()) draw(); });
+    d.querySelectorAll('[data-save]').forEach((b) => b.onclick = async () => { const k = b.dataset.save; try { P.content[k] = JSON.parse(d.querySelector(`[data-json="${k}"]`).value); P.sections[k] = 'generated'; if (await save()) draw(); } catch (e) { m.textContent = 'That is not valid JSON: ' + e.message; } });
+    d.querySelectorAll('[data-regen]').forEach((b) => b.onclick = async () => { const k = b.dataset.regen; b.disabled = true; m.textContent = 'The agent is preparing this section again…'; const tmp = { id: P.id, content: P.content, sections: P.sections, only: [k] }; await runPack(P.industry, P.country, PK_COUNTRIES[P.country] || ((P.content.profile || {}).country_name) || P.country, P.notes, tmp); const r2 = await sb.rpc('admin_pack_get', { p_id: P.id }); Object.assign(P, r2.data || {}); m.textContent = ''; draw(); });
+    const pub = d.querySelector('#pd-pub'); if (pub) pub.onclick = async () => { if (!confirm('Publish this pack? Every customer in this industry and country will be offered it.')) return; const s = await sb.rpc('admin_pack_status', { p_id: P.id, p_status: 'published' }); if (s.error) { m.textContent = s.error.message; return; } d.close(); d.remove(); packsView(); };
+    const rej = d.querySelector('#pd-rej'); if (rej) rej.onclick = async () => { await sb.rpc('admin_pack_status', { p_id: P.id, p_status: 'rejected' }); d.close(); d.remove(); packsView(); };
+    const nv = d.querySelector('#pd-new'); if (nv) nv.onclick = async () => { const s = await sb.rpc('admin_pack_save', { p_id: null, p_industry: P.industry, p_country: P.country, p_content: P.content, p_sections: Object.fromEntries(Object.keys(P.sections || {}).map((k) => [k, 'generated'])), p_notes: P.notes, p_generated_by: 'copy of v' + P.version }); if (s.error) { m.textContent = s.error.message; return; } d.close(); d.remove(); packDialog(s.data); };
+  };
+  document.body.append(d); d.showModal(); draw();
 }
 
 function companies() {

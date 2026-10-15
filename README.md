@@ -1,6 +1,6 @@
 # Orzio
 
-Your whole business, run by AI agents and approved by you, in these modules:
+Your whole business, run by AI agents and approved by you. Eight industry editions (see below) and these modules:
 
 | Module | What it covers |
 |---|---|
@@ -264,6 +264,42 @@ Staff open tickets in Help desk. Your **IT support** role works the queue, can t
 - Set `CONTACT_EMAIL` (and `RESEND_API_KEY`) so the contact form reaches you.
 - **Domains.** On `orzio.ai` and `www.orzio.ai`, `/` is the website and the app is at `/app`. On every other address (your `*.vercel.app` address, customers' own domains, an `app.` subdomain if you add one) `/` opens the app, as before. In Supabase → Authentication → URL Configuration, add `https://orzio.ai/**` to the redirect URLs so sign-up and password-reset links return to `/app`. If your domain isn't orzio.ai, change the two `host` values in `vercel.json` and the `og:image` address in the pages.
 - Until the domain is set, the website is at `https://<your-app>/site/`.
+
+## Workspace home and companies
+
+After signing in, everyone lands on the **workspace home**: a block for each company they can open, the **consolidated group** (when there are two or more companies) and, for the workspace admin, **Create a company**. There are no figures on this page.
+
+- **Create a company** asks for the country, company type, financial year end, industry (editions first), sub-industry and number of employees. The setup agent then populates the company from the published Orzio industry pack for that industry and country.
+- **Opening a company** shows its modules. *All companies* (or *Companies* in the top bar) returns to the workspace home.
+- **Workspace settings** (workspace admin only): choose the admins of each company, including yourself. A company admin manages that company’s settings, logins and modules. Invite people in Logins and access first.
+
+## Industry editions
+
+Eight editions package Orzio for one industry each, on the same platform and database:
+
+| Edition | For | Edition modules |
+|---|---|---|
+| Orzio Clinic | Medical and welfare clinics | Patient Module, Clinic Module |
+| Orzio Broker | Insurance brokers | Broking: placements and quote comparison, policies and debit notes, client money, remittances, endorsements, renewals, claims, production and commission |
+| Orzio Commerce | E-commerce | E-commerce, Inventory |
+| Orzio Software | Software houses | Software: subscriptions, billing run, deferred revenue (IFRS 15), SaaS metrics, R&D capitalisation (IAS 38); Practice; Projects |
+| Orzio Consulting | Management consultancies | Practice: engagements, acceptance checks, letters, WIP, utilisation, month-end WIP accrual; Projects |
+| Orzio Practice | Accounting practices | Practice plus clients and services, jobs and statutory deadlines, document requests |
+| Orzio Fire & Safety | Fire protection contractors | Fire & safety: sites and asset register, AMC contracts, visit planner, job cards with standards-based checklists, certificates, compliance reports |
+| Orzio Holdings | Holding companies | Holdings: portfolio and valuation, dividends, intercompany loans and interest, management fees, governance; Group consolidation |
+
+A company’s industry decides its edition. Each edition switches on its modules (Settings → Modules can change this) and adds its own roles, policies and risk register.
+
+## Industry packs (prepared once per industry and country)
+
+Customers do not trigger an AI setup run each. Instead:
+
+1. In `/admin → Industry packs`, choose an industry and a country and press **Run the agents**. The agents prepare 11 sections: country profile (tax rates, banks, exchange rate), chart of accounts, laws and due dates, licences, catalogue, checklists, templates, edition settings, policies, KPIs and help desk answers. This uses the `ANTHROPIC_MODEL_COMPLEX` model.
+2. Review each section, edit its JSON if needed, **Approve** it, then **Publish**. Publishing a new version retires the previous one.
+3. Every customer in that industry and country is offered the pack: at sign-up (the setup step uses it instead of an agent run) and in each company’s **Settings → Industry edition and pack**, where the company’s owner, admin or CEO approves it before it is applied. Applying only adds; nothing the customer entered is changed.
+4. Customers whose country has no pack yet get the standard template, and their request appears in the admin console so you can prepare one. A pack for country `*` is the fallback for all countries.
+
+Countries with a published pack are added to the sign-up country list automatically.
 
 ## Updating an existing installation
 

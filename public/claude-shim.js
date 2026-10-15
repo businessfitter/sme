@@ -516,7 +516,7 @@ ${role() === 'owner' ? `<p class="note">To ${u.status === 'trial' ? 'continue af
   }
 
   // Employee Lounge, attendance and signing helpers (all checks are in the database or the server)
-  const RPC_OK = ['att_status', 'att_punch', 'att_reset_device', 'sig_consume', 'sig_delete_mine', 'aml_screen', 'support_open', 'support_mine', 'support_reply'];
+  const RPC_OK = ['att_status', 'att_punch', 'att_reset_device', 'sig_consume', 'sig_delete_mine', 'aml_screen', 'support_open', 'support_mine', 'support_reply', 'pack_get', 'pack_countries', 'pack_request'];
   const NO_ORG = ['sig_delete_mine', 'support_reply'];
   const platform = Object.freeze({
     org: () => ORG,
