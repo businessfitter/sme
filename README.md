@@ -1,12 +1,15 @@
 # Orzio
 
-Your whole business, run by AI agents and approved by you, in eleven modules:
+Your whole business, run by AI agents and approved by you, in these modules:
 
 | Module | What it covers |
 |---|---|
-| **Accounting** | Ledger, banking, assets and investments (with the agent's list of allowed investments for your country and industry), schedules, month-end close, tabbed financial statements under the framework you choose (IFRS, IFRS for SMEs, US GAAP, FRS 102, SOCPA, Ind AS, cash basis…) with the current period in bold against approved comparatives, Financial analysis (live ratios, variance, 1/3/5-year projections, sensitivity), budgets and forecasts |
+| **Accounting** | Group consolidation (consolidated trial balance and statements, intercompany ledger and statements, FX translation under IAS 21, group adjustments and NCI), branch results, ledger, banking, assets and investments (with the agent's list of allowed investments for your country and industry), schedules, month-end close, tabbed financial statements under the framework you choose (IFRS, IFRS for SMEs, US GAAP, FRS 102, SOCPA, Ind AS, cash basis…) with the current period in bold against approved comparatives, Financial analysis (live ratios, variance, 1/3/5-year projections, sensitivity), budgets and forecasts |
 | **Sales** | Quotes prepared by the agent from CRM or customers' requests, sent by link or portal, accepted or changed online; service agreements drafted by the agent, e-signed with the company stamp; invoices, customer payments, projects and billing, statements, aging, reminders, three-way match |
-| **Purchasing & Inventory** | Suppliers, requests for quotation by link or portal, agent comparison, LPOs with approval, goods received, bills matched to LPO and receipt, payables reports (aging, supplier ledgers, commitments, GRNI, payment schedule), stock at weighted-average cost |
+| **Procurement** | Suppliers, requests for quotation by link or portal, agent comparison, LPOs with approval, goods received, bills matched to LPO and receipt, payables reports (aging, supplier ledgers, commitments, GRNI, payment schedule) |
+| **Inventory** | Item cards, stock and movements at weighted-average cost, warehouses (HQ, warehouse, store, fulfilment centre, 3PL, in transit), transfers through transit, stock counts (count → review → post), replenishment drafted by the inventory agent, landed costs, valuation and ageing |
+| **E-commerce** (industry) | Live sales board, orders from your website, Shopify, WooCommerce, marketplaces (CSV), POS and phone, fulfilment (pick lists, labels, shipping), carriers with rate cards and COD remittances, stores and the embeddable live shop, catalogue for the web, pricing rules, channel and margin reports |
+| **Help desk** | Help centre with FAQs, tickets from staff to your IT team with SLAs and internal notes, and escalation from the IT team to Orzio support |
 | **HR** | Organogram drafted by the HR agent and approved by the HR Manager, payroll and employees, recruitment |
 | **Employee Lounge** | Geo-verified check-in from the phone (500 m, server time), leave, requests, assigned tasks, daily and monthly summaries, performance reviews, the employee's library |
 | **Patient Module** (medical clinics) | Front desk with appointments, online booking requests, tokens and a waiting-room queue screen. Doctor's desk with vitals, ICD-10 diagnosis, e-prescription (English and Urdu instructions), tests and procedures, agent-drafted notes and prescription checks (allergies, duplicates, pregnancy, child dosing, stock). Daily register with photo reading. Patient records with MR numbers and full history |
@@ -50,6 +53,10 @@ This edition is built to be sold. One codebase runs either way:
 | `api/sanctions.js` | Vercel Cron, daily | Downloads the official sanctions lists for AML screening |
 | `api/worldcheck.js` | Vercel function | Optional LSEG World-Check One screening |
 | `public/sw.js` | Browser | Makes Orzio installable on phones and desktops |
+| `api/store.js`, `public/store.js`, `public/shop.html`, `public/track.html` | Vercel function + pages | Your customers' online shop: live catalogue and stock, orders that reserve stock at once, order tracking, Shopify/WooCommerce order webhooks |
+| `api/connector.js` | Vercel function | Pushes stock levels to Shopify and WooCommerce |
+| `api/contact.js` | Vercel function | The website's contact form |
+| `public/site/` | Vercel (static) | The Orzio marketing website (home, product, industries, pricing, security, partners, about, contact, privacy, terms) |
 | `supabase/migrations/0001_init.sql` | Supabase | Database, access rules, plans, limits, usage log, file storage, admin functions |
 
 ## 1. Put it on GitHub
@@ -224,6 +231,39 @@ Customers, suppliers, employees, leads and the shareholders/UBOs you list are sc
 
 Orzio is an installable web app. On Android/Chrome an **Install app** button appears; on iPhone use Share → *Add to Home Screen*. It opens full-screen with the Orzio icon. Data always comes live from the server.
 
+## Groups, HQ and company logins
+
+Every workspace is the group's **HQ**. Under it, Settings → Organisation adds companies (subsidiaries with ownership %, associates), branches and sales points.
+
+- **Who sees what.** Workspace settings → *HQ access* sets each person's role, whether they see *All companies (HQ)* or only ticked companies, and whether they see the *Consolidated* view. Each company's own settings → *Company access* gives a person a different role in that company, or removes them. A subsidiary's staff who are given only that company see only that company; the database enforces it.
+- **Dashboard.** People with access to more than one company get tiles to switch between each company and the consolidated group.
+- **Consolidation** lives in Accounting → Group: consolidated TB and statements, intercompany ledger and statements, FX rates (closing, average; save per period), and group adjustments. The agent prepares eliminations, investment/equity and NCI entries; a person approves them. Export the full pack to Excel.
+- **Point of sale** per sales point, with a daily closing that posts to the branch.
+
+## E-commerce, inventory and online stores
+
+Choose *E-commerce* as the industry (or turn the module on) and open E-commerce → Stores.
+
+1. **Your own website.** Each store has a key. Paste the snippet shown on the store card into any page (`<div data-orzio-shop></div>` plus `store.js`): customers see live stock, order, and stock is reserved at once. Or link to the hosted shop page. Customers track orders at `/track`.
+2. **Shopify / WooCommerce.** On the store card, enter the shop address and access token, then add an order webhook pointing at `https://<your-app>/api/store?key=STORE_KEY&src=shopify` (or `src=woo`) with the webhook secret you saved. Orders arrive in Orzio; stock is pushed back from the store card or after each shipment.
+3. **Carriers.** E-commerce → Shipping holds rate cards (presets for Aramex, DHL, SMSA, Naqel, SPL, Emirates Post, FedEx, UPS, J&T, TCS, Leopards, PostEx and own delivery). Labels are printed from the order; COD remittances are recorded there.
+
+When an order ships, Orzio posts the sale, VAT, cost of goods, shipping and fees to the ledger.
+
+## Help desk
+
+Staff open tickets in Help desk. Your **IT support** role works the queue, can turn an answer into an FAQ, and can escalate to Orzio support. You answer escalations in `/admin → Support`.
+
+## The Orzio website
+
+`public/site/` is the marketing website. Before launch:
+
+- Replace the placeholders: `hello@orzio.ai` and `sales@orzio.ai`, the office location, prices ("Ask for a quote"), social links (empty), in the pages under `public/site/` (search and replace across the folder).
+- Have a lawyer review `privacy.html` and `terms.html`.
+- Set `CONTACT_EMAIL` (and `RESEND_API_KEY`) so the contact form reaches you.
+- **Domains.** Add `orzio.ai` and `www.orzio.ai` to the Vercel project; `vercel.json` already serves the website there. Add `app.orzio.ai` for the app; the website's *Sign in* and *Start free trial* buttons go to `app.<your domain>`. If your domain isn't orzio.ai, change the two `host` values in `vercel.json` and the `og:image` address in the pages.
+- Until the domain is set, the website is at `https://<your-app>/site/`.
+
 ## Updating an existing installation
 
 When a new version changes `supabase/migrations/0001_init.sql`, run the whole file again in the Supabase SQL Editor. It is written to be re-run safely: it keeps all data and only adds or replaces rules and functions.
@@ -291,3 +331,7 @@ The person who creates the workspace is the **Admin**. Position roles (CEO, CFO,
 - No self-serve workspace deletion. Set a customer to `cancelled` in /admin. Deleting their data for good is done in Supabase.
 - The Outlook mailbox panel in CRM isn't connected in self-hosting. The Email, WhatsApp, Call and meeting buttons work.
 - Data entered in the Claude-hosted version isn't copied over automatically.
+- Carrier booking APIs aren't connected: rates come from your rate cards and labels are printed by Orzio; book pickups in the carrier's portal.
+- Stock is pushed to Shopify/WooCommerce when someone uses the app (after a shipment, receipt or from the store card), not by a 24/7 background job.
+- Live screens refresh every 15 seconds when realtime isn't available.
+- Marketplace orders (Amazon, Noon and others) are imported from their CSV exports.

@@ -15,6 +15,26 @@
   },
   "rewrites": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?orzio\\.ai"
+        }
+      ],
+      "destination": "/site/index.html"
+    },
+    {
+      "source": "/:page(features|industries|pricing|security|partners|about|contact|privacy|terms)",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?orzio\\.ai"
+        }
+      ],
+      "destination": "/site/:page.html"
+    },
+    {
       "source": "/_blob/:id",
       "destination": "/api/blob/:id"
     }
@@ -68,6 +88,19 @@
         {
           "key": "X-Robots-Tag",
           "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/store.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         }
       ]
     }

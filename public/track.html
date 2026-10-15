@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Track your order</title><link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+<style>
+:root{--ink:#14213A;--muted:#5A6577;--line:#E1E6EE;--bg:#F4F6FA;--panel:#fff;--teal:#0F766E;--bad:#B3261E}
+@media (prefers-color-scheme:dark){:root{--ink:#E6EBF3;--muted:#9AA6BA;--line:#253045;--bg:#0D131F;--panel:#151D2C}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:560px;margin:24px auto;padding:0 16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:14px}
+label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}input{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink)}
+button{font:600 1rem inherit;border:0;border-radius:12px;padding:12px 18px;background:var(--teal);color:#fff;cursor:pointer;width:100%;margin-top:14px}
+.steps{display:flex;gap:6px;margin:14px 0}.steps div{flex:1;height:6px;border-radius:4px;background:var(--line)}.steps div.on{background:var(--teal)}.mut{color:var(--muted);font-size:.88rem}.err{color:var(--bad);font-weight:500}
+</style></head><body><main><div class="card"><h1 style="font-size:1.3rem;margin:0 0 4px">Track your order</h1><p class="mut">Enter your order number and the last 4 digits of the phone number you ordered with.</p>
+<label for="n">Order number</label><input id="n" placeholder="WEB-2026-00001"><label for="p">Last 4 digits of your phone</label><input id="p" inputmode="numeric" maxlength="4"><button id="go">Track</button><p id="m" class="err" role="status"></p></div><div id="out"></div></main>
+<script>
+(function(){const k=new URLSearchParams(location.search).get('k')||'';const $=id=>document.getElementById(id);const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ST=['new','confirmed','picking','packed','shipped','delivered'];const LBL={new:'Order received',confirmed:'Confirmed',picking:'Being picked',packed:'Packed',shipped:'On the way',delivered:'Delivered',cancelled:'Cancelled',returned:'Returned'};
+const q=new URLSearchParams(location.search);if(q.get('n')) $('n').value=q.get('n');
+$('go').onclick=async()=>{$('m').textContent='';$('out').innerHTML='';const r=await fetch('/api/store?k='+encodeURIComponent(k)+'&track='+encodeURIComponent($('n').value.trim())+'&phone='+encodeURIComponent($('p').value.trim()));const j=await r.json().catch(()=>({}));
+  if(!r.ok){$('m').textContent=j.error||'Not found.';return;}const i=ST.indexOf(j.status);
+  $('out').innerHTML=`<div class="card"><b>${esc(j.number)}</b> · ${esc(j.store||'')}<div style="font-size:1.25rem;font-weight:700;margin-top:6px">${esc(LBL[j.status]||j.status)}</div>
+   ${i>=0?`<div class="steps">${ST.map((s,n)=>`<div class="${n<=i?'on':''}"></div>`).join('')}</div>`:''}
+   ${j.tracking?`<p>${esc(j.carrier||'Courier')} tracking: <b>${esc(j.tracking)}</b>${j.tracking_url&&/^https:/.test(j.tracking_url)?` · <a href="${esc(j.tracking_url)}" target="_blank" rel="noopener">Follow the parcel</a>`:''}</p>`:''}
+   <p class="mut">${(j.items||[]).map(x=>esc(x.name)+' × '+esc(x.qty)).join(', ')}</p><p class="mut">Ordered ${new Date(j.placed).toLocaleString()} · ${esc(j.currency)} ${Number(j.total).toFixed(2)}</p></div>`;};})();
+</script></body></html>

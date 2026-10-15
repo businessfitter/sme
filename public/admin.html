@@ -64,7 +64,7 @@ dialog h2{margin:0 0 .2rem;font-size:1.15rem;font-weight:500}
 </head>
 <body>
 <header><span class="brand"><img src="/brand/app-icon.svg" alt=""><span id="appname">Orzio</span> · Platform admin</span>
-<nav id="nav" hidden><button type="button" data-v="companies" aria-current="page">Customers</button><button type="button" data-v="plans">Plans</button><button type="button" data-v="settings">Settings</button></nav>
+<nav id="nav" hidden><button type="button" data-v="companies" aria-current="page">Customers</button><button type="button" data-v="plans">Plans</button><button type="button" data-v="support">Support</button><button type="button" data-v="settings">Settings</button></nav>
 <a href="/">Open the app →</a></header>
 <main id="main"><div class="center"><p class="muted">Loading…</p></div></main>
 
@@ -104,7 +104,38 @@ async function reload() {
   orgs = o.data || []; plans = p.data || [];
 }
 
-function render() { if (view === 'companies') companies(); else if (view === 'plans') plansView(); else settings(); }
+function render() { if (view === 'companies') companies(); else if (view === 'plans') plansView(); else if (view === 'support') support(); else settings(); }
+
+// Support: tickets your customers' IT teams escalated from their Help desk
+let tickets = [], tFilter = 'open';
+async function support() {
+  const { data, error } = await sb.rpc('admin_tickets'); if (error) { $('#main').innerHTML = `<p class="msg">${esc(error.message)}</p>`; return; }
+  tickets = data || [];
+  const open = tickets.filter((t) => !['resolved', 'closed'].includes(t.status));
+  const list = tickets.filter((t) => tFilter === 'all' || (tFilter === 'open' ? open.includes(t) : t.priority === 'urgent' && open.includes(t)));
+  $('#main').innerHTML = `<h1>Support</h1>
+<div class="tiles"><div class="tile"><div class="k">Open tickets</div><div class="v">${nf(open.length)}</div><div class="s">${nf(open.filter((t) => t.status === 'open').length)} waiting for a first reply</div></div>
+<div class="tile"><div class="k">Urgent</div><div class="v">${nf(open.filter((t) => t.priority === 'urgent').length)}</div><div class="s">Open and urgent</div></div>
+<div class="tile"><div class="k">All time</div><div class="v">${nf(tickets.length)}</div><div class="s">From ${nf(new Set(tickets.map((t) => t.org_id)).size)} workspaces</div></div></div>
+<div class="bar"><select id="tf"><option value="open">Open</option><option value="urgent">Urgent</option><option value="all">All</option></select></div>
+<div class="wrap"><table><thead><tr><th>#</th><th>Workspace</th><th>Subject</th><th>Priority</th><th>Status</th><th>From</th><th>Updated</th></tr></thead><tbody>
+${list.map((t) => `<tr class="click" data-id="${t.id}"><td>${t.id}</td><td>${esc(t.org_name)}</td><td>${esc(t.subject)}</td><td>${esc(t.priority)}</td><td><span class="pill ${t.status === 'open' ? 'trial' : t.status === 'resolved' || t.status === 'closed' ? 'active' : 'ending'}">${esc(t.status.replace('_', ' '))}</span></td><td class="sub">${esc(t.by_email || '')}</td><td class="sub">${new Date(t.updated_at).toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">No tickets.</td></tr>'}
+</tbody></table></div>`;
+  $('#tf').value = tFilter; $('#tf').onchange = (e) => { tFilter = e.target.value; support(); };
+  $('#main').querySelectorAll('tr.click').forEach((tr) => tr.onclick = () => ticketDialog(tickets.find((t) => String(t.id) === tr.dataset.id)));
+}
+function ticketDialog(t) {
+  const d = document.createElement('dialog'); d.style.width = 'min(44rem,calc(100vw - 2rem))';
+  d.innerHTML = `<h2>#${t.id} · ${esc(t.subject)}</h2><p class="sub">${esc(t.org_name)} · ${esc(t.by_email || '')} · ${esc(t.category || '')} ${t.app_ref ? '· ' + esc(t.app_ref) : ''} · ${esc(t.priority)}</p>
+<div style="max-height:45vh;overflow:auto;margin:.8rem 0"><div style="white-space:pre-wrap;padding:.6rem;border:1px solid var(--line);border-radius:10px">${esc(t.body)}</div>
+${(t.messages || []).map((m) => `<div style="white-space:pre-wrap;padding:.6rem;border:1px solid var(--line);border-radius:10px;margin-top:.5rem;${m.from === 'support' ? 'margin-left:2rem;background:var(--sunk)' : ''}"><div class="sub">${esc(m.by)} · ${new Date(m.at).toLocaleString()}</div>${esc(m.text)}</div>`).join('')}</div>
+<textarea id="tr-text" rows="4" style="width:100%" placeholder="Reply to the customer’s IT team"></textarea>
+<div class="grid"><label>Status<select id="tr-st">${['open', 'in_progress', 'waiting', 'resolved', 'closed'].map((s) => `<option value="${s}"${s === t.status ? ' selected' : ''}>${s.replace('_', ' ')}</option>`).join('')}</select></label></div>
+<div class="msg" id="tr-m"></div><div class="acts"><button class="btn" type="button" id="tr-x">Close</button><button class="btn primary" type="button" id="tr-go">Send</button></div>`;
+  document.body.append(d); d.showModal();
+  d.querySelector('#tr-x').onclick = () => { d.close(); d.remove(); };
+  d.querySelector('#tr-go').onclick = async () => { const r = await sb.rpc('support_reply', { p_id: t.id, p_text: d.querySelector('#tr-text').value, p_status: d.querySelector('#tr-st').value }); if (r.error) { d.querySelector('#tr-m').textContent = r.error.message; return; } d.close(); d.remove(); support(); };
+}
 
 function companies() {
   const now = Date.now(), wk = now + 7 * 864e5;

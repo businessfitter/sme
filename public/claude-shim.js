@@ -516,12 +516,13 @@ ${role() === 'owner' ? `<p class="note">To ${u.status === 'trial' ? 'continue af
   }
 
   // Employee Lounge, attendance and signing helpers (all checks are in the database or the server)
-  const RPC_OK = ['att_status', 'att_punch', 'att_reset_device', 'sig_consume', 'sig_delete_mine', 'aml_screen'];
+  const RPC_OK = ['att_status', 'att_punch', 'att_reset_device', 'sig_consume', 'sig_delete_mine', 'aml_screen', 'support_open', 'support_mine', 'support_reply'];
+  const NO_ORG = ['sig_delete_mine', 'support_reply'];
   const platform = Object.freeze({
     org: () => ORG,
     async rpc(name, args) {
       if (!RPC_OK.includes(name)) throw new Error('Not allowed');
-      const { data, error } = await sb.rpc(name, name === 'sig_delete_mine' ? {} : { p_org: ORG, ...(args || {}) });
+      const { data, error } = await sb.rpc(name, NO_ORG.includes(name) ? (name === 'sig_delete_mine' ? {} : { ...(args || {}) }) : { p_org: ORG, ...(args || {}) });
       if (error) throw new Error(error.message);
       return data;
     },

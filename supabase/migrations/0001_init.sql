@@ -94,6 +94,10 @@ create table if not exists public.members (
 alter table public.members add column if not exists status text not null default 'active' check (status in ('invited', 'active'));
 -- Companies (entities) inside the workspace this person may see; NULL = all companies, including future ones
 alter table public.members add column if not exists entities text[];
+-- Company-level roles: companies where this person may only read (an "auditor" role set for that company),
+-- and whether an HQ login may open the consolidated group (group-level records: entity = 'group').
+alter table public.members add column if not exists ro_entities text[];
+alter table public.members add column if not exists group_view boolean not null default true;
 -- Time-limited access (temporary staff, auditors, delegations): no access after this moment
 alter table public.members add column if not exists expires_at timestamptz;
 create index if not exists members_user_idx on public.members (user_id);
@@ -159,9 +163,11 @@ $$;
 -- (group settings, journals, workflows, exchange rates, logins) is visible to every member.
 create or replace function public.entity_allowed(p_org uuid, p_path text, p_entity text) returns boolean
 language plpgsql stable security definer set search_path = public as $$
-declare ents text[];
+declare ents text[]; gv boolean;
 begin
-  select entities into ents from members where org_id = p_org and user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now());
+  select entities, group_view into ents, gv from members where org_id = p_org and user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now());
+  -- group-level records (consolidation adjustments) only for HQ logins with the consolidated view
+  if p_entity = 'group' then return ents is null and coalesce(gv, true); end if;
   if ents is null then return true; end if;
   if p_path like 'setup/main/entities/%' then return split_part(p_path, '/', 4) = any (ents); end if;
   if p_path = 'setup/main' or p_path like 'setup/main/journals/%' or p_path like 'setup/main/workflows/%'
@@ -169,6 +175,22 @@ begin
     return true;
   end if;
   return coalesce(nullif(p_entity, ''), 'main') = any (ents);
+end $$;
+
+-- Companies where the person's company-level role is read-only: they can read but not change that company's records.
+create or replace function public.entity_readonly(p_org uuid, p_path text, p_entity text) returns boolean
+language plpgsql stable security definer set search_path = public as $$
+declare ro text[];
+begin
+  select ro_entities into ro from members where org_id = p_org and user_id = auth.uid() and status = 'active';
+  if ro is null or cardinality(ro) = 0 then return false; end if;
+  if p_path like 'setup/main/entities/%' then return split_part(p_path, '/', 4) = any (ro); end if;
+  if p_path = 'setup/main' or p_path like 'setup/main/journals/%' or p_path like 'setup/main/workflows/%'
+     or p_path like 'setup/main/fx/%' or p_path like 'setup/main/access_log/%' or p_path like 'portal/%' then
+    return false;
+  end if;
+  if p_entity = 'group' then return false; end if;
+  return coalesce(nullif(p_entity, ''), 'main') = any (ro);
 end $$;
 
 -- The person's role inside the app (ceo, cfo, hr_mgr, accountant…), from the login the owner gave them
@@ -200,6 +222,7 @@ language sql stable security definer set search_path = public as $$
     when 'staff'  then (p_path not like 'setup/main/access/%'
                         or (my_app_role(p_org) = 'ceo' and p_path <> 'setup/main/access/' || auth.uid()::text))
                        and entity_allowed(p_org, p_path, p_entity)
+                       and not entity_readonly(p_org, p_path, p_entity)
     when 'portal' then own_portal(p_path)
     else false end
 $$;
@@ -341,7 +364,7 @@ end $$;
 -- ============================================================================
 create or replace function public.sync_access() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare uid uuid; r text; cur text; lim bigint; n bigint; k text; ents text[];
+declare uid uuid; r text; cur text; lim bigint; n bigint; k text; ents text[]; ro text[]; gv boolean;
 begin
   if tg_op = 'DELETE' then
     if old.collection = 'setup/main/access' then
@@ -358,7 +381,7 @@ begin
          when new.data ->> 'role' = 'auditor' then 'viewer'
          when new.data ->> 'role' in ('admin', 'accountant', 'approver', 'tax', 'custom', 'ceo', 'cfo', 'compliance', 'audit_mgr',
                                       'fin_acc', 'hr_mgr', 'manager', 'officer', 'clinic_mgr', 'doctor', 'nurse', 'pharmacist',
-                                      'lab_tech', 'receptionist', 'cashier') then 'staff'  -- only the owner (or the CEO) can grant logins
+                                      'lab_tech', 'receptionist', 'cashier', 'it_support', 'ecom_mgr', 'warehouse_mgr', 'storekeeper', 'procurement') then 'staff'  -- only the owner (or the CEO) can grant logins
          else null end;
   if r is null then
     raise exception 'Unknown role "%".', coalesce(new.data ->> 'role', '') using errcode = '22023';
@@ -384,10 +407,15 @@ begin
     select array_agg(distinct x) into ents from jsonb_array_elements_text(new.data -> 'entities') x where btrim(x) <> '';
     if ents is not null and 'all' = any (ents) then ents := null; end if;
   end if;
+  -- Company-level read-only roles (data.ent_perms = {"ksa": {"role": "auditor"}}) and the consolidated view (data.consolidated)
+  if r <> 'portal' and jsonb_typeof(new.data -> 'ent_perms') = 'object' then
+    select array_agg(key) into ro from jsonb_each(new.data -> 'ent_perms') where value ->> 'role' = 'auditor';
+  end if;
+  gv := ents is null and coalesce((new.data ->> 'consolidated')::boolean, true);
   -- New people are invited: they must accept before they can see anything.
-  insert into members (org_id, user_id, role, status, entities, expires_at)
-  values (new.org_id, uid, r, 'invited', ents, case when coalesce(new.data ->> 'expires_at', '') ~ '^\d{4}-\d{2}-\d{2}' then (new.data ->> 'expires_at')::timestamptz end)
-  on conflict (org_id, user_id) do update set role = excluded.role, entities = excluded.entities, expires_at = excluded.expires_at;
+  insert into members (org_id, user_id, role, status, entities, expires_at, ro_entities, group_view)
+  values (new.org_id, uid, r, 'invited', ents, case when coalesce(new.data ->> 'expires_at', '') ~ '^\d{4}-\d{2}-\d{2}' then (new.data ->> 'expires_at')::timestamptz end, ro, gv)
+  on conflict (org_id, user_id) do update set role = excluded.role, entities = excluded.entities, expires_at = excluded.expires_at, ro_entities = excluded.ro_entities, group_view = excluded.group_view;
   return new;
 end $$;
 drop trigger if exists docs_access_sync on public.docs;
@@ -1370,6 +1398,214 @@ begin
 end $$;
 
 -- ============================================================================
+-- 7h. E-commerce: online stores read live stock and place orders without a login
+--     (through /api/store). Connector secrets (Shopify, WooCommerce) stay on the server.
+-- ============================================================================
+create table if not exists public.store_secrets (
+  store_id   text primary key,
+  org_id     uuid not null references public.orgs (id) on delete cascade,
+  data       jsonb not null default '{}',
+  updated_at timestamptz not null default now()
+);
+alter table public.store_secrets enable row level security;  -- no policies: server only
+
+create or replace function public.store_find(p_key text) returns table (org_id uuid, store_id text, data jsonb)
+language sql stable security definer set search_path = public as $$
+  select d.org_id, split_part(d.path, '/', 2), d.data from docs d join orgs o on o.id = d.org_id and o.status <> 'cancelled'
+   where p_key is not null and length(p_key) >= 24 and d.collection = 'stores' and d.data ->> 'key' = p_key and coalesce((d.data ->> 'active')::boolean, true)
+   limit 1 $$;
+
+-- available stock of one item in the store's warehouses (all warehouses when none are chosen)
+create or replace function public.store_avail(p_org uuid, p_item text, p_whs text[]) returns numeric
+language sql stable security definer set search_path = public as $$
+  select coalesce(sum((m.data ->> 'qty')::numeric), 0) from docs m
+   where m.org_id = p_org and m.collection = 'stock_moves' and m.data ->> 'item_id' = p_item
+     and (p_whs is null or cardinality(p_whs) = 0 or coalesce(m.data ->> 'wh', 'main') = any (p_whs)) $$;
+
+create or replace function public.store_catalog(p_key text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare f record; ent text; whs text[]; e jsonb;
+begin
+  select * into f from store_find(p_key);
+  if f.org_id is null then return null; end if;
+  ent := coalesce(f.data ->> 'entity', 'main');
+  select array_agg(x) into whs from jsonb_array_elements_text(coalesce(f.data -> 'warehouses', '[]'::jsonb)) x;
+  select data into e from docs where org_id = f.org_id and path = 'setup/main/entities/' || ent;
+  return jsonb_build_object('store', f.data ->> 'name', 'company', e ->> 'name', 'currency', coalesce(e ->> 'currency', 'AED'),
+    'shipping', coalesce(f.data -> 'shipping', '{}'::jsonb), 'payments', coalesce(f.data -> 'payments', '["cod"]'::jsonb), 'updated_at', now(),
+    'items', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', split_part(i.path, '/', 2), 'sku', i.data ->> 'sku', 'name', coalesce(nullif(i.data ->> 'web_name', ''), i.data ->> 'name'),
+        'price', round(coalesce(nullif(i.data ->> 'web_price', '')::numeric, (i.data ->> 'price')::numeric, 0) * (1 + coalesce(nullif(f.data ->> 'price_pct', '')::numeric, 0) / 100), 2),
+        'compare_at', nullif(i.data ->> 'compare_at', '')::numeric, 'image', i.data ->> 'image', 'description', i.data ->> 'web_desc',
+        'category', i.data ->> 'category', 'weight', nullif(i.data ->> 'weight', '')::numeric,
+        'available', greatest(0, floor(store_avail(f.org_id, split_part(i.path, '/', 2), whs) - coalesce(nullif(i.data ->> 'safety_stock', '')::numeric, 0))))
+        order by i.data ->> 'name')
+      from docs i where i.org_id = f.org_id and i.collection = 'inv_items' and coalesce(i.data ->> 'entity', 'main') = ent
+       and coalesce((i.data ->> 'web')::boolean, false) and coalesce((i.data ->> 'active')::boolean, true)), '[]'::jsonb));
+end $$;
+
+-- an order from the website (or imported from Shopify / WooCommerce): checks stock, takes prices from the books,
+-- reserves stock at once (so every website shows the new quantity) and records the order for the team to fulfil
+create or replace function public.store_place_order(p_key text, p_order jsonb, p_source text default 'web', p_ext_id text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare f record; ent text; whs text[]; ln jsonb; it record; q numeric; av numeric; price numeric; sub numeric := 0; lines jsonb := '[]'::jsonb;
+  ship numeric := 0; sh jsonb; num text; oid text; n int; cost numeric; wh text; cust jsonb; pay text; i int := 0; cur text;
+begin
+  select * into f from store_find(p_key);
+  if f.org_id is null then return jsonb_build_object('ok', false, 'why', 'This shop is not available.'); end if;
+  if not org_writable(f.org_id) then return jsonb_build_object('ok', false, 'why', 'This shop is not taking orders right now.'); end if;
+  ent := coalesce(f.data ->> 'entity', 'main');
+  select array_agg(x) into whs from jsonb_array_elements_text(coalesce(f.data -> 'warehouses', '[]'::jsonb)) x;
+  cust := coalesce(p_order -> 'customer', '{}'::jsonb);
+  if p_source = 'web' then
+    if length(btrim(coalesce(cust ->> 'name', ''))) < 2 or length(regexp_replace(coalesce(cust ->> 'phone', ''), '\D', '', 'g')) < 7 then
+      return jsonb_build_object('ok', false, 'why', 'Enter your name and phone number.'); end if;
+    if length(btrim(coalesce(cust ->> 'address', ''))) < 5 then return jsonb_build_object('ok', false, 'why', 'Enter the delivery address.'); end if;
+    select count(*) into n from docs where org_id = f.org_id and collection = 'web_orders' and data ->> 'store' = f.store_id and (data ->> 'created_at')::timestamptz > now() - interval '10 minutes';
+    if n >= 60 then return jsonb_build_object('ok', false, 'why', 'The shop is busy. Please try again in a few minutes.'); end if;
+    select count(*) into n from docs where org_id = f.org_id and collection = 'web_orders' and data -> 'customer' ->> 'phone_digits' = right(regexp_replace(cust ->> 'phone', '\D', '', 'g'), 9)
+       and (data ->> 'created_at')::timestamptz > now() - interval '1 minute';
+    if n > 0 then return jsonb_build_object('ok', false, 'why', 'Your order was just received. Please wait a minute before ordering again.'); end if;
+  end if;
+  if p_ext_id is not null and exists (select 1 from docs where org_id = f.org_id and collection = 'web_orders' and data ->> 'ext_id' = p_ext_id and data ->> 'source' = p_source) then
+    return jsonb_build_object('ok', true, 'duplicate', true); end if;
+  if jsonb_typeof(p_order -> 'lines') <> 'array' or jsonb_array_length(p_order -> 'lines') = 0 or jsonb_array_length(p_order -> 'lines') > 50 then
+    return jsonb_build_object('ok', false, 'why', 'Your cart is empty.'); end if;
+  perform pg_advisory_xact_lock(hashtext('stock:' || f.org_id::text));
+  for ln in select * from jsonb_array_elements(p_order -> 'lines') loop
+    q := floor(coalesce((ln ->> 'qty')::numeric, 0));
+    if q <= 0 or q > 999 then return jsonb_build_object('ok', false, 'why', 'Check the quantities in your cart.'); end if;
+    select split_part(d.path, '/', 2) id, d.data into it from docs d where d.org_id = f.org_id and d.collection = 'inv_items' and coalesce(d.data ->> 'entity', 'main') = ent
+       and coalesce((d.data ->> 'active')::boolean, true) and (split_part(d.path, '/', 2) = ln ->> 'id' or (p_source <> 'web' and d.data ->> 'sku' = ln ->> 'sku' and coalesce(ln ->> 'sku', '') <> ''))
+       and (p_source <> 'web' or coalesce((d.data ->> 'web')::boolean, false)) limit 1;
+    if it.id is null then
+      if p_source = 'web' then return jsonb_build_object('ok', false, 'why', 'An item in your cart is no longer sold.'); end if;
+      lines := lines || jsonb_build_object('item_id', null, 'sku', ln ->> 'sku', 'name', coalesce(ln ->> 'name', ln ->> 'sku'), 'qty', q, 'price', coalesce((ln ->> 'price')::numeric, 0), 'cost', 0, 'unmatched', true);
+      sub := sub + q * coalesce((ln ->> 'price')::numeric, 0); continue;
+    end if;
+    av := store_avail(f.org_id, it.id, whs);
+    if p_source = 'web' and q > av - coalesce(nullif(it.data ->> 'safety_stock', '')::numeric, 0) then
+      return jsonb_build_object('ok', false, 'why', format('Only %s left of %s.', greatest(0, floor(av - coalesce(nullif(it.data ->> 'safety_stock', '')::numeric, 0))), it.data ->> 'name'), 'item', it.id); end if;
+    price := case when p_source = 'web' then round(coalesce(nullif(it.data ->> 'web_price', '')::numeric, (it.data ->> 'price')::numeric, 0) * (1 + coalesce(nullif(f.data ->> 'price_pct', '')::numeric, 0) / 100), 2) else coalesce((ln ->> 'price')::numeric, 0) end;
+    select case when sum((m.data ->> 'qty')::numeric) > 0 then sum((m.data ->> 'value')::numeric) / sum((m.data ->> 'qty')::numeric) else coalesce((it.data ->> 'cost')::numeric, 0) end
+      into cost from docs m where m.org_id = f.org_id and m.collection = 'stock_moves' and m.data ->> 'item_id' = it.id;
+    -- the store's warehouse with the most stock of this item
+    select w into wh from (select coalesce(m.data ->> 'wh', 'main') w, sum((m.data ->> 'qty')::numeric) s from docs m
+      where m.org_id = f.org_id and m.collection = 'stock_moves' and m.data ->> 'item_id' = it.id and (whs is null or coalesce(m.data ->> 'wh', 'main') = any (whs)) group by 1 order by 2 desc limit 1) x;
+    lines := lines || jsonb_build_object('item_id', it.id, 'sku', it.data ->> 'sku', 'name', it.data ->> 'name', 'qty', q, 'price', price, 'cost', round(coalesce(cost, 0), 4), 'wh', coalesce(wh, whs[1], 'main'));
+    sub := sub + q * price;
+  end loop;
+  sh := coalesce(f.data -> 'shipping', '{}'::jsonb);
+  ship := case when p_source <> 'web' then coalesce((p_order ->> 'shipping')::numeric, 0)
+               when coalesce((sh ->> 'free_over')::numeric, 0) > 0 and sub >= (sh ->> 'free_over')::numeric then 0
+               else coalesce((sh -> 'by_country' ->> upper(coalesce(cust ->> 'country', ''))) ::numeric, (sh ->> 'flat')::numeric, 0) end;
+  pay := case when p_source <> 'web' then coalesce(p_order ->> 'payment', 'paid') when p_order ->> 'payment' in ('cod', 'bank', 'card') then p_order ->> 'payment' else 'cod' end;
+  select data ->> 'currency' into cur from docs where org_id = f.org_id and path = 'setup/main/entities/' || ent;
+  select count(*) + 1 into n from docs where org_id = f.org_id and collection = 'web_orders' and data ->> 'number' like 'WEB-' || to_char(now(), 'YYYY') || '-%';
+  num := 'WEB-' || to_char(now(), 'YYYY') || '-' || lpad(n::text, 5, '0');
+  oid := ent || '-w' || replace(gen_random_uuid()::text, '-', '');
+  insert into docs (org_id, path, collection, scope, data) values (f.org_id, 'web_orders/' || oid, 'web_orders', '', jsonb_build_object(
+    'entity', ent, 'store', f.store_id, 'store_name', f.data ->> 'name', 'number', num, 'source', p_source, 'ext_id', p_ext_id, 'status', 'new',
+    'payment', pay, 'payment_status', case when pay in ('paid', 'card') and p_source <> 'web' then 'paid' else 'unpaid' end,
+    'lines', lines, 'subtotal', round(sub, 2), 'shipping_fee', round(ship, 2), 'total', round(sub + ship, 2), 'currency', coalesce(cur, 'AED'),
+    'customer', jsonb_build_object('name', left(btrim(coalesce(cust ->> 'name', '')), 120), 'phone', left(coalesce(cust ->> 'phone', ''), 40),
+       'phone_digits', right(regexp_replace(coalesce(cust ->> 'phone', ''), '\D', '', 'g'), 9), 'email', left(coalesce(cust ->> 'email', ''), 160),
+       'address', left(coalesce(cust ->> 'address', ''), 400), 'city', left(coalesce(cust ->> 'city', ''), 80), 'country', upper(left(coalesce(cust ->> 'country', ''), 2))),
+    'note', left(coalesce(p_order ->> 'note', ''), 500), 'created_at', now()));
+  -- reserve the stock straight away
+  for ln in select * from jsonb_array_elements(lines) loop
+    i := i + 1;
+    if ln ->> 'item_id' is null then continue; end if;
+    insert into docs (org_id, path, collection, scope, data) values (f.org_id, 'stock_moves/' || oid || '-' || i, 'stock_moves', '', jsonb_build_object(
+      'entity', ent, 'item_id', ln ->> 'item_id', 'date', current_date::text, 'qty', -(ln ->> 'qty')::numeric, 'unit_cost', (ln ->> 'cost')::numeric,
+      'value', round(-(ln ->> 'qty')::numeric * (ln ->> 'cost')::numeric, 2), 'type', 'web_order', 'wh', ln ->> 'wh', 'ref', num, 'order_id', oid, 'by', 'web', 'at', now(), 'posted', false));
+  end loop;
+  return jsonb_build_object('ok', true, 'number', num, 'total', round(sub + ship, 2), 'currency', coalesce(cur, 'AED'), 'order', oid);
+end $$;
+
+-- customers follow their order: number plus the last 4 digits of the phone they ordered with
+create or replace function public.store_track(p_key text, p_number text, p_phone4 text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare f record; o jsonb;
+begin
+  select * into f from store_find(p_key);
+  if f.org_id is null or coalesce(p_number, '') = '' or coalesce(length(regexp_replace(p_phone4, '\D', '', 'g')), 0) < 4 then return null; end if;
+  select data into o from docs where org_id = f.org_id and collection = 'web_orders' and upper(data ->> 'number') = upper(btrim(p_number))
+     and right(data -> 'customer' ->> 'phone_digits', 4) = right(regexp_replace(p_phone4, '\D', '', 'g'), 4) limit 1;
+  if o is null then return null; end if;
+  return jsonb_build_object('number', o ->> 'number', 'status', o ->> 'status', 'store', f.data ->> 'name', 'placed', o ->> 'created_at', 'total', o -> 'total', 'currency', o ->> 'currency',
+    'items', (select jsonb_agg(jsonb_build_object('name', l ->> 'name', 'qty', l -> 'qty')) from jsonb_array_elements(o -> 'lines') l),
+    'carrier', o -> 'shipment' ->> 'carrier_name', 'tracking', o -> 'shipment' ->> 'awb', 'tracking_url', o -> 'shipment' ->> 'tracking_url', 'history', coalesce(o -> 'history', '[]'::jsonb));
+end $$;
+
+-- ============================================================================
+-- 7i. Help desk: customers' IT teams escalate to the Orzio team (platform admins).
+--     Kept outside the workspace data, so platform admins never need access to a customer's books.
+-- ============================================================================
+create table if not exists public.support_tickets (
+  id         bigint generated always as identity primary key,
+  org_id     uuid not null references public.orgs (id) on delete cascade,
+  created_by uuid references auth.users (id) on delete set null,
+  subject    text not null check (length(subject) between 3 and 200),
+  body       text not null check (length(body) between 1 and 8000),
+  priority   text not null default 'normal' check (priority in ('low', 'normal', 'high', 'urgent')),
+  category   text,
+  app_ref    text,
+  status     text not null default 'open' check (status in ('open', 'in_progress', 'waiting', 'resolved', 'closed')),
+  messages   jsonb not null default '[]',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.support_tickets enable row level security;  -- reached only through the functions below
+create index if not exists support_tickets_org on public.support_tickets (org_id, created_at desc);
+
+create or replace function public.support_open(p_org uuid, p_subject text, p_body text, p_priority text default 'normal', p_category text default null, p_ref text default null) returns bigint
+language plpgsql security definer set search_path = public as $$
+declare n int; id_ bigint;
+begin
+  if coalesce(my_role(p_org), '') not in ('owner', 'staff') then raise exception 'Only team members can contact Orzio support.' using errcode = '42501'; end if;
+  select count(*) into n from support_tickets where org_id = p_org and created_at > now() - interval '1 day';
+  if n >= 30 then raise exception 'Too many tickets today. Add to an open ticket instead.' using errcode = 'P0001'; end if;
+  insert into support_tickets (org_id, created_by, subject, body, priority, category, app_ref)
+  values (p_org, auth.uid(), left(btrim(p_subject), 200), left(p_body, 8000), case when p_priority in ('low', 'normal', 'high', 'urgent') then p_priority else 'normal' end, left(p_category, 60), left(p_ref, 120))
+  returning id into id_;
+  return id_;
+end $$;
+
+create or replace function public.support_mine(p_org uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if coalesce(my_role(p_org), '') not in ('owner', 'staff') then return '[]'::jsonb; end if;
+  return coalesce((select jsonb_agg(to_jsonb(t) - 'org_id' order by t.created_at desc) from support_tickets t where t.org_id = p_org), '[]'::jsonb);
+end $$;
+
+create or replace function public.support_reply(p_id bigint, p_text text, p_status text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare t support_tickets; adm boolean := is_platform_admin(); nm text;
+begin
+  select * into t from support_tickets where id = p_id;
+  if t.id is null then raise exception 'Ticket not found.' using errcode = 'P0002'; end if;
+  if not adm and coalesce(my_role(t.org_id), '') not in ('owner', 'staff') then raise exception 'Ticket not found.' using errcode = 'P0002'; end if;
+  if p_status is not null and p_status not in ('open', 'in_progress', 'waiting', 'resolved', 'closed') then raise exception 'Unknown status.'; end if;
+  if not adm and p_status not in ('open', 'closed') then p_status := null; end if;
+  select coalesce(full_name, email) into nm from profiles where id = auth.uid();
+  update support_tickets set
+    messages = case when coalesce(btrim(p_text), '') = '' then messages else messages || jsonb_build_object('at', now(), 'by', case when adm then 'Orzio support' else coalesce(nm, 'Customer') end, 'from', case when adm then 'support' else 'customer' end, 'text', left(p_text, 8000)) end,
+    status = coalesce(p_status, case when adm then (case when status = 'open' then 'in_progress' else status end) else (case when status in ('waiting', 'resolved') then 'open' else status end) end),
+    updated_at = now()
+  where id = p_id returning * into t;
+  return to_jsonb(t) - 'org_id';
+end $$;
+
+create or replace function public.admin_tickets() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not is_platform_admin() then raise exception 'Platform admins only.' using errcode = '42501'; end if;
+  return coalesce((select jsonb_agg(to_jsonb(t) || jsonb_build_object('org_name', o.name, 'by_email', p.email) order by (t.status in ('resolved', 'closed')), t.updated_at desc)
+    from support_tickets t join orgs o on o.id = t.org_id left join profiles p on p.id = t.created_by), '[]'::jsonb);
+end $$;
+
+-- ============================================================================
 -- 9. Realtime for live updates between users (rules above apply to every event)
 -- ============================================================================
 do $$ begin
@@ -1437,6 +1673,9 @@ revoke execute on function public.domain_lookup(text) from public, anon, authent
 grant  execute on function public.donor_public(text), public.domain_lookup(text) to service_role;
 revoke execute on function public.booking_public(text), public.booking_public_request(text, text, text, text, date, text), public.share_public(text) from public, anon, authenticated;
 grant  execute on function public.booking_public(text), public.booking_public_request(text, text, text, text, date, text), public.share_public(text) to service_role;
+revoke execute on function public.store_find(text), public.store_avail(uuid, text, text[]), public.store_catalog(text), public.store_track(text, text, text), public.store_place_order(text, jsonb, text, text) from public, anon, authenticated;
+grant  execute on function public.store_find(text), public.store_avail(uuid, text, text[]), public.store_catalog(text), public.store_track(text, text, text), public.store_place_order(text, jsonb, text, text) to service_role;
+grant  execute on function public.support_open(uuid, text, text, text, text, text), public.support_mine(uuid), public.support_reply(bigint, text, text), public.admin_tickets() to authenticated;
 revoke execute on function public.sig_code_gate(uuid)                     from public, anon, authenticated;
 revoke execute on function public.sig_code_result(uuid, boolean)          from public, anon, authenticated;
 revoke execute on function public.sig_save(uuid, text, text)              from public, anon, authenticated;
