@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Your clinic record</title><link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Nastaliq+Urdu&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#14213A;--muted:#5A6577;--line:#E1E6EE;--bg:#F4F6FA;--panel:#fff;--teal:#0F766E;--bad:#B3261E}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "IBM Plex Sans",system-ui,sans-serif}
+main{max-width:760px;margin:16px auto;padding:0 12px 24px}.sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.hd{display:flex;justify-content:space-between;gap:12px;border-bottom:2px solid var(--teal);padding-bottom:10px;margin-bottom:12px}.hd b{font-size:1.15rem}
+.mut{color:var(--muted);font-size:.86rem}table{width:100%;border-collapse:collapse;font-size:.93rem;margin:6px 0 10px}td,th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{font-size:.75rem;color:var(--muted)}
+.ur{font-family:"Noto Nastaliq Urdu",serif;direction:rtl;font-size:.95rem;line-height:2}.hi{color:var(--bad);font-weight:600}h3{margin:14px 0 4px;font-size:1rem}.row{display:flex;gap:16px;flex-wrap:wrap}
+.pbtn{margin:12px 0;padding:10px 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font:600 .95rem inherit;cursor:pointer}@media print{.pbtn{display:none}body{background:#fff}.sheet{border:0}}
+</style></head><body><main id="m"><div class="sheet">Loading…</div></main>
+<script>
+(function(){const t=new URLSearchParams(location.search).get('t')||'';const m=document.getElementById('m');const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const d=s=>s?new Date(String(s).slice(0,10)+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+fetch('/api/share?t='+encodeURIComponent(t)).then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{if(!ok){m.innerHTML='<div class="sheet">'+esc(j.error)+'</div>';return;}
+  const x=j.doc||{};const c=x.clinic||{};document.title=(x.title||'Clinic record')+' · '+(c.name||'');
+  let h=`<div class="sheet"><div class="hd"><div><b>${esc(c.name)}</b><div class="mut">${esc(c.address||'')}${c.phone?' · '+esc(c.phone):''}</div></div><div style="text-align:right"><b>${esc(x.title||'')}</b><div class="mut">${d(x.date)}</div></div></div>
+   <div class="row"><div><span class="mut">Patient</span><br><b>${esc(x.patient)}</b></div><div><span class="mut">MR number</span><br>${esc(x.mrn||'')}</div><div><span class="mut">Age / sex</span><br>${esc(x.age||'')} ${esc(x.sex||'')}</div>${x.doctor?`<div><span class="mut">Doctor</span><br>${esc(x.doctor)}</div>`:''}</div>`;
+  if(x.diagnosis&&x.diagnosis.length) h+=`<h3>Diagnosis</h3><div>${x.diagnosis.map(esc).join(', ')}</div>`;
+  if(x.rx&&x.rx.length) h+=`<h3>Prescription</h3><table><thead><tr><th>Medicine</th><th>How to take</th><th>Days</th><th class="ur">ہدایات</th></tr></thead><tbody>${x.rx.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.how)}</td><td>${esc(r.days||'')}</td><td class="ur">${esc(r.ur||'')}</td></tr>`).join('')}</tbody></table>`;
+  if(x.labs&&x.labs.length) h+=`<h3>Laboratory results</h3><table><thead><tr><th>Test</th><th>Result</th><th>Normal range</th></tr></thead><tbody>${x.labs.map(l=>`<tr><td>${esc(l.name)}</td><td class="${l.flag?'hi':''}">${esc(l.result)} ${esc(l.unit||'')} ${l.flag?'('+esc(l.flag)+')':''}</td><td class="mut">${esc(l.range||'')}</td></tr>`).join('')}</tbody></table>`;
+  if(x.advice) h+=`<h3>Advice</h3><div style="white-space:pre-wrap">${esc(x.advice)}</div>`;if(x.follow_up) h+=`<p><b>Next visit:</b> ${d(x.follow_up)}</p>`;
+  h+=`<button class="pbtn" onclick="print()">Print or save as PDF</button><p class="mut">This link works until ${d(j.expires_at)}. Keep it private: anyone with the link can see this record.</p></div>`;m.innerHTML=h;
+}).catch(()=>{m.innerHTML='<div class="sheet">The record could not be loaded.</div>';});})();
+</script></body></html>

@@ -357,7 +357,8 @@ begin
          when new.data ->> 'role' in ('employee', 'customer', 'supplier') then 'portal'
          when new.data ->> 'role' = 'auditor' then 'viewer'
          when new.data ->> 'role' in ('admin', 'accountant', 'approver', 'tax', 'custom', 'ceo', 'cfo', 'compliance', 'audit_mgr',
-                                      'fin_acc', 'hr_mgr', 'manager', 'officer') then 'staff'  -- only the owner (or the CEO) can grant logins
+                                      'fin_acc', 'hr_mgr', 'manager', 'officer', 'clinic_mgr', 'doctor', 'nurse', 'pharmacist',
+                                      'lab_tech', 'receptionist', 'cashier') then 'staff'  -- only the owner (or the CEO) can grant logins
          else null end;
   if r is null then
     raise exception 'Unknown role "%".', coalesce(new.data ->> 'role', '') using errcode = '22023';
@@ -1273,6 +1274,102 @@ begin
 end $$;
 
 -- ============================================================================
+-- 7g. Clinic donor dashboards (public, read-only, expiring) and custom domains
+-- ============================================================================
+-- Server only: the public view of a donor dashboard link. Returns only the summary the
+-- clinic published (no patient names), and nothing once the link is revoked or expired.
+create or replace function public.donor_public(p_token text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare d record; ent jsonb;
+begin
+  if p_token is null or length(p_token) < 32 then return null; end if;
+  select org_id, path, data into d from docs where path like 'donor_links/%' and data ->> 'token' = p_token limit 1;
+  if d.path is null then return null; end if;
+  if coalesce((d.data ->> 'revoked')::boolean, false) or coalesce((d.data ->> 'expires_at')::timestamptz, now() - interval '1 second') < now() then
+    return jsonb_build_object('expired', true, 'org_ok', true);
+  end if;
+  select data into ent from docs where org_id = d.org_id and path = 'setup/main/entities/' || coalesce(nullif(d.data ->> 'entity', ''), 'main');
+  return jsonb_build_object('summary', coalesce(d.data -> 'snapshot', '{}'::jsonb), 'title', d.data ->> 'title', 'message', d.data ->> 'message', 'expires_at', d.data ->> 'expires_at',
+    'company', jsonb_build_object('name', ent ->> 'name', 'address', ent ->> 'address', 'phone', ent ->> 'phone', 'email', ent ->> 'email', 'logo', ent #>> '{brand,logo}', 'color', ent #>> '{brand,color}', 'currency', ent ->> 'currency'),
+    'org_ok', exists (select 1 from orgs where id = d.org_id and status <> 'cancelled'));
+end $$;
+
+-- Custom domains: a workspace owner can serve Orzio on their own address (for example app.myclinic.org).
+-- Rows are written only by the server (/api/domain) after checking the caller is an owner.
+create table if not exists public.org_domains (
+  domain      text primary key check (domain ~ '^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$'),
+  org_id      uuid not null references public.orgs (id) on delete cascade,
+  status      text not null default 'pending' check (status in ('pending', 'verified', 'error')),
+  detail      jsonb not null default '{}'::jsonb,
+  created_by  uuid,
+  created_at  timestamptz not null default now(),
+  verified_at timestamptz
+);
+alter table public.org_domains enable row level security;
+drop policy if exists org_domains_read on public.org_domains;
+create policy org_domains_read on public.org_domains for select to authenticated using (my_role(org_id) in ('owner', 'staff'));
+revoke insert, update, delete, truncate on public.org_domains from anon, authenticated;
+grant select on public.org_domains to authenticated;
+
+-- Server only: which workspace a verified domain belongs to, with its public branding
+create or replace function public.domain_lookup(p_host text) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('org_id', d.org_id, 'name', coalesce(e.data ->> 'name', o.name), 'logo', e.data #>> '{brand,logo}', 'color', e.data #>> '{brand,color}')
+    from org_domains d join orgs o on o.id = d.org_id and o.status <> 'cancelled'
+    left join docs e on e.org_id = d.org_id and e.path = 'setup/main/entities/main'
+   where d.domain = lower(p_host) and d.status = 'verified' limit 1
+$$;
+
+-- Clinic: public appointment requests (no login). The front desk confirms them.
+create or replace function public.booking_public(p_token text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare e record;
+begin
+  if p_token is null or length(p_token) < 24 then return null; end if;
+  select org_id, path, data into e from docs where path like 'setup/main/entities/%' and data #>> '{clinic,booking_token}' = p_token
+     and coalesce((data #>> '{clinic,booking_on}')::boolean, false) limit 1;
+  if e.path is null then return null; end if;
+  return jsonb_build_object('company', jsonb_build_object('name', e.data ->> 'name', 'phone', e.data ->> 'phone', 'address', e.data ->> 'address', 'logo', e.data #>> '{brand,logo}'),
+    'doctors', coalesce((select jsonb_agg(jsonb_build_object('id', d ->> 'id', 'name', d ->> 'name', 'specialty', d ->> 'specialty', 'days', d -> 'days', 'start', d ->> 'start', 'end', d ->> 'end'))
+       from jsonb_array_elements(coalesce(e.data #> '{clinic,doctors}', '[]'::jsonb)) d where coalesce((d ->> 'online')::boolean, true)), '[]'::jsonb),
+    'org_ok', exists (select 1 from orgs where id = e.org_id and status <> 'cancelled'));
+end $$;
+create or replace function public.booking_public_request(p_token text, p_name text, p_phone text, p_doctor text, p_date date, p_note text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare e record; ent text; n int; id text;
+begin
+  select org_id, path, data into e from docs where path like 'setup/main/entities/%' and data #>> '{clinic,booking_token}' = p_token
+     and coalesce((data #>> '{clinic,booking_on}')::boolean, false) limit 1;
+  if e.path is null then return jsonb_build_object('ok', false, 'why', 'Online booking is not available.'); end if;
+  if length(btrim(coalesce(p_name, ''))) < 2 or length(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g')) < 7 then return jsonb_build_object('ok', false, 'why', 'Enter your name and phone number.'); end if;
+  if p_date is null or p_date < current_date or p_date > current_date + 60 then return jsonb_build_object('ok', false, 'why', 'Choose a date in the next 60 days.'); end if;
+  ent := split_part(e.path, '/', 4);
+  select count(*) into n from docs where org_id = e.org_id and path like 'appointments/%' and data ->> 'source' = 'online' and (data ->> 'created_at')::timestamptz > now() - interval '1 hour';
+  if n >= 40 then return jsonb_build_object('ok', false, 'why', 'Too many requests just now. Please call the clinic.'); end if;
+  select count(*) into n from docs where org_id = e.org_id and path like 'appointments/%' and data ->> 'source' = 'online' and data ->> 'phone_digits' = right(regexp_replace(p_phone, '\D', '', 'g'), 9) and data ->> 'date' = p_date::text;
+  if n >= 2 then return jsonb_build_object('ok', false, 'why', 'You already asked for an appointment on that day.'); end if;
+  id := ent || '-a' || replace(gen_random_uuid()::text, '-', '');
+  insert into docs (org_id, path, collection, scope, data) values (e.org_id, 'appointments/' || id, 'appointments', '',
+    jsonb_build_object('entity', ent, 'patient_name', left(btrim(p_name), 120), 'phone', left(btrim(p_phone), 30), 'phone_digits', right(regexp_replace(p_phone, '\D', '', 'g'), 9),
+      'doctor_id', left(coalesce(p_doctor, ''), 40), 'date', p_date::text, 'time', '', 'reason', left(coalesce(p_note, ''), 500), 'status', 'requested', 'source', 'online', 'created_at', now()));
+  return jsonb_build_object('ok', true, 'clinic', e.data ->> 'name');
+end $$;
+-- Clinic: a patient opens their prescription or lab report from a link that expires
+create or replace function public.share_public(p_token text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare d record;
+begin
+  if p_token is null or length(p_token) < 32 then return null; end if;
+  select org_id, path, data into d from docs where path like 'share_links/%' and data ->> 'token' = p_token limit 1;
+  if d.path is null then return null; end if;
+  if coalesce((d.data ->> 'revoked')::boolean, false) or coalesce((d.data ->> 'expires_at')::timestamptz, now() - interval '1 second') < now() then
+    return jsonb_build_object('expired', true, 'org_ok', true);
+  end if;
+  return jsonb_build_object('kind', d.data ->> 'kind', 'doc', d.data -> 'snapshot', 'expires_at', d.data ->> 'expires_at',
+    'org_ok', exists (select 1 from orgs where id = d.org_id and status <> 'cancelled'));
+end $$;
+
+-- ============================================================================
 -- 9. Realtime for live updates between users (rules above apply to every event)
 -- ============================================================================
 do $$ begin
@@ -1335,6 +1432,11 @@ revoke execute on function public.quote_public(text)                      from p
 revoke execute on function public.quote_public_answer(text, text, text, text) from public, anon, authenticated;
 revoke execute on function public.email_gate(uuid, uuid, text, text)      from public, anon, authenticated;
 grant  execute on function public.quote_public(text), public.quote_public_answer(text, text, text, text), public.email_gate(uuid, uuid, text, text) to service_role;
+revoke execute on function public.donor_public(text) from public, anon, authenticated;
+revoke execute on function public.domain_lookup(text) from public, anon, authenticated;
+grant  execute on function public.donor_public(text), public.domain_lookup(text) to service_role;
+revoke execute on function public.booking_public(text), public.booking_public_request(text, text, text, text, date, text), public.share_public(text) from public, anon, authenticated;
+grant  execute on function public.booking_public(text), public.booking_public_request(text, text, text, text, date, text), public.share_public(text) to service_role;
 revoke execute on function public.sig_code_gate(uuid)                     from public, anon, authenticated;
 revoke execute on function public.sig_code_result(uuid, boolean)          from public, anon, authenticated;
 revoke execute on function public.sig_save(uuid, text, text)              from public, anon, authenticated;

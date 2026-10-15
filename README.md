@@ -4,11 +4,13 @@ Your whole business, run by AI agents and approved by you, in eleven modules:
 
 | Module | What it covers |
 |---|---|
-| **Accounting** | Ledger, banking, assets, schedules, month-end close, financial statements under the framework you choose (IFRS, IFRS for SMEs, US GAAP, FRS 102, SOCPA, Ind AS, cash basis…), approved statements kept on record and compared month, quarter and year, budgets and forecasts |
+| **Accounting** | Ledger, banking, assets and investments (with the agent's list of allowed investments for your country and industry), schedules, month-end close, tabbed financial statements under the framework you choose (IFRS, IFRS for SMEs, US GAAP, FRS 102, SOCPA, Ind AS, cash basis…) with the current period in bold against approved comparatives, Financial analysis (live ratios, variance, 1/3/5-year projections, sensitivity), budgets and forecasts |
 | **Sales** | Quotes prepared by the agent from CRM or customers' requests, sent by link or portal, accepted or changed online; service agreements drafted by the agent, e-signed with the company stamp; invoices, customer payments, projects and billing, statements, aging, reminders, three-way match |
 | **Purchasing & Inventory** | Suppliers, requests for quotation by link or portal, agent comparison, LPOs with approval, goods received, bills matched to LPO and receipt, payables reports (aging, supplier ledgers, commitments, GRNI, payment schedule), stock at weighted-average cost |
 | **HR** | Organogram drafted by the HR agent and approved by the HR Manager, payroll and employees, recruitment |
 | **Employee Lounge** | Geo-verified check-in from the phone (500 m, server time), leave, requests, assigned tasks, daily and monthly summaries, performance reviews, the employee's library |
+| **Patient Module** (medical clinics) | Front desk with appointments, online booking requests, tokens and a waiting-room queue screen. Doctor's desk with vitals, ICD-10 diagnosis, e-prescription (English and Urdu instructions), tests and procedures, agent-drafted notes and prescription checks (allergies, duplicates, pregnancy, child dosing, stock). Daily register with photo reading. Patient records with MR numbers and full history |
+| **Clinic Module** (medical clinics) | Billing and cash counter (itemised bills, charity applied automatically, cash, card, wallet, panel/insurance), day closing with cash count. Pharmacy (starter formulary, batches, expiry, first-expiry-first-out dispensing, cost of medicines). Laboratory (results, normal ranges, flags, reports). Welfare assessments with committee approval. Charity funds and donations, donor dashboards, doctors and their fee share, clinic reports (ICD-10, notifiable diseases, missed follow-ups) |
 | **CRM** | Pipeline and leads, customer and supplier queries, marketing, website |
 | **Documents & e-sign** | Files, letters, e-signatures placed on the page, with or without a date-and-time stamp, saved signatures confirmed by an email code, manager approval before employees sign |
 | **Tax** | VAT and corporate tax |
@@ -80,7 +82,7 @@ git push -u origin main
    - `ANTHROPIC_API_KEY`, needed for the AI agents
    - `TERMS_URL`, `PRIVACY_URL`: links shown at sign-up. Leave them empty until your legal pages exist.
    - `APP_NAME`: the product name shown on sign-in and in the admin console (default `Orzio`)
-   - `GOOGLE_MAPS_API_KEY` (optional): a browser key for the office-location maps and address search. Restrict it to your domain in Google Cloud and enable *Maps JavaScript API* and *Places API*. Without it the maps use OpenStreetMap.
+   - `GOOGLE_MAPS_API_KEY` (optional): a browser key for the office-location maps and address search. Restrict it to your domain in Google Cloud and enable *Maps JavaScript API* and *Places API*. Without it the maps and the address search use OpenStreetMap (free, no key).
    - `RESEND_API_KEY` and `EMAIL_FROM` (optional but recommended): to email quotes, agreements, statements, requests for quotation and payment reminders from the server (resend.com; `EMAIL_FROM` like `Orzio <billing@yourdomain.com>` on a verified domain). Without them the app opens the user's own email program with the message ready.
    - `CRON_SECRET`: any long random text. Vercel sends it to `/api/reminders` every morning (see `vercel.json`, `crons`) so payment reminders go out automatically.
    - `APP_URL`: your site address, e.g. `https://app.orzio.ai`, used in reminder emails.
@@ -136,11 +138,70 @@ Limits are enforced by the database and the AI function. When a customer hits on
 - **Records** is the size of the books themselves (every entry, invoice, employee…). Saving a smaller version or deleting always works, even when a workspace is over its limit.
 - Employees, customers and suppliers can store at most 2,000 items of up to 64 KB each in their own portal.
 
+
+## Agents first, people review
+
+The agents prepare the work and people approve, amend or delete it:
+
+- The **Review hub** (top bar, *Review*) lists everything the agents prepared that needs a person: journal entries, statement packs, projections, the investment list, quotes, agreements, policy updates, the organogram, policy exceptions and possible sanctions matches.
+- It shows the share of posted entries the agents prepared in the last 30 days, against a 70% target.
+- **Financial analysis** fills the projection assumptions from your last 12 months. Anything a person changes is marked *Edited*.
+- The **investment agent** builds the list of allowed instruments from the company's country, industry, regulated status and Sharia setting. You can add your own lines; it reviews the list monthly, and a person approves it.
+
+
+## Medical clinics
+
+Set the company's industry to **Medical clinic** (or Healthcare). Two modules appear: **Patient Module** and **Clinic Module**.
+
+**How a visit flows**
+
+1. **Front desk.** Find or register the patient and issue a token for a doctor; the token slip prints. Patients get an MR number (MR-000001…), and the front desk can record vitals. Appointments booked by phone or online show up here too. A full-screen queue view can run on a TV in the waiting area.
+2. **Doctor's desk.** The doctor calls the next token and sees allergies, long-term conditions, vitals with warnings and recent visits. They record the complaint, examination and an ICD-10 diagnosis, then write the prescription.
+   - Quantities are worked out from dose × frequency × days, and instructions print in English and Urdu.
+   - The doctor ticks tests and procedures and sets a follow-up date.
+   - The agent can draft the note from short notes. It checks the prescription for allergies, duplicate groups, ulcer + NSAID, pregnancy, child doses and stock.
+   - "Finish" sends the patient to billing, the pharmacy and the lab.
+3. **Billing & cash.** The bill is built automatically: consultation fee, procedures, tests and dispensed medicines. Approved welfare patients get their charity share automatically. Payment can be cash, card, bank, wallet or a panel/insurance account, and a receipt prints.
+4. **Pharmacy.** Dispense paid prescriptions first-expiry-first-out. Receive stock by batch and expiry, and watch low stock and expiring medicines.
+5. **Laboratory.** Enter results; values outside the normal range are flagged, and the doctor is notified. Print the report or send the patient a link.
+6. **Close the day.** Count the cash. The agent posts one entry for the day:
+   - cash, bank and panel receipts
+   - charity from each fund
+   - income split into consultations (4000), medicines (4100), tests (4150) and procedures (4200)
+   - cost of medicines dispensed (5000 / 1200)
+
+**Welfare.** Staff record household size, income and circumstances. The agent suggests a charity share from the clinic's bands; the welfare committee approves it, and the approval lasts 6 months by default.
+
+**Doctors.** Each doctor has a fee, working days and hours, and a share % of consultation fees. The agent books the monthly share for approval.
+
+**Patient links.** A prescription, visit summary or lab report can be sent as a link (`/p?t=…`, valid 7 days), with a WhatsApp button.
+
+**Online booking.** Turn it on in Clinic Module → Settings → Prescription and welfare. Patients use `/b?t=…` to ask for a day and doctor, and the front desk confirms. Requests are rate-limited.
+
+**Roles.** Clinic manager, doctor, nurse, pharmacist, lab technician, receptionist and cashier, each with matching access. Give these roles in Settings → Logins and access.
+
+**Charity funds and donor dashboards.** Donations go into restricted funds (Zakat 3500, General 3510) and charity care is paid out of them. Public donor dashboards (`/d?t=…`) show totals only and expire after 7 days by default.
+
+Not included yet: e-claims to insurers (for example DHA eClaimLink or Riayati in the UAE) and national health-record exchange (NABIDH, Malaffi). Panel billing exports a claims list for now.
+
+## Custom domains (white-label)
+
+A workspace owner can open Orzio on their own address. Go to **Settings → Group → Your own domain**, then enter for example `app.theirclinic.org`. They then add the DNS records shown and press **Check**. On that address, the sign-in page shows their name and opens their workspace.
+
+To switch this on for your server, add these Vercel environment variables:
+
+- `VERCEL_TOKEN`: a Vercel access token with access to this project.
+- `VERCEL_PROJECT_ID`: Vercel → Project → Settings → General → Project ID.
+- `VERCEL_TEAM_ID`: only if the project belongs to a team.
+
+Email sign-in links (magic links and invitations) only redirect to addresses Supabase allows. For each verified customer domain, add `https://their-domain/**` under Supabase → Authentication → URL Configuration → Redirect URLs. Password sign-in works without this.
+
 ## Employee check-in (geo-fenced) — how it is protected
 
 - Each company sets its office locations in **Employee Lounge → Settings → Office locations** (map, 500 m radius by default, up to 1 km).
 - On the phone the employee picks the office and presses **Check in**. The **database** reads its own clock, measures the distance to the office and refuses anything outside the radius or less precise than the limit (±100 m by default). Refused attempts are logged.
-- Nobody can insert, edit or delete a check-in directly, not even the owner. Corrections are separate records with a reason.
+- Nobody can insert, edit or delete a check-in directly, not even the owner. Corrections are separate records with a reason. There is no front-desk check-in button: a day only counts as present from a verified phone check-in or an HR correction with a reason (shown as *Corrected*).
+- HR places each office by searching its address (for example *Johar Town, Lahore*), then fine-tunes the pin on the map. Employees get a *Get directions* link to their office.
 - The first phone is registered; another phone is flagged, or refused when *phone registration* is on. HR can reset it.
 - Far from the office? The screen says so and opens Leave with *Work from another location*.
 - Limits: a browser cannot detect a rooted phone that fakes GPS. The server-side radius, precision limit, phone registration, impossible-travel flags and the HR review of flags make this much harder, but if you need certainty add a selfie or a kiosk at the door.

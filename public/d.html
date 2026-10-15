@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Donor dashboard</title><link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#14213A;--muted:#5A6577;--line:#E1E6EE;--bg:#F4F6FA;--panel:#fff;--navy:#0E1B33;--teal:#0B8277;--blue:#1F4FD1;--soft:#DFF3F0;--bad:#B3261E;--ac:#0B8277}
+@media (prefers-color-scheme:dark){:root{--ink:#E6EBF3;--muted:#9AA6BA;--line:#253045;--bg:#0D131F;--panel:#151D2C;--soft:#11332F}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "IBM Plex Sans",system-ui,sans-serif}
+header{background:linear-gradient(120deg,var(--navy),#16305A);color:#fff;padding:22px 16px 26px}
+header .in{max-width:980px;margin:auto;display:flex;align-items:center;gap:14px}
+header img{height:44px;width:44px;object-fit:contain;border-radius:10px;background:#fff;padding:4px}
+header .co{font:600 1.25rem/1.2 Sora,sans-serif}header .sub{opacity:.8;font-size:.9rem;margin-top:2px}
+main{max-width:980px;margin:-14px auto 0;padding:0 16px 24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:14px;box-shadow:0 10px 30px -22px rgba(14,27,51,.4)}
+h1{font:600 1.35rem/1.25 Sora,sans-serif;margin:0 0 4px}h2{font:600 1rem Sora,sans-serif;margin:0 0 12px}
+.mut{color:var(--muted)}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:16px;top:0;width:28px;height:3px;border-radius:3px;background:var(--ac)}
+.kl{font-size:.8rem;color:var(--muted);font-weight:600}.kv{font:600 1.5rem/1.2 Sora,sans-serif;margin-top:4px;letter-spacing:-.02em}.kd{font-size:.8rem;color:var(--muted)}
+.funds{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.fund{border:1px solid var(--line);border-radius:12px;padding:12px 14px}.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:8px 0 6px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--blue))}
+.row{display:flex;justify-content:space-between;gap:10px;font-size:.88rem}
+table{width:100%;border-collapse:collapse;font-size:.92rem}td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}th{font-size:.75rem;color:var(--muted);font-weight:600}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.cbar{height:8px;border-radius:99px;background:var(--soft);min-width:4px}
+svg text{font:500 13px "IBM Plex Sans",sans-serif;fill:var(--muted)}
+.msg{white-space:pre-wrap;line-height:1.6}.note{font-size:.82rem;color:var(--muted)}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:10px 16px 28px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media (max-width:760px){.grid2{grid-template-columns:1fr}.kv{font-size:1.25rem}}
+</style></head><body>
+<header><div class="in"><img id="logo" alt="" hidden><div><div class="co" id="co">Donor dashboard</div><div class="sub" id="sub"></div></div></div></header>
+<main id="m"><div class="card">Loading the dashboard…</div></main>
+<footer>Shared with Orzio. Totals only: no patient names or details are shown.</footer>
+<script>
+(function(){const t=new URLSearchParams(location.search).get('t')||'';const m=document.getElementById('m');
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const n0=v=>Number(v||0).toLocaleString('en-US',{maximumFractionDigits:0});const d=s=>s?new Date(String(s).slice(0,10)+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+const mon=s=>new Date(s+'-15T12:00:00').toLocaleDateString('en-GB',{month:'short'});
+fetch('/api/donor?t='+encodeURIComponent(t)).then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{
+  if(!ok){m.innerHTML='<div class="card"><h1>'+(j&&/expired/.test(j.error||'')?'This link has expired':'Not available')+'</h1><p class="mut">'+esc(j.error||'This dashboard could not be found.')+'</p></div>';return;}
+  const c=j.company||{},S=j.summary||{},T=S.totals||{},cur=c.currency||S.currency||'';
+  if(c.color&&/^#[0-9a-f]{6}$/i.test(c.color)) document.documentElement.style.setProperty('--ac',c.color);
+  document.getElementById('co').textContent=c.name||'Clinic';document.getElementById('sub').textContent=(j.title||'How your donations help')+(S.period?` · ${d(S.period.from)} to ${d(S.period.to)}`:'');document.title=(j.title||'Donor dashboard')+' · '+(c.name||'');
+  if(c.logo&&/^data:image|^https:/.test(c.logo)){const l=document.getElementById('logo');l.src=c.logo;l.hidden=false;}
+  const share=T.charges?Math.round(T.charity/T.charges*100):0;
+  const k=(l,v,s)=>`<div class="kpi"><div class="kl">${l}</div><div class="kv">${v}</div><div class="kd">${s||''}</div></div>`;
+  let h=`<div class="kpis">${k('Patients helped',n0(T.patients),n0(T.visits)+' visits')}${k('Charity care given',cur+' '+n0(T.charity),share+'% of all charges')}${k('Free patients',n0(T.free_visits),'Visits that cost the patient nothing')}${k('Donations received',cur+' '+n0(T.donations),n0(T.donors)+' donations')}</div>`;
+  if(j.message) h+=`<div class="card"><h2>A note from ${esc(c.name||'the clinic')}</h2><div class="msg">${esc(j.message)}</div></div>`;
+  if((S.funds||[]).length) h+=`<div class="card"><h2>Funds</h2><div class="funds">${S.funds.map(f=>{const used=Math.max(0,+f.used||0),rec=Math.max(0,+f.received||0);const pc=rec?Math.min(100,Math.round(used/rec*100)):0;return `<div class="fund"><b>${esc(f.name)}</b><div class="bar"><i style="width:${pc}%"></i></div><div class="row"><span class="mut">Received</span><span>${cur} ${n0(rec)}</span></div><div class="row"><span class="mut">Spent on patients</span><span>${cur} ${n0(used)}</span></div>${(+f.balance||0)<0?`<div class="row"><span class="mut">Still needed</span><b style="color:var(--bad)">${cur} ${n0(-f.balance)}</b></div>`:`<div class="row"><span class="mut">Balance</span><b>${cur} ${n0(f.balance)}</b></div>`}</div>`;}).join('')}</div></div>`;
+  const ms=S.monthly||[];if(ms.length){const W=640,H=200,L=44,B=24,mx=Math.max(1,...ms.map(x=>Math.max(+x.charity||0,+x.donations||0)));const cw=(W-L-10)/ms.length,bw=Math.min(18,cw/3);
+    let g='';for(let i=0;i<=3;i++){const v=mx*i/3,y=10+(H-B-10)*(1-i/3);g+=`<line x1="${L}" x2="${W-10}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-6}" y="${y+4}" text-anchor="end">${n0(v)}</text>`;}
+    ms.forEach((x,i)=>{const cx=L+cw*i+cw/2;const hC=(+x.charity||0)/mx*(H-B-10),hD=(+x.donations||0)/mx*(H-B-10);g+=`<rect x="${cx-bw-1}" y="${H-B-hD}" width="${bw}" height="${hD}" rx="3" fill="#1F4FD1"><title>Donations ${n0(x.donations)}</title></rect><rect x="${cx+1}" y="${H-B-hC}" width="${bw}" height="${hC}" rx="3" fill="var(--teal)"><title>Charity care ${n0(x.charity)}</title></rect><text x="${cx}" y="${H-6}" text-anchor="middle">${mon(x.m)}</text>`;});
+    h+=`<div class="card"><h2>Donations received and charity care given, by month</h2><svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Monthly donations and charity care">${g}</svg><div class="note"><span style="color:#1F4FD1">■</span> Donations received &nbsp; <span style="color:var(--teal)">■</span> Charity care given (${esc(cur)})</div></div>`;}
+  const cs=S.conditions||[];if(cs.length){const mx=Math.max(1,...cs.map(x=>+x.visits||0));h+=`<div class="grid2"><div class="card"><h2>What patients came for</h2><table><thead><tr><th>Condition</th><th class="n">Visits</th><th style="width:35%"></th></tr></thead><tbody>${cs.slice(0,10).map(x=>`<tr><td>${esc(x.name)}</td><td class="n">${n0(x.visits)}</td><td><div class="cbar" style="width:${Math.round(x.visits/mx*100)}%;background:var(--teal)"></div></td></tr>`).join('')}</tbody></table></div>
+    <div class="card"><h2>Where the charity went</h2><table><thead><tr><th>Condition</th><th class="n">Charity care (${esc(cur)})</th></tr></thead><tbody>${cs.slice().sort((a,b)=>(b.charity||0)-(a.charity||0)).slice(0,10).map(x=>`<tr><td>${esc(x.name)}</td><td class="n">${n0(x.charity)}</td></tr>`).join('')}</tbody></table></div></div>`;}
+  h+=`<div class="card note">Figures from the clinic’s records as at ${d(S.updated_at)}. This link works until ${d(j.expires_at)}.${c.phone?' · '+esc(c.phone):''}${c.email?' · '+esc(c.email):''}</div>`;
+  m.innerHTML=h;}).catch(()=>{m.innerHTML='<div class="card">The dashboard could not be loaded. Check your connection and try again.</div>';});})();
+</script></body></html>
