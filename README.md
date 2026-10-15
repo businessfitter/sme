@@ -36,7 +36,7 @@ This edition is built to be sold. One codebase runs either way:
 
 | Part | Runs on | What it does |
 |---|---|---|
-| `public/index.html` | Vercel (static) | The app |
+| `public/app.html` | Vercel (static) | The app (served at `/` and `/app`; at `/app` only on the website domain) |
 | `public/claude-shim.js` | Vercel (static) | Connects the app to Supabase. Handles sign-up, workspace setup, the workspace switcher, plan and usage, and trial/read-only notices |
 | `public/admin.html` | Vercel (static), at `/admin` | **Your** console: all customers, plans, trials, usage, suspend/activate |
 | `public/vendor/` | Vercel (static) | Supabase client library, bundled so the app doesn't depend on a public CDN |
@@ -93,7 +93,7 @@ git push -u origin main
    - `GOOGLE_MAPS_API_KEY` (optional): a browser key for the office-location maps and address search. Restrict it to your domain in Google Cloud and enable *Maps JavaScript API* and *Places API*. Without it the maps and the address search use OpenStreetMap (free, no key).
    - `RESEND_API_KEY` and `EMAIL_FROM` (optional but recommended): to email quotes, agreements, statements, requests for quotation and payment reminders from the server (resend.com; `EMAIL_FROM` like `Orzio <billing@yourdomain.com>` on a verified domain). Without them the app opens the user's own email program with the message ready.
    - `CRON_SECRET`: any long random text. Vercel sends it to `/api/reminders` every morning (see `vercel.json`, `crons`) so payment reminders go out automatically.
-   - `APP_URL`: your site address, e.g. `https://app.orzio.ai`, used in reminder emails.
+   - `APP_URL`: your site address, e.g. `https://orzio.ai/app`, used in reminder emails.
    - `UAE_LOCAL_LIST_URL` (optional): a CSV export of the UAE Local Terrorist List if you host one. Otherwise upload the EOCN Excel in Compliance → AML screening.
    - `WC1_API_KEY`, `WC1_API_SECRET`, `WC1_GROUP_ID` (optional): LSEG World-Check One credentials. Built to LSEG's published API but not tested without credentials.
 3. **Deploy**, then add your domain under **Settings → Domains**.
@@ -262,7 +262,7 @@ Staff open tickets in Help desk. Your **IT support** role works the queue, can t
 - Replace the placeholders: `hello@orzio.ai` and `sales@orzio.ai`, the office location, prices ("Ask for a quote"), social links (empty), in the pages under `public/site/` (search and replace across the folder).
 - Have a lawyer review `privacy.html` and `terms.html`.
 - Set `CONTACT_EMAIL` (and `RESEND_API_KEY`) so the contact form reaches you.
-- **Domains.** Add `orzio.ai` and `www.orzio.ai` to the Vercel project; `vercel.json` already serves the website there. Add `app.orzio.ai` for the app; the website's *Sign in* and *Start free trial* buttons go to `app.<your domain>`. If your domain isn't orzio.ai, change the two `host` values in `vercel.json` and the `og:image` address in the pages.
+- **Domains.** On `orzio.ai` and `www.orzio.ai`, `/` is the website and the app is at `/app`. On every other address (your `*.vercel.app` address, customers' own domains, an `app.` subdomain if you add one) `/` opens the app, as before. In Supabase → Authentication → URL Configuration, add `https://orzio.ai/**` to the redirect URLs so sign-up and password-reset links return to `/app`. If your domain isn't orzio.ai, change the two `host` values in `vercel.json` and the `og:image` address in the pages.
 - Until the domain is set, the website is at `https://<your-app>/site/`.
 
 ## Updating an existing installation

@@ -95,7 +95,7 @@
       const email = $('sb-e').value.trim(), password = $('sb-p').value;
       const r = mode === 'in'
         ? await sb.auth.signInWithPassword({ email, password })
-        : await sb.auth.signUp({ email, password, options: { data: { full_name: $('sb-n').value.trim() }, emailRedirectTo: location.origin } });
+        : await sb.auth.signUp({ email, password, options: { data: { full_name: $('sb-n').value.trim() }, emailRedirectTo: location.origin + location.pathname } });
       $('sb-go').disabled = false;
       if (r.error) return msg(r.error.message);
       if (mode === 'up' && !r.data.session) return msg('Check your inbox to confirm your email, then sign in.');
@@ -104,12 +104,12 @@
     };
     $('sb-ml').onclick = async () => {
       const email = $('sb-e').value.trim(); if (!email) return msg('Enter your email first.');
-      const r = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin, shouldCreateUser: mode === 'up' } });
+      const r = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: mode === 'up' } });
       msg(r.error ? r.error.message : 'Check your inbox for the sign-in link.');
     };
     $('sb-fp').onclick = async () => {
       const email = $('sb-e').value.trim(); if (!email) return msg('Enter your email first.');
-      const r = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/?reset' });
+      const r = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname + '?reset' });
       msg(r.error ? r.error.message : 'Check your inbox for a link to set a new password.');
     };
   }
@@ -124,7 +124,7 @@
       e.preventDefault();
       const r = await sb.auth.updateUser({ password: $('sb-p').value });
       if (r.error) { $('sb-m').textContent = r.error.message; return; }
-      location.replace(location.origin + '/');
+      location.replace(location.origin + location.pathname);
     };
   }
 

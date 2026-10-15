@@ -35,6 +35,10 @@
       "destination": "/site/:page.html"
     },
     {
+      "source": "/",
+      "destination": "/app.html"
+    },
+    {
       "source": "/_blob/:id",
       "destination": "/api/blob?id=:id"
     }

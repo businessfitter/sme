@@ -65,7 +65,7 @@ dialog h2{margin:0 0 .2rem;font-size:1.15rem;font-weight:500}
 <body>
 <header><span class="brand"><img src="/brand/app-icon.svg" alt=""><span id="appname">Orzio</span> · Platform admin</span>
 <nav id="nav" hidden><button type="button" data-v="companies" aria-current="page">Customers</button><button type="button" data-v="plans">Plans</button><button type="button" data-v="support">Support</button><button type="button" data-v="settings">Settings</button></nav>
-<a href="/">Open the app →</a></header>
+<a href="/app">Open the app →</a></header>
 <main id="main"><div class="center"><p class="muted">Loading…</p></div></main>
 
 <dialog id="dlg"></dialog>
@@ -87,7 +87,7 @@ let orgs = [], plans = [], view = 'companies', q = '', fStatus = '';
 
 (async () => {
   const { data } = await sb.auth.getSession();
-  if (!data.session) { $('#main').innerHTML = '<div class="center"><div><p>Sign in first.</p><a class="btn primary" href="/">Go to sign-in</a></div></div>'; return; }
+  if (!data.session) { $('#main').innerHTML = '<div class="center"><div><p>Sign in first.</p><a class="btn primary" href="/app">Go to sign-in</a></div></div>'; return; }
   const { data: info } = await sb.rpc('app_info');
   if (!info || !info.is_platform_admin) {
     $('#main').innerHTML = `<div class="center"><div><h1>Not a platform admin</h1><p class="muted">Signed in as ${esc(data.session.user.email)}. Add this account to platform_admins in Supabase to use this page.</p></div></div>`;

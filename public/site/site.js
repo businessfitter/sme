@@ -1,11 +1,9 @@
 // Orzio website behaviour: header, mobile menu, links to the app, the review-hub orbit, contact form.
 (function () {
-  // Where the app lives. On your marketing domain (orzio.ai) the app is app.<domain>; when the site is opened
-  // from the app's own address (…/site/…) the app is on the same address. Override with <meta name="orzio-app">.
+  // The app lives at /app on the same address (on other addresses / also opens it). Override with <meta name="orzio-app">.
   var meta = document.querySelector('meta[name="orzio-app"]');
-  var host = location.hostname.replace(/^www\./, '');
-  var APP = (meta && meta.content) || (location.pathname.indexOf('/site') === 0 || host === 'localhost' || /vercel\.app$/.test(host) || /^app\./.test(host) ? location.origin : 'https://app.' + host);
-  document.querySelectorAll('[data-app]').forEach(function (a) { var p = a.getAttribute('data-app'); a.href = APP + (p === 'signup' ? '/?signup' : '/'); });
+  var APP = (meta && meta.content) || (location.origin + '/app');
+  document.querySelectorAll('[data-app]').forEach(function (a) { var p = a.getAttribute('data-app'); a.href = APP + (p === 'signup' ? '?signup' : ''); });
 
   var top = document.querySelector('.top');
   if (top) {

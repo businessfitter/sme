@@ -3,7 +3,7 @@
   "name": "Orzio",
   "short_name": "Orzio",
   "description": "Your business, run by AI agents and approved by you.",
-  "start_url": "/?source=app",
+  "start_url": "/app?source=app",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
