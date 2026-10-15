@@ -22,7 +22,7 @@
           "value": "(www\\.)?orzio\\.ai"
         }
       ],
-      "destination": "/site/index.html"
+      "destination": "/site/index"
     },
     {
       "source": "/:page(features|industries|pricing|security|partners|about|contact|privacy|terms)",
@@ -32,11 +32,11 @@
           "value": "(www\\.)?orzio\\.ai"
         }
       ],
-      "destination": "/site/:page.html"
+      "destination": "/site/:page"
     },
     {
       "source": "/",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/_blob/:id",
