@@ -8816,6 +8816,7 @@ try{Object.assign(TAXO,{
   accounting:{'Practice':['Bookkeeping and accounting','Tax compliance and advisory','Audit and assurance','Payroll bureau','Full-service practice'],'Firm type':['Sole practitioner','Partnership','Network member firm']},
   firesafety:{'Services':['Maintenance and inspection (AMC)','Installation contractor','Design and consultancy','Full-service contractor'],'Systems':['Extinguishers and hose reels','Fire alarm and detection','Sprinklers and water-based systems','Gas suppression','Emergency lighting and signage','Mixed']},
   holding:{'Holding':['Group holding company','Investment holding','Family office','Special purpose vehicle'],'Portfolio':['Operating subsidiaries','Listed and private investments','Real estate holdings','Mixed']}});}catch(e){}
+try{INDUSTRIES.clinic[0]='Medical Clinic';INDUSTRIES.clinic[1]='Clinics, polyclinics and dispensaries, including free and subsidised patients';TAXO.clinic={'Clinic':['General practice clinic','Polyclinic','Specialist clinic','Dental clinic','Dispensary','Maternity and child health'],'Charitable and community':['Charitable clinic','Trust hospital','Free medical camps']};}catch(e){}
 try{Object.keys(TAXO).forEach(k=>{SUBS[k]=Object.keys(TAXO[k]);});}catch(e){}
 
 const EDITIONS={

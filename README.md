@@ -279,7 +279,7 @@ Eight editions package Orzio for one industry each, on the same platform and dat
 
 | Edition | For | Edition modules |
 |---|---|---|
-| Orzio Clinic | Medical and welfare clinics | Patient Module, Clinic Module |
+| Orzio Clinic | Medical clinics | Patient Module, Clinic Module |
 | Orzio Broker | Insurance brokers | Broking: placements and quote comparison, policies and debit notes, client money, remittances, endorsements, renewals, claims, production and commission |
 | Orzio Commerce | E-commerce | E-commerce, Inventory |
 | Orzio Software | Software houses | Software: subscriptions, billing run, deferred revenue (IFRS 15), SaaS metrics, R&D capitalisation (IAS 38); Practice; Projects |
