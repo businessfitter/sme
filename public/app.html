@@ -1469,6 +1469,9 @@ td.nowrap{white-space:nowrap}
 .mdnew{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;margin-top:.4rem}.mdnew input{flex:1;min-width:8rem}
 table.mdtab td{vertical-align:middle}table.mdtab select{max-width:12rem}
 .mdocs .cardhead>.row{flex-wrap:nowrap;align-items:center}.mdocs .cardhead>.row input[type=search]{width:14rem}
+table.revtab td.revtype{min-width:11rem}table.revtab td.revtype select{max-width:13rem;width:100%}
+table.revtab .txp{display:flex;flex-direction:column;gap:.2rem;margin-top:.3rem}table.revtab .txp select{max-width:13rem}
+table.mdtab tr.mdmonth td{background:var(--bg2,#F7F8FA);font-weight:600;font-size:.8rem;color:var(--ink2,#5B6472);padding-top:.5rem;padding-bottom:.5rem}
 
 </style>
 
@@ -2217,16 +2220,16 @@ async function processStatement(file,bank,bankName,logEl,resEl,signal){const st=
     let el=(Array.isArray(l.entry.lines)?l.entry.lines:[]).map(x=>({account:String(x.account||'').trim(),label:String(x.label||l.description).slice(0,140),debit:r2(x.debit),credit:r2(x.credit)})).filter(x=>x.debit||x.credit);
     const bl=el.find(x=>x.account===bank);const shapeOk=bl&&(inflow?(Math.abs(bl.debit-amtS)<0.01&&!bl.credit):(Math.abs(bl.credit-amtS)<0.01&&!bl.debit))&&validateLines(el).length===0;
     if(!shapeOk){el=[{account:bank,label:l.description,debit:inflow?amtS:0,credit:inflow?0:amtS},{account:'1990',label:l.description,debit:inflow?0:amtS,credit:inflow?amtS:0}];conf=0;reasoning='The agent’s proposed entry did not balance or used an unknown account, so the line was parked in the suspense account for you to classify.'+(reasoning?' Agent note: '+reasoning:'');}
-    let settles=null;const pm=!foreign?matchPayment(l.amount,l.description+' '+(l.counterparty||'')):null;
-    if(pm){const ctrl=inflow?'1100':'2000';const tot=r2(pm.items.reduce((s,x)=>s+x.amount,0));const lbl=pm.items.map(x=>x.inv.number).join(', ');
-      el=inflow?[{account:bank,label:l.description,debit:amtS,credit:0},...(pm.charge?[{account:'6600',label:'Bank charges deducted by the payer',debit:pm.charge,credit:0}]:[]),...(pm.wht?[{account:whtCfg().account,label:`Final tax withheld at ${whtCfg().rate}% on ${lbl}`,debit:pm.wht,credit:0}]:[]),{account:ctrl,label:`${lbl} ${pm.items[0].inv.partner}`,debit:0,credit:tot},...(pm.fxgain?[{account:'6850',label:'Exchange difference on export proceeds',debit:0,credit:pm.fxgain}]:[])]
-        :[{account:ctrl,label:`${lbl} ${pm.items[0].inv.partner}`,debit:tot,credit:0},...(pm.charge?[{account:'6600',label:'Bank charges on the payment',debit:pm.charge,credit:0}]:[]),{account:bank,label:l.description,debit:0,credit:amtS}];
+    let settles=null;const sm=!foreign?matchSalary(l.amount,l.description+' '+(l.counterparty||'')):null;const pm=!foreign&&!sm?matchPayment(l.amount,l.description+' '+(l.counterparty||'')):null;
+    if(sm){el=[{account:sm.account,label:`Salary · ${sm.emp.name}`,debit:amtS,credit:0},{account:bank,label:l.description,debit:0,credit:amtS}];conf=sm.conf;reasoning=sm.why;l.counterparty=sm.emp.name;l._sal=sm;}else if(pm){const ctrl=inflow?'1100':'2000';const tot=r2(pm.items.reduce((s,x)=>s+x.amount,0));const lbl=pm.items.map(x=>x.inv.number).join(', ');
+      el=inflow?[{account:bank,label:l.description,debit:amtS,credit:0},...(pm.charge?[{account:'6600',label:'Bank charges deducted by the payer',debit:pm.charge,credit:0}]:[]),...(pm.wht?[{account:whtCfg().account,label:`Final tax withheld at ${whtCfg().rate}% on ${lbl}`,debit:pm.wht,credit:0}]:[]),{account:ctrl,label:`${lbl} ${pm.items[0].inv.partner}`,debit:0,credit:r2(tot+(pm.over||0))},...(pm.fxgain?[{account:'6850',label:'Exchange difference on export proceeds',debit:0,credit:pm.fxgain}]:[])]
+        :[{account:ctrl,label:`${lbl} ${pm.items[0].inv.partner}`,debit:r2(tot+(pm.over||0)),credit:0},...(pm.charge?[{account:'6600',label:'Bank charges on the payment',debit:pm.charge,credit:0}]:[]),{account:bank,label:l.description,debit:0,credit:amtS}];
       conf=pm.conf;reasoning=pm.why;settles=pm.items.map(x=>({invoice_id:x.inv.id,amount:x.amount}));l.counterparty=pm.items[0].inv.partner;}
-    else{const rule=findRule((l.counterparty||'')+' '+l.description);const other=el.length===2?el.find(x=>x.account!==bank):null;if(rule&&S.accounts[rule.account]&&other&&other.account!==rule.account){other.account=rule.account;reasoning=`Learned rule: “${rule.match}” goes to ${rule.account} ${aname(rule.account)}. `+reasoning;conf=Math.max(conf,0.9);}}
+    else{const rule=bankRule((l.counterparty||'')+' '+l.description,inflow?'in':'out');const other=el.length===2?el.find(x=>x.account!==bank):null;if(rule&&S.accounts[rule.account]&&other){const ch=other.account!==rule.account;other.account=rule.account;reasoning=`Learned from your approvals${(+rule.hits||1)>1?' ('+rule.hits+' times)':''}: “${rule.match}” goes to ${rule.account} ${aname(rule.account)}.`+(ch&&reasoning?' Agent first suggested otherwise: '+reasoning:'');conf=Math.max(conf,(+rule.hits||1)>=2?0.95:0.9);}}
     if(foreign) el=convertLines(el,scur);
     const amt=moveTotal({lines:el});
     const mv={journal:'BNK1',date:l.date,ref:l.description,partner:l.counterparty,bank:bankName,lines:el,amount:amt,currency:scur,amount_currency:foreign?l.amount:null,source:'bank_statement',statement_id:stRef.id,statement_hash:l.hash,confidence:conf,reasoning,created_by:'agent:bank',created_at:nowISO(),uploaded_by:S.me,audit:[{at:nowISO(),by:'agent:bank',action:'Proposed from '+fileName+(foreign?` (${scur} ${money2(l.amount)} converted at ${fx(scur,S.baseCur).toFixed(4)})`:'')}]};
-    if(settles) mv.settles=settles;if(pm&&pm.wht) mv.wht={rate:whtCfg().rate,amount:pm.wht,invoices:pm.items.map(x=>x.inv.number)};const errs=validateMove(mv);const why=[];if(errs.length) why.push(errs.join(' '));if(amt>maxAuto) why.push(`amount is above the auto-post limit of ${money(maxAuto)}`);if(conf<minConf) why.push(`agent confidence ${Math.round(conf*100)}% is below ${Math.round(minConf*100)}%`);if(integrity==='mismatch') why.push('the statement balances don’t agree');if(policy().agents_need_review) why.push('your settings send every agent action for approval');
+    if(settles) mv.settles=settles;if(l._sal) mv.salary_of={emp:l._sal.emp.id,month:l._sal.month||null};if(pm&&pm.wht) mv.wht={rate:whtCfg().rate,amount:pm.wht,invoices:pm.items.map(x=>x.inv.number)};const errs=validateMove(mv);const why=[];if(errs.length) why.push(errs.join(' '));if(amt>maxAuto) why.push(`amount is above the auto-post limit of ${money(maxAuto)}`);if(conf<minConf) why.push(`agent confidence ${Math.round(conf*100)}% is below ${Math.round(minConf*100)}%`);if(integrity==='mismatch') why.push('the statement balances don’t agree');if(policy().agents_need_review) why.push('your settings send every agent action for approval');
     if(!why.length){mv.state='posted';mv.name=nextName('BNK1',l.date);mv.approved_by='agent:bank';mv.approved_at=nowISO();mv.audit.push({at:nowISO(),by:'engine',action:`Auto-posted: ${money(amt)} is within ${money(maxAuto)} and confidence ${Math.round(conf*100)}% meets ${Math.round(minConf*100)}%`});nAuto++;}
     else{mv.state='to_approve';mv.name=null;mv.audit.push({at:nowISO(),by:'engine',action:'Held for review: '+why.join('; ')+'.'});nRev++;}
     const id=await writeMove(mv);stDoc.lines.push({date:l.date,description:l.description,amount:l.amount,balance:l.balance,status:mv.state==='posted'?'posted':'review',move_id:id});}
@@ -2640,7 +2643,7 @@ async function learnFrom(m,lines){try{if(!['bank_statement','bill'].includes(m.s
 function settledFor(id,withPending){let s=0;for(const m of (withPending?postedOrPending():posted())) for(const x of (m.settles||[])) if(x.invoice_id===id) s+=+x.amount||0;return r2(s);}
 function invDue(inv,withPending){return r2((+inv.total_base||0)-settledFor(inv.id,withPending));}
 function invStatus(inv){if(inv.status==='cancelled') return [inv.deleted_reason?'Deleted':'Cancelled',''];const mv=S.moves.find(m=>m.id===inv.move_id);if(mv&&mv.state==='to_approve') return ['Awaiting approval','warn'];if(mv&&mv.state==='cancelled') return ['Rejected',''];
-  const due=invDue(inv);if(due<=0.01) return ['Paid','ok'];if(settledFor(inv.id)>0.01) return [inv.due<today()?'Part paid, overdue':'Part paid',inv.due<today()?'bad':'acc'];return inv.due<today()?['Overdue','bad']:['Open','acc'];}
+  const due=invDue(inv);if(due<=0.01) return ['Paid','ok'];if(settledFor(inv.id)>0.01) return [(inv.due<today()?'Short paid, overdue':'Short paid')+' · '+money2(due)+' to pay',inv.due<today()?'bad':'warn'];return inv.due<today()?['Overdue','bad']:['Open','acc'];}
 const openInvoices=kind=>S.invoices.filter(i=>i.kind===kind&&i.status!=='cancelled'&&(S.moves.find(m=>m.id===i.move_id)||{}).state==='posted'&&invDue(i,true)>0.01);
 // payment matching: one payment can clear several invoices, net of bank charges, or part-pay the oldest
 function partnerHit(i,n){const w=norm(i.partner).split(' ').filter(x=>x.length>2&&!STOP.has(x));return w.some(x=>n.includes(' '+x+' '))||n.includes(' '+norm(i.number)+' ')||(i.supplier_ref&&n.includes(' '+norm(i.supplier_ref)+' '));}
@@ -2846,7 +2849,7 @@ Use net amounts before VAT. Choose accounts only from this list (expenses, cost 
       catch(e){s2.err(sampleErr(e));}finally{fileIn.value='';}};}
   const runCard=h('div',{class:'card'});el.append(runCard);
   const partnersBox=h('div',{class:'tablewrap'});el.append(h('div',{class:'card'},h('div',{class:'cardhead'},h('div',{},h('h3',{},isC?'Customers':'Suppliers'),h('p',{class:'note'},'Select a row to open the '+(isC?'customer':'supplier')+' dashboard.'))),partnersBox));
-  const search=h('input',{type:'search',placeholder:'Search number or name','aria-label':'Search',style:'flex:1;min-width:12rem',oninput:()=>drawList()});const stSel=h('select',{'aria-label':'Status',onchange:()=>drawList()},['All','Open','Overdue','Paid','Awaiting approval','Rejected','Deleted'].map(s=>h('option',{value:s},s)));
+  const search=h('input',{type:'search',placeholder:'Search number or name','aria-label':'Search',style:'flex:1;min-width:12rem',oninput:()=>drawList()});const stSel=h('select',{'aria-label':'Status',onchange:()=>drawList()},['All','Open','Short paid','Overdue','Paid','Awaiting approval','Rejected','Deleted'].map(s=>h('option',{value:s},s)));
   const list=h('div',{class:'tablewrap'});el.append(h('div',{class:'card'},h('div',{class:'cardhead'},h('h3',{},isC?'Invoices':'Bills'),h('div',{class:'row'},h('button',{class:'btn sm',type:'button',onclick:()=>exportXlsx(`${isC?'invoices':'bills'}-${fileSlug(S.settings.company)}.xlsx`,{[isC?'Invoices':'Bills']:[['Number','Supplier ref','Partner','Date','Due','Currency','Total','Total in '+S.baseCur,'Balance','Status'],...S.invoices.filter(i=>i.kind===kind).map(i=>[i.number,i.supplier_ref||'',i.partner,i.date,i.due,i.currency,i.total,i.total_base,invDue(i),invStatus(i)[0]])]})},'Export'))),h('div',{class:'row'},search,stSel),list));
   function drawList(){list.textContent='';try{const nc=numberCheck(kind);if(nc) list.append(nc);}catch(e){}const q=norm(search.value);let ls=S.invoices.filter(i=>i.kind===kind).sort((a,b)=>a.date<b.date?1:-1);if(q) ls=ls.filter(i=>norm(i.number+' '+i.partner+' '+(i.supplier_ref||'')).includes(q));
     if(stSel.value!=='All') ls=ls.filter(i=>invStatus(i)[0].startsWith(stSel.value==='Open'?'Open':stSel.value)||(stSel.value==='Overdue'&&invStatus(i)[0].includes('overdue')));
@@ -2855,7 +2858,7 @@ Use net amounts before VAT. Choose accounts only from this list (expenses, cost 
     ls.slice(0,300).forEach(i=>{const [s,k]=invStatus(i);const open=!!S.open['inv-'+i.id];tb.append(h('tr',{class:'click',tabindex:'0',onclick:()=>{S.open['inv-'+i.id]=!open;drawList();}},h('td',{class:'code'},i.number,i.supplier_ref?h('div',{class:'mini'},i.supplier_ref):null),h('td',{},i.partner),h('td',{style:'white-space:nowrap'},fmtDate(i.date)),h('td',{style:'white-space:nowrap'},fmtDate(i.due)),
       h('td',{class:'num'},(i.currency!==S.baseCur?i.currency+' ':'')+money2(i.total)),h('td',{class:'num'},money2(invDue(i))),h('td',{},pill(s,k)),invQuick(i,()=>drawList())));
       if(open){const box=h('div',{class:'stack',style:'gap:.6rem'});const mv=S.moves.find(m=>m.id===i.move_id);
-        box.append(h('div',{class:'mini mut'},`${i.lines.length} line(s). Net ${money2(i.net)}, VAT ${money2(i.vat)}, total ${i.currency} ${money2(i.total)}${i.currency!==S.baseCur?` (${S.baseCur} ${money2(i.total_base)})`:''}. Entry ${mv&&mv.name||'awaiting approval'}.`),i.doc?h('div',{class:'row'},attachLinks([i.doc])):null);box.append(invoiceActions(i,()=>drawList()));{const eb_=invEditBtn(i,()=>drawList());if(eb_) box.append(eb_);const db_=invDeleteBtn(i,()=>drawList());if(db_) box.append(db_);}
+        box.append(h('div',{class:'mini mut'},`${i.lines.length} line(s). Net ${money2(i.net)}, VAT ${money2(i.vat)}, total ${i.currency} ${money2(i.total)}${i.currency!==S.baseCur?` (${S.baseCur} ${money2(i.total_base)})`:''}. Entry ${mv&&mv.name||'awaiting approval'}.`),i.doc?h('div',{class:'row'},attachLinks([i.doc])):null);box.append(invoiceActions(i,()=>drawList()));{const mp_=invBankMap(i);if(mp_) box.append(mp_);}{const eb_=invEditBtn(i,()=>drawList());if(eb_) box.append(eb_);const db_=invDeleteBtn(i,()=>drawList());if(db_) box.append(db_);}
         if(S.canWrite&&invDue(i,true)>0.01&&mv&&mv.state==='posted') box.append(paymentForm(i,()=>{S.open['inv-'+i.id]=false;drawList();}));
         if(isC&&invDue(i)>0.01&&i.due<today()&&sample){const out=h('div',{class:'answer'});const copy=h('button',{class:'btn sm',type:'button',hidden:true,onclick:async()=>{try{await navigator.clipboard.writeText(out.textContent);copy.textContent='Copied';}catch(e){const r=document.createRange();r.selectNodeContents(out);const s_=getSelection();s_.removeAllRanges();s_.addRange(r);}}},'Copy email');
           const b=h('button',{class:'btn agent sm',type:'button',onclick:async()=>{b.disabled=true;out.textContent='Drafting…';const days=Math.floor((Date.parse(today())-Date.parse(i.due))/864e5);
@@ -11255,6 +11258,7 @@ async function submitStatement(file,code,bn,log,result,signal,existing){
       catch(e){log.append(h('div',{class:'step err'},'The file could not be saved to Documents ('+(e.message||e)+'). The agent still reads it.'));}}
     await ref.set({entity:S.entity,file_name:file.name||'statement',bank:bn,bank_account:code,file:fileRec,status:'submitted',uploaded_by:S.me,uploaded_at:nowISO(),lines:[]});}
   try{if(typeof whtCfg==='function'&&whtCfg().on) await whtEnsure();}catch(e){}
+  try{if((S.employees||[]).length&&S.canEdit&&!(S.accounts['2350']&&S.accounts['6000'])) await payrollAccounts();}catch(e){}
   S._stmtRef=ref;S._stmtFile=fileRec;S._stmtOrigAt=existing?existing.uploaded_at:null;S._stmtSaved=false;S.bankRunId=ref.id;
   try{await processStatement(file,code,bn,log,result,signal);}
   finally{const saved=S._stmtSaved;S._stmtRef=null;S._stmtFile=null;S._stmtOrigAt=null;S.bankRunId=null;
@@ -11263,7 +11267,10 @@ async function submitStatement(file,code,bn,log,result,signal,existing){
 async function withdrawHeld(s,why){for(const m of stmtMoves(s).filter(m=>m.state==='to_approve')){await db.doc('moves/'+m.id).update({state:'cancelled',audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:why}]});m.state='cancelled';}}
 async function rerunStatement(s,btn){const U=S._bankUI;if(!U||S.bankRun) return;
   U.log.textContent='';U.result.textContent='';U.log.scrollIntoView({block:'center',behavior:'smooth'});
-  if(!s.file||!s.file.url){U.log.append(h('div',{class:'step err'},'This statement was uploaded before files were kept, so upload it again.'));return;}
+  if(!s.file||!s.file.url){const pick=h('input',{type:'file',style:'display:none'});document.body.append(pick);
+    const f=await new Promise(res=>{pick.onchange=()=>res(pick.files&&pick.files[0]);pick.click();setTimeout(()=>{if(!pick.files||!pick.files.length) res(null);},120000);});pick.remove();
+    if(!f) return;try{const loc=await storeFile(f,{title:`${s.bank||'Bank'} statement · ${f.name}`,folder:'Bank statements',source:'bank_statement'});await db.doc('files/'+loc.id).update({module:'accounting',sub:'Bank statements',record:{kind:'statement',id:s.id}});
+      s.file={file_id:loc.id,asset_id:loc.asset_id,url:loc.url,name:f.name,mime:f.type||'',size:f.size||0};await db.doc('statements/'+s.id).update({file:s.file});}catch(e){U.log.append(h('div',{class:'step err'},'The file could not be saved: '+(e.message||e)));return;}}
   const ctl=new AbortController();S.bankRun=true;U.stopB.hidden=false;U.stopB.onclick=()=>ctl.abort();U.fileIn.disabled=true;if(btn) btn.disabled=true;
   try{const r=await fetch(s.file.url,{credentials:'same-origin'});if(!r.ok) throw new Error('The saved file could not be opened.');const b=await r.blob();
     const file=new File([b],s.file_name||s.file.name||'statement',{type:s.file.mime||b.type||''});
@@ -11281,7 +11288,7 @@ function drawStmts(hist){hist.textContent='';const st=S.statements.slice().sort(
   st.forEach(s=>{const k=stmtStats(s);const [lbl,kind]=stmtStatus(s);const busy=!!S.bankRun;
     const fileCell=h('td',{},h('div',{class:'stfile'},h('span',{class:'stico','aria-hidden':'true'},(String(s.file_name||'').split('.').pop()||'').slice(0,4).toUpperCase()),
       h('div',{},s.file&&s.file.url?h('a',{href:s.file.url,target:'_blank',rel:'noopener',class:'stname'},s.file_name||'Statement'):h('span',{class:'stname'},s.file_name||'Statement'),h('div',{class:'mini mut'},[s.bank||s.bank_name,s.bank_account?aname?`${s.bank_account} ${aname(s.bank_account)}`:s.bank_account:null].filter(Boolean).join(' · ')))));
-    const rr=h('button',{class:'btn sm '+(k.unid||s.status==='failed'||(!k.n&&s.status!=='submitted')?'agent':'ghost'),type:'button',disabled:busy||!S.canWrite||!(s.file&&s.file.url),title:s.file&&s.file.url?'The agent reads the saved file again. Posted entries are kept; entries still waiting are proposed again.':'Uploaded before files were kept'},'Re-run agent');
+    const rr=h('button',{class:'btn sm '+(k.unid||s.status==='failed'||(!k.n&&s.status!=='submitted')?'agent':'ghost'),type:'button',disabled:busy||!S.canWrite,title:s.file&&s.file.url?'The agent reads the saved file again. Posted entries are kept; entries still waiting are proposed again.':'This statement was saved before files were kept: choose the file once and the agent reads it again.'},'Re-run agent');
     rr.onclick=()=>rerunStatement(s,rr);
     const clr=h('button',{class:'btn ghost sm danger',type:'button',disabled:busy||!(S.canEdit||S.canDelete)},'Clear');
     const row=h('tr',{'data-st':s.id},fileCell,h('td',{class:'mini'},fmtDate(String(s.uploaded_at||'').slice(0,10)),h('div',{class:'mut'},who(s.uploaded_by))),
@@ -11321,10 +11328,10 @@ const fsize=n=>!n?'':n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.rou
 BUILD.mdocs=()=>{const el=h('section',{class:'stack mdocs'});const body=h('div',{class:'stack'});const later=lazyRefresh(el,()=>refresh());
   const head=h('div',{class:'pagehead'});el.append(head,body);
   function refresh(){if(allGuard(el,'keep documents')) return;if(later()) return;const A=mdocApp();const k=A.k;const D=S.mdocF||(S.mdocF={});const cur=D[k]||'';
-    head.textContent='';head.append(h('div',{},h('h1',{},`${A.name} documents`),h('p',{class:'lede'},`Files for ${A.name.toLowerCase()}, in folders. Documents the agents and screens of this module create or receive are filed here automatically.`)));
+    head.textContent='';head.append(h('div',{},h('h1',{},`${A.name} documents`),h('p',{class:'lede'},`Everything ${A.name.toLowerCase()} receives or creates, such as bank statements and agreements, is saved here by month. This is a record, so files are added from the module screens, not here.`)));
     body.textContent='';const folders=mdocFolders(k);const files=liveFiles().filter(f=>{const p=mdocPlace(f);return p&&p[0]===k;});
     const q=h('input',{type:'search',placeholder:'Search documents',value:D.q||'','aria-label':'Search documents',oninput:e=>{D.q=e.target.value;drawList();}});
-    const up=h('input',{type:'file',multiple:true,style:'display:none'});const upB=h('label',{class:'btn primary',style:'cursor:pointer'},up,'Upload');upB.hidden=!S.canWrite||!assetsCap;
+    const up=h('input',{type:'file',multiple:true,style:'display:none'});const upB=h('label',{class:'btn primary',style:'cursor:pointer'},up,'Upload');upB.hidden=true;
     const prog=h('div',{class:'agentlog'});
     up.onchange=async()=>{const fl=[...(up.files||[])];up.value='';if(!fl.length) return;const st=stepper(prog);const into=cur||'General';
       for(const f of fl){const s=st.add(`Saving ${f.name} to ${into}`);try{const loc=await storeFile(f,{title:f.name.replace(/\.[^.]+$/,''),folder:'Other',source:'module'});await db.doc('files/'+loc.id).update({module:k,sub:into});loc.module=k;loc.sub=into;s.done(`${f.name} → ${into}`);}catch(e){s.err(`${f.name}: ${e.message||e.code}`);}}refresh();};
@@ -11338,16 +11345,16 @@ BUILD.mdocs=()=>{const el=h('section',{class:'stack mdocs'});const body=h('div',
       folders.map(fd=>{const n=files.filter(f=>mdocPlace(f)[1]===fd).length;return h('button',{type:'button',class:'mdf'+(cur===fd?' on':''),onclick:()=>{D[k]=fd;refresh();}},h('span',{},fd),h('span',{class:'mdn'},n?String(n):''));}),nf);
     const listBox=h('div',{class:'stack'});
     function drawList(){listBox.textContent='';const qq=norm(D.q||'');const L=files.filter(f=>(!cur||mdocPlace(f)[1]===cur)&&(!qq||norm(`${f.title} ${f.name} ${(f.contact||{}).name||''}`).includes(qq))).sort((a,b)=>(b.created_at||'')<(a.created_at||'')?-1:1);
-      if(!L.length){listBox.append(emptyNote(cur?`Nothing in ${cur} yet. Upload files here, or they arrive as the module creates them.`:'No documents yet.'));return;}
+      if(!L.length){listBox.append(emptyNote(cur?`Nothing in ${cur} yet. Files arrive here as they are submitted in the module.`:'No documents yet. Files arrive here as they are submitted in the module.'));return;}
       const t=h('table',{class:'mdtab'},h('thead',{},h('tr',{},h('th',{},'Name'),h('th',{},'Folder'),h('th',{},'Date'),h('th',{},'Added by'),h('th',{class:'num'},'Size'),h('th',{class:'acts'},''))));const tb=h('tbody');
-      L.forEach(f=>{const ext=(String(f.name||'').split('.').pop()||'').slice(0,4).toUpperCase();const mv=h('select',{'aria-label':'Move to folder',disabled:!S.canWrite},folders.map(x=>h('option',{value:x},x)));mv.value=mdocPlace(f)[1];
+      let lastM='';L.forEach(f=>{const mk=String(f.created_at||'').slice(0,7);if(mk!==lastM){lastM=mk;tb.append(h('tr',{class:'mdmonth'},h('td',{colspan:6},mk?mLabel(mk,true):'Undated')));}const ext=(String(f.name||'').split('.').pop()||'').slice(0,4).toUpperCase();const mv=h('select',{'aria-label':'Move to folder',disabled:!S.canWrite},folders.map(x=>h('option',{value:x},x)));mv.value=mdocPlace(f)[1];
         mv.onchange=async()=>{try{await db.doc('files/'+f.id).update({module:k,sub:mv.value});f.module=k;f.sub=mv.value;refresh();}catch(e){}};
         const del=h('button',{class:'btn ghost sm danger',type:'button',disabled:!(S.canDelete||S.canEdit)},'Delete');del.onclick=async()=>{del.disabled=true;try{await db.doc('files/'+f.id).update({deleted_at:nowISO(),deleted_by:S.me});f.deleted_at=nowISO();refresh();}catch(e){del.disabled=false;}};
         tb.append(h('tr',{},h('td',{},h('div',{class:'stfile'},h('span',{class:'stico','aria-hidden':'true'},f.kind==='link'?'LINK':ext),h('div',{},h('a',{class:'stname',href:f.url,target:'_blank',rel:'noopener'},f.title||f.name),h('div',{class:'mini mut'},[f.name!==f.title?f.name:null,f.filed_by,(f.contact||{}).name].filter(Boolean).join(' · '))))),
           h('td',{},mv),h('td',{class:'nowrap'},fmtDate(String(f.created_at||'').slice(0,10))),h('td',{class:'mini'},who(f.created_by)),h('td',{class:'num mini'},fsize(f.size)),h('td',{class:'acts'},del)));});
       t.append(tb);listBox.append(h('div',{class:'tablewrap'},t));}
     drawList();
-    body.append(h('div',{class:'mdgrid'},h('div',{class:'card mdside'},h('h3',{},'Folders'),tree),h('div',{class:'card stack'},h('div',{class:'cardhead'},h('div',{},h('h3',{},cur||'All documents'),h('p',{class:'note'},cur?`Uploads go into ${cur}.`:'Choose a folder to upload into it; otherwise uploads go into General.')),h('div',{class:'row'},q,upB)),prog,listBox)));}
+    body.append(h('div',{class:'mdgrid'},h('div',{class:'card mdside'},h('h3',{},'Folders'),tree),h('div',{class:'card stack'},h('div',{class:'cardhead'},h('div',{},h('h3',{},cur||'All documents'),h('p',{class:'note'},'Filed automatically from the module, month by month. Nothing is uploaded here.')),h('div',{class:'row'},q)),listBox)));}
   return {el,refresh};};
 
 // ===== Withholding tax on export receipts (Pakistan: 1% final tax deducted at source on export proceeds) =====
@@ -11413,23 +11420,24 @@ function bankReviewTable(w){const box=h('div',{class:'revwrap'});const sel=revSe
   const bar=h('div',{class:'revbar'},cnt,h('label',{class:'mini revsetl'},'Set account',setAcc),apB,rjB);
   const all=h('input',{type:'checkbox','aria-label':'Select all'});
   const tb=h('tbody');
-  const t=h('table',{class:'revtab'},h('thead',{},h('tr',{},h('th',{class:'ck'},all),h('th',{},'Date'),h('th',{},'Transaction'),h('th',{class:'num'},'Money in'),h('th',{class:'num'},'Money out'),h('th',{},'Account'),h('th',{},'Matched to'),h('th',{},'Agent'),h('th',{class:'acts'},''))),tb);
+  const t=h('table',{class:'revtab'},h('thead',{},h('tr',{},h('th',{class:'ck'},all),h('th',{},'Date'),h('th',{},'Transaction'),h('th',{class:'num'},'Money in'),h('th',{class:'num'},'Money out'),h('th',{},'What is this'),h('th',{},'Account'),h('th',{},'Matched to'),h('th',{},'Agent'),h('th',{class:'acts'},''))),tb);
   function sync(){const n=list.filter(m=>sel.has(m.id)).length;cnt.textContent=n?`${n} selected`:'Select entries to approve together';apB.disabled=rjB.disabled=!n;setAcc.disabled=!n;bar.classList.toggle('on',!!n);all.checked=n>0&&n===list.length;all.indeterminate=n>0&&n<list.length;}
   function draw(){tb.textContent='';
     list.forEach(m=>{const ed=S.edits[m.id]||(S.edits[m.id]={});const {cash,other}=revCounter(m,ed);const inn=r2(cash.reduce((s,l)=>s+(+l.debit||0),0)),out=r2(cash.reduce((s,l)=>s+(+l.credit||0),0));const amt=moveTotal(m);
       const ck=h('input',{type:'checkbox',checked:sel.has(m.id),'aria-label':'Select '+(m.ref||'entry'),onchange:e=>{e.target.checked?sel.add(m.id):sel.delete(m.id);tr.classList.toggle('sel',e.target.checked);sync();}});
-      const acc=other.length===1?acctSelect(other[0].account,v=>{ed[other[0].i]=v;tr.classList.add('edited');}):h('span',{class:'mini'},other.length?`Split · ${other.length} lines`:'—');
+      const accBox=h('span',{});const mkAcc=v0=>{accBox.textContent='';accBox.append(acctSelect(v0,v=>{ed[other[0].i]=v;tr.classList.add('edited');}));};if(other.length===1) mkAcc(ed[other[0].i]??other[0].account);const acc=other.length===1?accBox:h('span',{class:'mini'},other.length?`Split · ${other.length} lines`:'—');
+      const typ=other.length===1&&cash.length&&typeof txCell==='function'?txCell(m,ed,other[0],inn>0,v=>{mkAcc(v);tr.classList.add('edited');}):h('td',{class:'revtype'},h('span',{class:'mini mut'},'—'));
       const inv=(m.settles||[]).map(x=>(S.invoices.find(i=>i.id===x.invoice_id)||{}).number).filter(Boolean);
       const match=h('div',{},inv.length?h('span',{class:'code mini'},inv.join(', ')):h('span',{class:'mini mut'},'—'),m.wht?h('div',{},pill(`Final tax ${money2(m.wht.amount)}`,'acc')):null);
       const ag=h('div',{},isUnid(m)?pill('Not identified','bad'):confPill(m.confidence),m.reasoning?h('div',{class:'mini mut revwhy',title:m.reasoning},m.reasoning):null);
       const ap=h('button',{class:'btn primary sm',type:'button',title:'Approve and post'},'Approve');const more=h('button',{class:'btn ghost sm',type:'button','aria-expanded':'false'},'Details');
       const tr=h('tr',{class:(sel.has(m.id)?'sel ':'')+(isUnid(m)?'unid':'')},h('td',{class:'ck'},ck),h('td',{class:'nowrap'},fmtDate(m.date)),
         h('td',{class:'revtx'},h('div',{class:'revref'},m.ref||'Entry'),h('div',{class:'mini mut'},[m.partner,m.source==='bank_statement'?(S.statements.find(s=>s.id===m.statement_id)||{}).file_name:sourceLabel(m)].filter(Boolean).join(' · '))),
-        h('td',{class:'num in'},inn?money2(inn):''),h('td',{class:'num out'},out?money2(out):(!cash.length?money2(amt):'')),h('td',{class:'revacc'},acc),h('td',{},match),h('td',{class:'revag'},ag),h('td',{class:'acts'},h('div',{class:'row'},ap,more)));
+        h('td',{class:'num in'},inn?money2(inn):''),h('td',{class:'num out'},out?money2(out):(!cash.length?money2(amt):'')),typ,h('td',{class:'revacc'},acc),h('td',{},match),h('td',{class:'revag'},ag),h('td',{class:'acts'},h('div',{class:'row'},ap,more)));
       ap.onclick=async()=>{ap.disabled=true;try{await approveMove(m,(m.lines||[]).map((l,i)=>({...l,account:ed[i]??l.account})));sel.delete(m.id);tr.classList.add('done');}catch(e){msg.textContent=e.message;ap.disabled=false;}};
-      more.onclick=()=>{const nx=tr.nextSibling;if(nx&&nx.classList.contains('revdet')){nx.remove();more.setAttribute('aria-expanded','false');return;}more.setAttribute('aria-expanded','true');tr.after(h('tr',{class:'detail revdet'},h('td',{colspan:9},reviewCard(m))));};
+      more.onclick=()=>{const nx=tr.nextSibling;if(nx&&nx.classList.contains('revdet')){nx.remove();more.setAttribute('aria-expanded','false');return;}more.setAttribute('aria-expanded','true');tr.after(h('tr',{class:'detail revdet'},h('td',{colspan:10},reviewCard(m))));};
       tb.append(tr);});
-    if(!list.length) tb.append(h('tr',{},h('td',{colspan:9},emptyNote(F.only?'Nothing in this view.':'Nothing is waiting.'))));sync();}
+    if(!list.length) tb.append(h('tr',{},h('td',{colspan:10},emptyNote(F.only?'Nothing in this view.':'Nothing is waiting.'))));sync();}
   all.onchange=()=>{list.forEach(m=>all.checked?sel.add(m.id):sel.delete(m.id));draw();};
   const bulk=async(fn,verb)=>{const pick=list.filter(m=>sel.has(m.id));if(!pick.length) return;apB.disabled=rjB.disabled=true;let ok=0;const bad=[];
     for(const m of pick){msg.textContent=`${verb} ${ok+bad.length+1} of ${pick.length}…`;try{await fn(m);ok++;sel.delete(m.id);}catch(e){bad.push(`${m.ref||m.id}: ${e.message}`);}}
@@ -11437,6 +11445,122 @@ function bankReviewTable(w){const box=h('div',{class:'revwrap'});const sel=revSe
   apB.onclick=()=>bulk(m=>approveMove(m,(m.lines||[]).map((l,i)=>({...l,account:(S.edits[m.id]||{})[i]??l.account}))),'Approving');
   rjB.onclick=()=>bulk(m=>rejectMove(m),'Rejecting');
   draw();box.append(h('div',{class:'revtop'},filt,bar),msg,h('div',{class:'tablewrap'},t));return box;}
+
+// ===== Bank agent: learns from every approval, recognises salaries, and works like an experienced bookkeeper =====
+const BANK_NOISE=new Set('inward outward remittance remit transfer trf tt ref reference payment pymt pmt pos purchase ibft raast fund funds credit debit online mobile banking swift ach neft rtgs imps upi via from for the and acc account txn transaction number cheque chq clearing deposit withdrawal atm card visa mastercard debitcard tran trans fees fee llc ltd limited pvt private fze fzco fz company inc plc dubai abu dhabi sharjah karachi lahore islamabad uae pakistan pk ae bank date value narration details detail beneficiary benef ordering customer unknown misc sundry received receipt paid amount being'.split(' '));
+function bankKey(text){const w=norm(text).split(' ').filter(x=>x.length>2&&!/\d/.test(x));const d=w.filter(x=>!BANK_NOISE.has(x));return (d.length?d:w).slice(0,3).join(' ');}
+// the learned rule that fits a bank line best: all its words present, same direction, the most specific and most used
+function bankRule(text,dir){const n=' '+norm(text)+' ';let best=null;
+  for(const r of (S.rules||[])){if(!r.match||(r.dir&&dir&&r.dir!==dir)) continue;const ws=r.match.split(' ').filter(x=>!BANK_NOISE.has(x));if(!ws.length) continue;const k=ws.filter(x=>n.includes(' '+x+' ')).length;if(k<(ws.length>=3?2:ws.length)) continue;
+    const score=k*10+(k===ws.length?5:0)+(+r.hits||1);if(!best||score>best.score) best={...r,score};}
+  return best;}
+function matchSalary(amount,desc){if(!(amount<0)) return null;const emps=(S.employees||[]).filter(e=>e.active!==false&&e.name);if(!emps.length) return null;const amt=r2(-amount);const n=' '+norm(desc)+' ';
+  const hit=emps.filter(e=>{const w=norm(e.name).split(' ').filter(x=>x.length>2);const k=w.filter(x=>n.includes(' '+x+' ')).length;return w.length&&k>=Math.min(2,w.length);});
+  if(!hit.length) return null;const tol=Math.max(1,amt*0.005);
+  const runs=(S.payruns||[]).filter(p=>p.status==='posted').sort((a,b)=>a.month<b.month?1:-1);
+  for(const e of hit){for(const p of runs.slice(0,3)){const ln=(p.lines||[]).find(x=>x.id===e.id);if(ln&&Math.abs(r2(ln.net)-amt)<=tol){const done=S.moves.some(m=>m.salary_run===p.id&&m.state!=='cancelled');
+        return {emp:e,account:'2350',month:p.month,conf:done?0.4:0.95,why:done?`Salary to ${e.name} for ${mLabel(p.month,true)}, but the whole salary transfer for that month is already recorded from Payroll, so this may be counted twice. Check before approving.`:`Salary to ${e.name} for ${mLabel(p.month,true)}: the amount is the net pay in that payroll, so it clears salaries payable.`};}}
+    const fp=fixedPay(e);if(fp&&Math.abs(fp-amt)<=tol) return {emp:e,account:runs.length?'2350':'6000',conf:0.92,why:`Salary to ${e.name}: the amount matches the monthly pay on the employee record${runs.length?', so it clears salaries payable':''}.`};}
+  const e=hit[0];return {emp:e,account:runs.length?'2350':'6000',conf:0.6,why:`Paid to ${e.name}, an employee, but the amount does not match the payroll or the monthly pay (${money2(fixedPay(e))}). It may be a bonus, advance or final settlement.`};}
+// learn from every bank line a person approves, changed or not
+async function bankLearn(m,lines){try{if(m.source!=='bank_statement'||(m.settles||[]).length||m.salary_of) return;const cash=new Set(cashCodes());
+    const other=(lines||[]).filter(l=>!cash.has(l.account)&&!(S.accounts[l.account]||{}).tax&&l.account!=='1990');if(!other.length) return;
+    const main=other.slice().sort((a,b)=>((+b.debit||0)+(+b.credit||0))-((+a.debit||0)+(+a.credit||0)))[0];
+    const key=bankKey(`${m.partner||''} ${m.ref||''}`);if(key.length<4) return;const inflow=(lines||[]).some(l=>cash.has(l.account)&&(+l.debit||0)>0);const dir=inflow?'in':'out';const amt=moveTotal({lines});
+    const ex=(S.rules||[]).find(r=>r.match===key&&(!r.dir||r.dir===dir));
+    if(ex){const same=ex.account===main.account;const upd={account:main.account,dir,hits:same?(+ex.hits||1)+1:1,last_amount:amt,updated_by:S.me,updated_at:nowISO(),from:m.name||m.ref||''};await db.doc('rules/'+ex.id).update(upd);Object.assign(ex,upd);}
+    else{const d={entity:S.entity,match:key,account:main.account,dir,hits:1,last_amount:amt,learned:'approval',created_by:S.me,created_at:nowISO(),from:m.name||m.ref||''};const ref=db.collection('rules').doc();await ref.set(d);(S.rules||(S.rules=[])).push({id:ref.id,...d});}}catch(e){console.warn(e);}}
+{const _am=approveMove;approveMove=async function(m,lines){const r=await _am(m,lines);await bankLearn(m,lines||m.lines);return r;};}
+// expert instructions and the team's own history for the bank agent
+{const _bp=bankPrompt;bankPrompt=function(...a){let t=_bp.apply(this,a);try{
+  const cash=new Set(cashCodes());const seen=new Set();const ex=[];
+  S.moves.filter(m=>m.state==='posted'&&m.source==='bank_statement'&&m.approved_by&&!String(m.approved_by).startsWith('agent:')).sort((x,y)=>x.date<y.date?1:-1).forEach(m=>{if(ex.length>=40) return;const k=bankKey(`${m.partner||''} ${m.ref||''}`);if(!k||seen.has(k)) return;seen.add(k);const o=(m.lines||[]).filter(l=>!cash.has(l.account));if(!o.length) return;ex.push(`${m.ref} → ${o.map(l=>l.account+' '+aname(l.account)).join(' + ')}`);});
+  const emps=(S.employees||[]).filter(e=>e.active!==false).slice(0,60).map(e=>`${e.name} (monthly pay ${money2(fixedPay(e))})`);
+  t+=`\n\nWork like an experienced bookkeeper who knows local bank narrations:
+- Bank charges, SMS or service fees, cheque book fees and the excise or sales tax charged on them go to bank charges.
+- Profit, interest or markup credited by the bank is finance income; markup or interest debited on a loan or running finance is finance cost.
+- Transfers between the company's own accounts, cash deposits from the company's own cash and ATM withdrawals for petty cash go to the other cash account.
+- A returned or bounced cheque reverses the original receipt or payment; a reversal line mirrors the original account.
+- Salary or WPS payments to named employees clear salaries payable when payroll has been posted; otherwise they are salaries expense.
+- Tax deducted by the bank (withholding on cash withdrawals or profit) is an advance tax asset unless it is a final tax.
+- When a description is unclear, give low confidence rather than guessing, so a person reviews it.`;
+  if(emps.length) t+=`\n\nEmployees (a payment naming one of them is usually salary): ${emps.join('; ')}.`;
+  if(ex.length) t+=`\n\nHow this company's team classified earlier bank lines (follow the same choices for the same payees):\n${ex.join('\n')}`;}catch(e){}return t;};}
+// an Agent memory card on Banking: what it has learned, editable
+function bankMemoryCard(){const L=(S.rules||[]).slice().sort((a,b)=>(+b.hits||1)-(+a.hits||1)||String(a.match).localeCompare(String(b.match)));const box=h('div',{class:'card stack bkmem'});
+  box.append(h('div',{class:'cardhead'},h('div',{},h('h3',{},'What the bank agent has learned'),h('p',{class:'note'},'Each time you approve or correct a bank line, the agent remembers the payee and the account, and uses it on the next statements. Change or remove anything it got wrong.'))));
+  if(!L.length){box.append(emptyNote('Nothing learned yet. Approve a few bank lines and they appear here.'));return box;}
+  const tb=h('tbody');L.slice(0,200).forEach(r=>{const del=h('button',{class:'btn ghost sm danger',type:'button',disabled:!S.canEdit},'Forget');del.onclick=async()=>{del.disabled=true;try{await db.doc('rules/'+r.id).delete();S.rules=S.rules.filter(x=>x.id!==r.id);tr.remove();}catch(e){del.disabled=false;}};
+    const acc=acctSelect(r.account,async v=>{try{await db.doc('rules/'+r.id).update({account:v,updated_by:S.me,updated_at:nowISO()});r.account=v;}catch(e){}});if(!S.canEdit) acc.disabled=true;
+    const tr=h('tr',{},h('td',{},h('b',{style:'font-weight:500'},r.match)),h('td',{},r.dir==='in'?'Money in':r.dir==='out'?'Money out':'Both'),h('td',{},acc),h('td',{class:'num'},String(+r.hits||1)),h('td',{class:'mini mut'},r.from||''),h('td',{class:'acts'},del));tb.append(tr);});
+  box.append(h('div',{class:'tablewrap'},h('table',{class:'memtab'},h('thead',{},h('tr',{},h('th',{},'Payee or words'),h('th',{},'Direction'),h('th',{},'Account'),h('th',{class:'num'},'Times approved'),h('th',{},'Last seen on'),h('th',{class:'acts'},''))),tb)));return box;}
+{const _b=BUILD.bank;BUILD.bank=(...a)=>{const r=_b(...a);const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);try{const old=r.el.querySelector(':scope > .bkmem');const c=bankMemoryCard();if(old) old.replaceWith(c);else r.el.append(c);}catch(e){}return y;};return r;};}
+{const _lf=learnFrom;learnFrom=async function(m,lines){if(m&&m.source==='bank_statement') return;return _lf(m,lines);};}
+
+// ===== Invoices and bank lines kept as a ledger: short payments carry forward, overpayments sit on account and clear the next invoice =====
+{const _mp=matchPayment;matchPayment=function(amount,desc){const r=_mp(amount,desc);const inflow=amount>0,amt=r2(Math.abs(amount));
+  if(r&&r.items&&/^Part payment/.test(r.why||'')){const it=r.items[r.items.length-1];const full=invDue(it.inv,true);const short=r2(full-it.amount);
+    r.short=short;r.why=`Short paid by ${it.inv.partner}: ${money2(amt)} received and applied to ${r.items.map(x=>x.inv.number).join(', ')}. ${it.inv.number} still has ${money2(short)} to pay, carried forward on the customer’s account.`;if(!inflow) r.why=r.why.replace('Short paid by','Part payment to').replace('to pay, carried forward on the customer’s account','to pay, carried forward on the supplier’s account');return r;}
+  if(r) return r;
+  // overpayment: everything open for the named partner is cleared and the excess stays on account
+  const n=' '+norm(desc)+' ';const open=openInvoices(inflow?'customer':'supplier').map(i=>({inv:i,due:invDue(i,true)})).filter(x=>x.due>0.01).sort((a,b)=>a.inv.date<b.inv.date?-1:1);
+  const named=open.filter(x=>partnerHit(x.inv,n));const parts=[...new Set(named.map(x=>norm(x.inv.partner)))];if(parts.length!==1) return null;
+  const tot=r2(named.reduce((s,x)=>s+x.due,0));if(!(amt>tot+0.009)) return null;const over=r2(amt-tot);
+  return {items:named.map(x=>({inv:x.inv,amount:x.due})),charge:0,over,conf:0.85,why:`${inflow?'Overpaid by':'Paid more to'} ${named[0].inv.partner}: ${money2(amt)} ${inflow?'received':'paid'} clears ${named.map(x=>x.inv.number).join(', ')} (${money2(tot)}). The extra ${money2(over)} stays on account and is applied to the next ${inflow?'invoice':'bill'}.`};};}
+// apply payments sitting on account to open invoices, oldest first
+async function autoApplyCredits(){if(S._applying||!S.canWrite||S.entity==='all'||typeof unappliedFor!=='function') return 0;S._applying=true;let n=0;
+  try{for(const kind of ['customer','supplier']){const parts=[...new Set(openInvoices(kind).map(i=>i.partner))];
+      for(const p of parts){let us=unappliedFor(kind,p).filter(u=>u.kind==='payment'&&!S.moves.some(m=>m.alloc_from===u.id&&m.state==='to_approve'));if(!us.length) continue;
+        const inv=openInvoices(kind).filter(i=>norm(i.partner)===norm(p)&&!S.moves.some(m=>m.state==='to_approve'&&(m.settles||[]).some(x=>x.invoice_id===i.id))).sort((a,b)=>a.date<b.date?-1:1);
+        for(const i of inv){for(const u of us){const due=invDue(i,true);if(due<=0.009) break;if(u.amount<=0.009) continue;const amt=r2(Math.min(u.amount,due));try{await applyOutstanding(i,u,amt);u.amount=r2(u.amount-amt);n++;}catch(e){console.warn(e);}}}}}}
+  finally{S._applying=false;}return n;}
+// after every statement, and whenever the invoice lists open
+{const _ss=submitStatement;submitStatement=async function(...a){const r=await _ss.apply(this,a);try{const n=await autoApplyCredits();if(n){const log=a[3];if(log) log.append(h('div',{class:'step'},`Applied payments on account to ${n} open ${n===1?'invoice':'invoices'}.`));}}catch(e){}return r;};}
+for(const k of ['sales','purchases']){const _b=BUILD[k];if(!_b) continue;BUILD[k]=(...a)=>{const r=_b(...a);const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);clearTimeout(S._aacT);S._aacT=setTimeout(()=>autoApplyCredits(),1500);return y;};return r;};}
+// invoice detail: the bank lines mapped to it, with what is still short
+function invBankMap(inv){const rows=[];const isC=inv.kind==='customer';
+  S.moves.filter(m=>m.state!=='cancelled'&&(m.settles||[]).some(x=>x.invoice_id===inv.id)).sort((a,b)=>a.date<b.date?-1:1).forEach(m=>{const x=m.settles.find(s=>s.invoice_id===inv.id);
+    const st=m.statement_id&&S.statements.find(s=>s.id===m.statement_id);rows.push({date:m.date,what:m.source==='allocation'?'Applied from payment on account':st?`Bank: ${m.ref||''}`:m.source==='payment'?'Marked as paid':m.ref||'Payment',file:st?st.file_name:'',amt:+x.amount||0,state:m.state,wht:m.wht?m.wht.amount:0});});
+  const total=r2(+inv.total_base||+inv.total||0);if(!rows.length) return null;let paid=0;
+  const t=h('table',{class:'mini invmap'},h('thead',{},h('tr',{},h('th',{},'Date'),h('th',{},'Mapped from'),h('th',{class:'num'},'Applied'),h('th',{class:'num'},'Still to pay'))),
+    h('tbody',{},rows.map(r=>{paid=r2(paid+r.amt);const left=r2(Math.max(0,invDue(inv,true)+rows.filter(z=>z.date>r.date).reduce((s,z)=>s+z.amt,0)));return h('tr',{},h('td',{},fmtDate(r.date)),h('td',{},r.what,r.file?h('div',{class:'mut'},r.file):null,r.state==='to_approve'?h('div',{},pill('Waiting for approval','warn')):null,r.wht?h('div',{class:'mut'},`incl. ${money2(r.wht)} tax withheld`):null),h('td',{class:'num'},money2(r.amt)),h('td',{class:'num'},left>0.009?money2(left):'—'));})));
+  const due=invDue(inv,true);
+  return h('div',{class:'stack',style:'gap:.35rem'},h('b',{style:'font-weight:500'},isC?'Receipts mapped to this invoice':'Payments mapped to this bill'),h('div',{class:'tablewrap'},t),due>0.009?h('div',{class:'banner warn'},`Short paid: ${money2(due)} is carried forward. The next payment from ${inv.partner} clears it first.`):null);}
+
+// ===== Bank review: say what each line is. Money in: customer receipt, loans, capital, other. Money out: supplier, expense, rent, salaries, director, dividend, advance =====
+const TX_IN=[['receipt','Customer receipt'],['loan_dir_in','Loan from director'],['loan_other_in','Loan from others'],['capital','Capital from shareholders'],['other_in','Other']];
+const TX_OUT=[['supplier','Supplier payment'],['expense','Expense'],['rent','Rent'],['salary','Salaries'],['loan_dir_out','Loan to director'],['dividend','Shareholder dividend'],['adv_supplier','Advance to supplier'],['other_out','Other']];
+const TX_ACC={loan_dir_in:[/loan from director|director.?s? loan|due to director/i,'2510','Loan from director','liability_non_current'],loan_other_in:[/loans? from (third|other|outside)|^bank loans?$|borrowings?/i,'2500','Bank loans','liability_non_current'],
+  capital:[/share capital|^capital$/i,'3000','Share capital','equity'],loan_dir_out:[/loan to director|due from director/i,'1410','Loan to director','asset_current'],dividend:[/dividend/i,'3200','Dividends paid','equity'],
+  adv_supplier:[/advances? to suppliers?|supplier advances?/i,'1420','Advances to suppliers','asset_current'],rent:[/^rent|rent expense|office rent/i,'6110','Rent','expense']};
+const freeCode=c=>{let n=+c;while(S.accounts[String(n)]) n++;return String(n);};
+async function txAccount(t){if(t==='receipt') return '1100';if(t==='supplier') return '2000';
+  if(t==='salary'){try{await payrollAccounts();}catch(e){}return (S.payruns||[]).some(p=>p.status==='posted')?'2350':'6000';}
+  const d=TX_ACC[t];if(!d) return null;const hit=Object.values(S.accounts).find(a=>!a.deprecated&&!a.group&&d[0].test(String(a.name||'')));if(hit) return hit.id;
+  const code=S.accounts[d[1]]&&!d[0].test(S.accounts[d[1]].name)?freeCode(d[1]):d[1];await ensureAccount(code,d[2],d[3]);return code;}
+function txGuess(acc,inflow){if(acc==='1100') return 'receipt';if(acc==='2000') return 'supplier';if(acc==='2350'||acc==='6000') return inflow?'other_in':'salary';
+  for(const [k,d] of Object.entries(TX_ACC)){const a=S.accounts[acc];if(a&&d[0].test(a.name||'')&&(inflow?TX_IN:TX_OUT).some(x=>x[0]===k)) return k;}
+  const t=typeOf(acc);if(!inflow&&/^expense/.test(t||'')) return 'expense';return '';}
+// settle a receipt or payment against the chosen partner's open invoices, oldest first; the rest stays on account
+function txSettles(kind,partner,amount){let left=r2(amount);const out=[];openInvoices(kind).filter(i=>norm(i.partner)===norm(partner)).sort((a,b)=>a.date<b.date?-1:1).forEach(i=>{if(left<=0.009) return;const a=r2(Math.min(left,invDue(i,true)));if(a>0){out.push({invoice_id:i.id,amount:a});left=r2(left-a);}});return out;}
+function txCell(m,ed,other,inflow,onAcc){const T=S.revT||(S.revT={});const st=T[m.id]||(T[m.id]={t:txGuess(other.account,inflow),partner:m.partner||''});
+  const opts=inflow?TX_IN:TX_OUT;const sel=h('select',{'aria-label':'What is this','class':'txsel'},h('option',{value:''},'What is this?'),opts.map(([k,l])=>h('option',{value:k},l)));sel.value=st.t||'';
+  const pbox=h('div',{class:'txp'});const msg=h('div',{class:'mini err'});
+  const drawP=()=>{pbox.textContent='';const kind=st.t==='receipt'?'customer':(st.t==='supplier'||st.t==='adv_supplier')?'supplier':st.t==='salary'?'employee':null;if(!kind) return;
+    const names=kind==='employee'?(S.employees||[]).filter(e=>e.active!==false).map(e=>e.name):(S.raw.partners||[]).filter(p=>p.kind===kind&&p.entity===S.entity&&!['deleted','rejected','blocked'].includes(p.status)).map(p=>p.name).sort();
+    const ps=h('select',{'aria-label':kind==='customer'?'Customer':kind==='supplier'?'Supplier':'Employee',class:'txparty'},h('option',{value:''},kind==='customer'?'Choose the customer':kind==='supplier'?'Choose the supplier':'Employee (optional)'),names.map(n=>h('option',{value:n},n)));ps.value=names.includes(st.partner)?st.partner:'';
+    ps.onchange=()=>{st.partner=ps.value;st.changed=true;const due=st.partner&&kind!=='employee'?openInvoices(kind).filter(i=>norm(i.partner)===norm(st.partner)).reduce((s,i)=>s+invDue(i,true),0):0;hint.textContent=st.partner&&kind!=='employee'?(due>0.009?`Open ${kind==='customer'?'invoices':'bills'}: ${money2(due)}. Applied oldest first; anything left stays on account.`:'Nothing open; it stays on account for the next one.'):'';};
+    const hint=h('div',{class:'mini mut'});pbox.append(ps,hint);if(st.partner) ps.onchange();};
+  sel.onchange=async()=>{st.t=sel.value;st.changed=true;msg.textContent='';if(st.t==='expense'||st.t==='other_in'||st.t==='other_out'||!st.t){drawP();return;}
+    try{const acc=await txAccount(st.t);if(acc){ed[other.i]=acc;onAcc(acc);}}catch(e){msg.textContent=e.message;}drawP();};
+  drawP();return h('td',{class:'revtype'},sel,pbox,msg);}
+// before approval: the partner and the invoices it settles
+async function txApply(m,lines){const st=(S.revT||{})[m.id];if(!st||!st.t||!st.changed) return;const cash=new Set(cashCodes());const amt=r2(lines.filter(l=>cash.has(l.account)).reduce((s,l)=>s+(+l.debit||0)+(+l.credit||0),0));
+  if((st.t==='receipt'||st.t==='supplier')&&!st.partner) throw new Error(`Choose the ${st.t==='receipt'?'customer':'supplier'} for “${m.ref||'this line'}” first.`);
+  const upd={tx_type:st.t};if(st.partner){upd.partner=st.partner;m.partner=st.partner;}
+  if(st.t==='receipt'||st.t==='supplier'){const s=txSettles(st.t==='receipt'?'customer':'supplier',st.partner,amt);upd.settles=s;m.settles=s;}
+  await db.doc('moves/'+m.id).update(upd);Object.assign(m,upd);}
+{const _am=approveMove;approveMove=async function(m,lines){if(m&&m.source==='bank_statement') await txApply(m,lines||m.lines);return _am(m,lines);};}
 
 
 // test hook (local development only)
