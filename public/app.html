@@ -11562,11 +11562,11 @@ async function autoApplyCredits(){if(S._applying||!S.canWrite||S.entity==='all'|
   try{for(const kind of ['customer','supplier']){const parts=[...new Set(openInvoices(kind).map(i=>i.partner))];
       for(const p of parts){let us=unappliedFor(kind,p).filter(u=>u.kind==='payment'&&!S.moves.some(m=>m.alloc_from===u.id&&m.state==='to_approve'));if(!us.length) continue;
         const inv=openInvoices(kind).filter(i=>norm(i.partner)===norm(p)&&!S.moves.some(m=>m.state==='to_approve'&&(m.settles||[]).some(x=>x.invoice_id===i.id))).sort((a,b)=>a.date<b.date?-1:1);
-        for(const i of inv){for(const u of us){const due=invDue(i,true);if(due<=0.009) break;if(u.amount<=0.009) continue;const amt=r2(Math.min(u.amount,due));try{await applyOutstanding(i,u,amt);u.amount=r2(u.amount-amt);n++;}catch(e){console.warn(e);}}}}}}
+        for(const i of inv){for(const u of us){const key=u.id+'>'+i.id;if((S._aacFail||(S._aacFail=new Set())).has(key)) continue;const due=invDue(i,true);if(due<=0.009) break;if(u.amount<=0.009) continue;const amt=r2(Math.min(u.amount,due));try{await applyOutstanding(i,u,amt);u.amount=r2(u.amount-amt);n++;}catch(e){S._aacFail.add(key);console.warn(e);}}}}}}
   finally{S._applying=false;}return n;}
 // after every statement, and whenever the invoice lists open
 {const _ss=submitStatement;submitStatement=async function(...a){const r=await _ss.apply(this,a);try{const n=await autoApplyCredits();if(n){const log=a[3];if(log) log.append(h('div',{class:'step'},`Applied payments on account to ${n} open ${n===1?'invoice':'invoices'}.`));}}catch(e){}return r;};}
-for(const k of ['sales','purchases']){const _b=BUILD[k];if(!_b) continue;BUILD[k]=(...a)=>{const r=_b(...a);const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);clearTimeout(S._aacT);S._aacT=setTimeout(()=>autoApplyCredits(),1500);return y;};return r;};}
+for(const k of ['sales','purchases']){const _b=BUILD[k];if(!_b) continue;BUILD[k]=(...a)=>{const r=_b(...a);const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);const now=Date.now();if(!S._aacAt||now-S._aacAt>60000){S._aacAt=now;clearTimeout(S._aacT);S._aacT=setTimeout(()=>autoApplyCredits(),1500);}return y;};return r;};}
 // invoice detail: the bank lines mapped to it, with what is still short
 function invBankMap(inv){const rows=[];const isC=inv.kind==='customer';
   S.moves.filter(m=>m.state!=='cancelled'&&(m.settles||[]).some(x=>x.invoice_id===inv.id)).sort((a,b)=>a.date<b.date?-1:1).forEach(m=>{const x=m.settles.find(s=>s.invoice_id===inv.id);
