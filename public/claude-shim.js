@@ -439,7 +439,7 @@ ${info.can_create_org && info.mode !== 'single' ? '<button class="sw" type="butt
     // (home hub, setup wizard, portal).
     const place = () => {
       const bar = document.querySelector('.topbar .tright');
-      if (shown(bar)) { btn.classList.remove('hub', 'inline'); if (bar.firstChild !== btn) bar.prepend(btn); return; }
+      if (shown(bar)) { btn.classList.remove('hub', 'inline'); const slot = document.querySelector('.topbar .tctx'); if (slot) { if (slot.firstChild !== btn) slot.prepend(btn); } else if (bar.firstChild !== btn) bar.prepend(btn); return; }
       const out = [...document.querySelectorAll('button, a')].find((x) => x.id !== 'signout' && x !== btn && /^\s*sign out\s*$/i.test(x.textContent || '') && shown(x));
       if (!out) return;
       const hub = !!out.closest('.lh-acts');

@@ -372,3 +372,7 @@ The person who creates the workspace is the **Admin**. Position roles (CEO, CFO,
 - Stock is pushed to Shopify/WooCommerce when someone uses the app (after a shipment, receipt or from the store card), not by a 24/7 background job.
 - Live screens refresh every 15 seconds when realtime isn't available.
 - Marketplace orders (Amazon, Noon and others) are imported from their CSV exports.
+
+## Live exchange rates
+
+`/api/fx` serves live market rates against the US dollar (cached 30 minutes). By default it uses the free ExchangeRate-API feed (open.er-api.com, updated daily, no key). For more frequent updates, set `FX_API_KEY` in Vercel to an ExchangeRate-API key. The app refreshes the workspace's rate table from it every six hours, and **Company settings → Currencies → Update to live rates now** refreshes on demand. Each company can choose up to four view currencies and the one amounts open in; the **View in** drop-down in the top bar switches between them.

@@ -3,7 +3,7 @@
 const ROUTES = {
   blob: () => require('./_routes/blob'), booking: () => require('./_routes/booking'), config: () => require('./_routes/config'),
   connector: () => require('./_routes/connector'), contact: () => require('./_routes/contact'), domain: () => require('./_routes/domain'),
-  donor: () => require('./_routes/donor'), email: () => require('./_routes/email'), quote: () => require('./_routes/quote'),
+  donor: () => require('./_routes/donor'), fx: () => require('./_routes/fx'), email: () => require('./_routes/email'), quote: () => require('./_routes/quote'),
   rfq: () => require('./_routes/rfq'), share: () => require('./_routes/share'), sign: () => require('./_routes/sign'),
   store: () => require('./_routes/store'), worldcheck: () => require('./_routes/worldcheck'),
 };

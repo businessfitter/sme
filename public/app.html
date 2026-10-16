@@ -1185,6 +1185,202 @@ input[type=color]{width:3rem;height:2.2rem;padding:0;border:1px solid var(--line
 @media (max-width:640px){.thchoice{grid-template-columns:1fr}}
 .thopt{display:flex;gap:.6rem;align-items:flex-start;padding:.7rem .8rem;border:1px solid var(--line,#d9dee7);border-radius:10px;cursor:pointer}
 .thopt.on{border-color:var(--blue,#2456d6);background:var(--blue-soft,#eef3ff)}
+/* screens outside a module have no sidebar */
+body.noside .shell{grid-template-columns:1fr}
+body.noside .side{display:none!important}
+/* currencies */
+.tbcur{display:inline-flex;align-items:center;gap:.35rem;font-size:.82rem;color:var(--muted)}
+.tbcur select{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:.22rem .6rem;font:500 .86rem var(--f);color:var(--ink)}
+.fxlive{color:var(--ok,#1d7a46);margin:.2rem 0 0}
+.curpick{display:flex;flex-direction:column;gap:.5rem}.curpick .combo{max-width:22rem}
+.fxrates{padding:.6rem .8rem;border-radius:10px;background:var(--bg-soft,rgba(0,0,0,.025))}
+
+/* ======================================================================
+   Orzio enterprise skin (tb2): calm, precise, neutral.
+   Ink on cool grey, hairline structure, one accent (the company theme).
+   ====================================================================== */
+body.tb2{--bg:#F5F6F8;--panel:#FFFFFF;--sunk:#F0F2F5;--ink:#101828;--muted:#5D6779;--line:#E4E7EC;--line-2:#CDD3DC;--f:"Geist","IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--fh:var(--f);
+  background:var(--bg);color:var(--ink);font-family:var(--f);font-feature-settings:"cv11","ss01";-webkit-font-smoothing:antialiased;letter-spacing:-.003em}
+body.tb2 .num,body.tb2 td.num,body.tb2 .kv{font-variant-numeric:tabular-nums}
+:root[data-theme="dark"] body.tb2{--bg:#0C111B;--panel:#121826;--sunk:#0F1522;--ink:#E7EAF0;--muted:#98A2B3;--line:#222B3B;--line-2:#2E384A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body.tb2{--bg:#0C111B;--panel:#121826;--sunk:#0F1522;--ink:#E7EAF0;--muted:#98A2B3;--line:#222B3B;--line-2:#2E384A}}
+
+/* ---- top bar ---- */
+body.tb2 .topbar{height:3.5rem;min-height:3.5rem;padding:0 1.25rem!important;gap:.5rem;background:var(--panel)!important;backdrop-filter:none;border-bottom:1px solid var(--line)!important;box-shadow:none}
+body.tb2 .topbar .tbrand{display:inline-flex!important;gap:.5rem;font-weight:600;color:var(--ink);margin-right:.25rem}
+body.tb2 .topbar .tbrand span:last-child{display:none}
+body.tb2 .navbtns,body.tb2 #company,body.tb2 #tbent,body.tb2 #curchip,body.tb2 #tn-dash{display:none!important}
+body.tb2 .tctx{display:flex;align-items:center;min-width:0}
+body.tb2 .tctx:not(:empty)::after{content:"";width:1px;height:1.25rem;background:var(--line);margin:0 .5rem 0 .6rem}
+body.tb2.wsmode .tctx::after,body.tb2 .tctx:has(+ .topnav > :not([hidden]):first-child[hidden])::after{display:none}
+body.tb2 #sx-co{border:0;background:transparent;border-radius:8px;padding:.35rem .55rem;font-weight:600;font-size:.9rem;color:var(--ink);max-width:15rem;margin:0}
+body.tb2 #sx-co:hover{background:var(--sunk)}
+body.tb2 #sx-co .t{font-weight:500}
+body.tb2 .topnav{display:flex;align-items:center;gap:.15rem;min-width:0;flex:1 1 auto;overflow:hidden}
+body.tb2 .topnav>button{display:inline-flex;align-items:center;gap:.45rem;height:2.1rem;padding:0 .7rem;border:0;border-radius:8px;background:transparent;color:var(--muted);font:500 .875rem var(--f);white-space:nowrap}
+body.tb2 .topnav>button:hover{background:var(--sunk);color:var(--ink)}
+body.tb2 .topnav>button[aria-current="page"]{color:var(--ink);background:var(--sunk)}
+body.tb2 .topnav>button svg{width:1rem;height:1rem;stroke:currentColor;fill:none;stroke-width:1.8;flex:none}
+body.tb2 .topnav>button span{display:inline!important}
+body.tb2 .tbback{padding:0 .6rem 0 .4rem!important}
+body.tb2 .tbco{color:var(--ink)!important;font-weight:600!important;padding:0 .6rem 0 .35rem!important;max-width:18rem}
+body.tb2 .tbco-n{overflow:hidden;text-overflow:ellipsis}
+body.tb2 .tbco-lg{width:1.5rem;height:1.5rem;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--line)}
+body.tb2 .tbco-in{display:inline-grid;place-items:center;width:1.5rem;height:1.5rem;border-radius:6px;background:var(--cc,#334155);color:#fff;font-size:.66rem;font-weight:600;letter-spacing:.02em}
+body.tb2 .tn-app{border-left:0!important;margin-left:0!important;padding:0 .4rem!important;font-size:.875rem;color:var(--muted)}
+body.tb2 .tn-app::before{content:"/";color:var(--line-2);margin-right:.55rem}
+body.tb2 .tn-app svg{display:none}
+body.tb2 .tn-app b{font-weight:600;color:var(--ink)}
+body.tb2 .tright{margin-left:auto;display:flex;align-items:center;gap:.15rem;flex:none}
+body.tb2 .tright .iconbtn,body.tb2 .tright .tbic,body.tb2 #tb-review{position:relative;display:inline-grid!important;place-items:center;width:2.1rem;height:2.1rem;padding:0!important;border:0!important;border-radius:8px;background:transparent!important;color:var(--muted)!important;box-shadow:none!important;cursor:pointer}
+body.tb2 .tright .iconbtn:hover,body.tb2 .tright .tbic:hover,body.tb2 #tb-review:hover{background:var(--sunk)!important;color:var(--ink)!important}
+body.tb2 .tright .tbic[aria-current="page"]{background:var(--sunk)!important;color:var(--ink)!important}
+body.tb2 .tright svg{width:1.08rem!important;height:1.08rem!important;stroke:currentColor;fill:none;stroke-width:1.75}
+body.tb2 #tb-review b{position:absolute;top:.15rem;right:.1rem;min-width:1rem;height:1rem;padding:0 .25rem;border-radius:999px;background:var(--blue,#2550C9);color:#fff;font:600 .62rem/1rem var(--f);text-align:center}
+body.tb2 #tb-review b:empty{display:none}
+body.tb2 #bell .bdot{top:.2rem!important;right:.2rem!important}
+body.tb2 .tbask{color:var(--blue,#2550C9)!important}
+body.tb2 .tbsep{width:1px;height:1.25rem;background:var(--line);margin:0 .4rem}
+body.tb2 #conn{display:none!important}
+body.tb2 .tbcur{margin-right:.35rem}
+body.tb2 .tbcur span{display:none}
+body.tb2 .tbcur select{height:2rem;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0 1.6rem 0 .6rem;font:500 .82rem var(--f);color:var(--ink)}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:900px){body.tb2 .topnav>button span,body.tb2 #sx-co .n{display:none!important}body.tb2 .tbco-n{display:inline!important}}
+
+/* ---- sidebar: light and quiet ---- */
+body.tb2 .side{background:var(--panel)!important;border-right:1px solid var(--line)!important;color:var(--ink)!important;--rail:var(--panel);--rail-2:var(--sunk);--rail-3:var(--line)}
+body.tb2 .side .sbrand{display:none}
+body.tb2 .side .sent span,body.tb2 .side .sent{color:var(--muted)!important}
+body.tb2 .side select{background:var(--panel)!important;color:var(--ink)!important;border:1px solid var(--line)!important;border-radius:8px!important}
+body.tb2 .snav .nav,body.tb2 .side .nav{color:#3A4456!important;background:transparent!important;border-radius:8px!important;box-shadow:none!important;font-weight:450;height:2.15rem;padding:0 .7rem!important}
+:root[data-theme="dark"] body.tb2 .side .nav{color:#C3CAD6!important}
+body.tb2 .side .nav svg{stroke:currentColor!important;opacity:.75}
+body.tb2 .side .nav:hover{background:var(--sunk)!important;color:var(--ink)!important}
+body.tb2 .side .nav[aria-selected="true"]{background:color-mix(in srgb,var(--blue,#2550C9) 9%,var(--panel))!important;color:var(--ink)!important;font-weight:600;box-shadow:inset 2px 0 0 var(--blue,#2550C9)!important}
+body.tb2 .side .nav[aria-selected="true"] svg{opacity:1;stroke:var(--blue,#2550C9)!important}
+body.tb2 .side .sgroup{color:var(--muted)!important;opacity:1;font-size:.72rem;letter-spacing:0;text-transform:none;font-weight:600;margin-top:1rem}
+body.tb2 .side .appname{background:transparent!important;border:0!important;box-shadow:none!important;color:var(--ink)!important;font-size:1rem;font-weight:600;padding:.4rem .7rem!important}
+body.tb2 .side .appname svg{stroke:var(--mc)!important}
+body.tb2 .side .sfoot{border-top:1px solid var(--line)!important;color:var(--ink)}
+body.tb2 .side .sfoot .rl{color:var(--muted)!important}
+body.tb2 .side #signout{background:transparent!important;border:1px solid var(--line)!important;color:var(--muted)!important;border-radius:8px}
+body.tb2 .side *{text-shadow:none!important}
+
+/* ---- page heads: plain titles, no tinted bands ---- */
+body.tb2 #main>section>.pagehead{background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:.25rem 0 1.1rem!important;margin:0 0 1.25rem!important;border-bottom:1px solid var(--line)!important;align-items:flex-end}
+body.tb2 #main>section>.pagehead::before{display:none!important}
+body.tb2 #main>section>.pagehead h1{font-size:1.5rem!important;font-weight:600!important;letter-spacing:-.018em!important;color:var(--ink)!important;margin:0 0 .3rem}
+body.tb2 #main>section>.pagehead .lede{font-size:.9rem;color:var(--muted);max-width:72ch;margin:0}
+body.tb2 #main{padding:1.5rem clamp(1.25rem,2.5vw,2.25rem) 3rem!important}
+
+/* ---- cards, tiles, tables ---- */
+body.tb2 .card{background:var(--panel)!important;border:1px solid var(--line)!important;border-radius:12px!important;box-shadow:0 1px 2px rgba(16,24,40,.04)!important;padding:1.15rem 1.25rem!important}
+body.tb2 .card::before{display:none!important}
+body.tb2 .card h3{font-size:.95rem;font-weight:600;letter-spacing:-.005em;color:var(--ink)}
+body.tb2 .kpis{background:var(--panel)!important;border:1px solid var(--line)!important;border-radius:12px!important;box-shadow:0 1px 2px rgba(16,24,40,.04)!important;overflow:hidden;gap:0!important}
+body.tb2 .kpi{border:0!important;border-right:1px solid var(--line)!important;background:transparent!important;padding:.9rem 1.1rem!important;box-shadow:none!important}
+body.tb2 .kpi:last-child{border-right:0!important}
+body.tb2 .kpi::before,body.tb2 .kpi::after{display:none!important}
+body.tb2 .kpi .kl{font-size:.78rem;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0}
+body.tb2 .kpi .kv{font-size:1.45rem;font-weight:600;letter-spacing:-.02em;color:var(--ink);margin:.15rem 0}
+body.tb2 .kpi .kd{font-size:.76rem;color:var(--muted)}
+body.tb2 table th{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;background:transparent;border-bottom:1px solid var(--line)}
+body.tb2 table td{border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+body.tb2 tr.click:hover td{background:var(--sunk)}
+body.tb2 .empty{border:1px dashed var(--line-2)!important;background:transparent!important;border-radius:10px;color:var(--muted)}
+body.tb2 .banner{border-radius:10px!important;border:1px solid var(--line)!important;background:var(--sunk)!important;color:var(--ink)!important;box-shadow:none!important;font-size:.875rem}
+body.tb2 .banner.warn{background:color-mix(in srgb,#B54708 7%,var(--panel))!important;border-color:color-mix(in srgb,#B54708 25%,var(--line))!important}
+body.tb2 .banner.ok{background:color-mix(in srgb,#067647 7%,var(--panel))!important;border-color:color-mix(in srgb,#067647 25%,var(--line))!important}
+
+/* ---- buttons, inputs, pills ---- */
+body.tb2 .btn{border-radius:8px!important;font:500 .875rem var(--f)!important;height:2.25rem;padding:0 .9rem!important;box-shadow:0 1px 2px rgba(16,24,40,.05)!important;border:1px solid var(--line-2)!important;background:var(--panel)!important;color:var(--ink)!important}
+body.tb2 .btn:hover{background:var(--sunk)!important}
+body.tb2 .btn.primary{background:var(--ink)!important;border-color:var(--ink)!important;color:var(--panel)!important}
+body.tb2 .btn.primary:hover{background:color-mix(in srgb,var(--ink) 88%,var(--blue,#2550C9))!important}
+body.tb2 .btn.ghost{background:transparent!important;border-color:transparent!important;box-shadow:none!important;color:var(--muted)!important}
+body.tb2 .btn.ghost:hover{background:var(--sunk)!important;color:var(--ink)!important}
+body.tb2 .btn.sm{height:1.9rem;padding:0 .65rem!important;font-size:.8rem!important}
+body.tb2 .btn[disabled]{opacity:.5}
+body.tb2 .btn.agent{color:var(--blue,#2550C9)!important}
+body.tb2 input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=color]),body.tb2 select,body.tb2 textarea{border:1px solid var(--line-2)!important;border-radius:8px!important;background:var(--panel)!important;box-shadow:0 1px 2px rgba(16,24,40,.04);font-family:var(--f)}
+body.tb2 input:focus,body.tb2 select:focus,body.tb2 textarea:focus{outline:none;border-color:var(--blue,#2550C9)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--blue,#2550C9) 16%,transparent)!important}
+body.tb2 label.field{font-size:.8rem;font-weight:500;color:#344054}
+:root[data-theme="dark"] body.tb2 label.field{color:#C3CAD6}
+body.tb2 .pill{border-radius:6px!important;font-weight:500;font-size:.74rem;padding:.12rem .45rem!important;border:1px solid transparent}
+body.tb2 .seg{background:var(--sunk)!important;border:1px solid var(--line)!important;border-radius:9px!important;padding:2px!important;box-shadow:none!important}
+body.tb2 .seg button{border-radius:7px!important;font-weight:500;color:var(--muted)}
+body.tb2 .seg button[aria-selected="true"]{background:var(--panel)!important;color:var(--ink)!important;box-shadow:0 1px 2px rgba(16,24,40,.08)!important}
+
+/* ---- company home and workspace: clean header, even cards ---- */
+body.tb2 .lhero2{background:var(--panel)!important;color:var(--ink)!important;border-bottom:1px solid var(--line);padding:2rem clamp(1.25rem,3vw,3rem) 1.6rem!important;min-height:0!important}
+body.tb2 .lhero2::before,body.tb2 .lhero2::after{display:none!important}
+body.tb2 .lhero2 h1{color:var(--ink)!important;font-size:1.75rem!important;font-weight:600!important;letter-spacing:-.022em!important;margin:.2rem 0 .25rem!important}
+body.tb2 .lhero2 .lh-sub{color:var(--muted)!important;font-size:.92rem}
+body.tb2 .launch .lh-back,body.tb2 .launch .lh-coset{display:none!important}
+body.tb2 .coid{display:flex;align-items:center;gap:1rem}
+body.tb2 .coid-logo{width:3.25rem!important;height:3.25rem!important;border-radius:12px!important;border:1px solid var(--line)!important;box-shadow:none!important}
+body.tb2 .launch-body{padding:1.75rem clamp(1.25rem,3vw,3rem) 3rem!important;margin-top:0!important}
+body.tb2 .appgrid{gap:1rem!important;grid-template-columns:repeat(auto-fill,minmax(15.5rem,1fr))!important}
+body.tb2 .appcard{background:var(--panel)!important;border:1px solid var(--line)!important;border-radius:12px!important;box-shadow:0 1px 2px rgba(16,24,40,.04)!important;padding:1.15rem 1.2rem!important;transform:none!important;min-height:0!important}
+body.tb2 .appcard::before,body.tb2 .appcard::after{display:none!important}
+body.tb2 .appcard:hover{border-color:var(--line-2)!important;box-shadow:0 4px 14px -6px rgba(16,24,40,.12)!important}
+body.tb2 .appcard .appic{width:2.25rem!important;height:2.25rem!important;border-radius:9px!important;background:color-mix(in srgb,var(--mc) 9%,var(--panel))!important;border:0!important;box-shadow:none!important}
+body.tb2 .appcard .appic svg{width:1.1rem!important;height:1.1rem!important}
+body.tb2 .appcard .appname2{font-size:1rem!important;font-weight:600!important;color:var(--ink)!important;margin-top:.75rem!important}
+body.tb2 .appcard .appdesc{font-size:.82rem!important;color:var(--muted)!important;line-height:1.45!important;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+body.tb2 .appcard .appm{background:transparent!important;border:0!important;padding:0!important;font-size:.76rem!important;color:var(--muted)!important}
+body.tb2 .appcard .appm+.appm::before{content:"·";margin:0 .4rem;color:var(--line-2)}
+body.tb2 .appcard .appm.warn{color:#B54708!important}
+body.tb2 .lsec{font-size:.85rem!important;font-weight:600!important;color:var(--muted)!important;text-transform:none!important;letter-spacing:0!important;margin:0 0 .75rem!important}
+body.tb2 .wsgrid{gap:1rem!important;grid-template-columns:repeat(auto-fill,minmax(15.5rem,1fr))!important}
+body.tb2 .wsco{background:var(--panel)!important;border:1px solid var(--line)!important;border-left:1px solid var(--line)!important;border-radius:12px!important;box-shadow:0 1px 2px rgba(16,24,40,.04)!important;color:var(--ink)!important;transform:none!important}
+body.tb2 .wsco::before{display:none!important}
+body.tb2 .wsco:hover{border-color:var(--line-2)!important;box-shadow:0 4px 14px -6px rgba(16,24,40,.12)!important}
+body.tb2 .wsco .wsmono{border-radius:9px!important}
+body.tb2 .wsco.wsgroup{background:var(--panel)!important}
+body.tb2 .wsco.wsgroup *{color:inherit}
+body.tb2 .wsco.wsgroup .wsmono{background:var(--ink)!important;color:var(--panel)!important}
+body.tb2 .wsco.wsgroup .wsmeta,body.tb2 .wsco.wsgroup .wsfoot{color:var(--muted)!important}
+body.tb2 .wsco.wsnew{border-style:dashed!important;box-shadow:none!important;background:transparent!important}
+body.tb2 .wsco .wsind{color:var(--ink)!important;font-weight:500}
+body.tb2 .wsco .wsrole{color:var(--muted)!important;font-weight:500}
+body.tb2.homemode .topbar,body.tb2.wsmode .topbar{display:flex!important}
+body.tb2.homemode #main,body.tb2.wsmode #main{padding:0!important}
+body.tb2 .launch{padding:0!important;margin:0!important;max-width:none!important}
+body.tb2 .lhero2{margin:0!important;border-radius:0!important;padding:1.6rem clamp(1.25rem,3vw,3rem) 1.4rem!important}
+body.tb2 .lhero2 .lh-copy{padding:0!important;margin:0!important;max-width:none!important}
+body.tb2 .coid-logo:has(img){background:#fff!important}
+body.tb2 .coid-logo{width:3rem!important;height:3rem!important}
+body.tb2.tbws #tn-coset,body.tb2.tbws #askbtn,body.tb2.tbws #tb-review{display:none!important}
+body.tb2 .tbreview::before,body.tb2 .tbreview::after{display:none!important}
+body.tb2 #tb-review b{top:.1rem;right:0}
+body.tb2 .side .sfoot .nm{color:var(--ink)!important;font-weight:600}
+body.tb2 .side .avatar{background:var(--ink)!important;color:var(--panel)!important}
+body.tb2 .appcard .apptop{min-height:0!important;height:auto!important;margin:0!important}
+body.tb2 .appcard .appms{margin-top:.9rem!important;padding-top:.75rem;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+body.tb2 .appgrid{max-width:none}
+body.tb2 .tbco-in{line-height:1!important;font-size:.62rem!important;padding:0!important;vertical-align:middle}
+body.tb2 .appcard .appic svg{width:1.3rem!important;height:1.3rem!important}
+body.tb2 .coid-logo.mono{background:var(--ink)!important;color:var(--panel)!important;font-size:1.05rem!important;font-weight:600!important;border:0!important}
+body.tb2 .topnav>button span.tbco-in{display:inline-grid!important}
+body.tb2.tbws #main{padding:0!important}
+body.tb2 .appcard .appms{width:100%;align-self:stretch}
+body.tb2 .esttypes,body.tb2 .estform{margin-top:0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body.tb2 .side .nav{color:#C3CAD6!important}:root:not([data-theme="light"]) body.tb2 label.field{color:#C3CAD6}}
+:root[data-theme="dark"] body.tb2 .side .nav[aria-selected="true"],body.tb2 .side .nav[aria-selected="true"]{color:var(--ink)!important}
+/* duplicate review */
+.duprow{display:grid;grid-template-columns:1fr minmax(9rem,14rem) 1fr;gap:1rem;align-items:center;padding:.8rem 0;border-top:1px solid var(--line)}
+.dupside{display:flex;flex-direction:column;gap:.3rem;min-width:0}.dupmid{display:flex;flex-direction:column;align-items:center;gap:.4rem;text-align:center;color:var(--muted)}
+@media (max-width:760px){.duprow{grid-template-columns:1fr}.dupmid{align-items:flex-start;text-align:left}}
+/* sign out lives in the top bar only, as a small icon */
+body.tb2 .side #signout{display:none!important}
+body.tb2 #tbout{display:inline-grid!important}
+body.tb2 .pfcombo{width:100%}
+.pfhint{margin-top:.3rem;color:var(--muted)}.pfhint:empty{display:none}.pfhint.warn{color:#B54708}
+.combo-list li.pfnew{color:var(--blue,#2550C9);font-weight:500;border-top:1px solid var(--line)}
+.combo-list li.pfwait span:first-child{color:var(--muted)}
+.dtype{display:flex;flex-direction:column;gap:.2rem;min-width:13rem}.dtacc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:16rem}
 
 </style>
 
@@ -1426,7 +1622,7 @@ function derive(){const ents=S.ent;const ids=Object.keys(ents);
   else {S.accounts={};S.moves=[];S.statements=[];S.scenarios=[];S.reports=[];S.budgets={};S.settings=null;}
   ['invoices','fassets','investments','employees','payruns','schedules','rules','compliance','digests','documents','projects','timesheets','files','jobs','applicants'].forEach(k=>{S[k]=(S.raw[k]||[]).filter(d=>S.entity==='all'?!!S.ents_ok(d):entOf(d)===S.entity);});
   S.templates=(S.raw.templates||[]).filter(t=>!t.entity||t.entity===S.entity);const byE=d=>d.entity?d.entity===S.entity:String(d.id).startsWith(S.entity+'-');S.closes=(S.raw.closes||[]).filter(byE);S.taxcomps=(S.raw.taxcomps||[]).filter(byE);
-  if(!S.viewCurSet||!rateOf(S.viewCur)) S.viewCur=S.baseCur;
+  if(!S.viewCurSet||!rateOf(S.viewCur)) S.viewCur=(typeof defaultViewCur==='function'&&defaultViewCur())||S.baseCur;
   const k=fx(S.baseCur,S.viewCur);S.k=k==null?1:k;}
 
 // ================= people =================
@@ -1937,7 +2133,7 @@ async function processStatement(file,bank,bankName,logEl,resEl,signal){const st=
     if(foreign) el=convertLines(el,scur);
     const amt=moveTotal({lines:el});
     const mv={journal:'BNK1',date:l.date,ref:l.description,partner:l.counterparty,bank:bankName,lines:el,amount:amt,currency:scur,amount_currency:foreign?l.amount:null,source:'bank_statement',statement_id:stRef.id,statement_hash:l.hash,confidence:conf,reasoning,created_by:'agent:bank',created_at:nowISO(),uploaded_by:S.me,audit:[{at:nowISO(),by:'agent:bank',action:'Proposed from '+fileName+(foreign?` (${scur} ${money2(l.amount)} converted at ${fx(scur,S.baseCur).toFixed(4)})`:'')}]};
-    if(settles) mv.settles=settles;const errs=validateMove(mv);const why=[];if(errs.length) why.push(errs.join(' '));if(amt>maxAuto) why.push(`amount is above the auto-post limit of ${money(maxAuto)}`);if(conf<minConf) why.push(`agent confidence ${Math.round(conf*100)}% is below ${Math.round(minConf*100)}%`);if(integrity==='mismatch') why.push('the statement balances don’t agree');
+    if(settles) mv.settles=settles;const errs=validateMove(mv);const why=[];if(errs.length) why.push(errs.join(' '));if(amt>maxAuto) why.push(`amount is above the auto-post limit of ${money(maxAuto)}`);if(conf<minConf) why.push(`agent confidence ${Math.round(conf*100)}% is below ${Math.round(minConf*100)}%`);if(integrity==='mismatch') why.push('the statement balances don’t agree');if(policy().agents_need_review) why.push('your settings send every agent action for approval');
     if(!why.length){mv.state='posted';mv.name=nextName('BNK1',l.date);mv.approved_by='agent:bank';mv.approved_at=nowISO();mv.audit.push({at:nowISO(),by:'engine',action:`Auto-posted: ${money(amt)} is within ${money(maxAuto)} and confidence ${Math.round(conf*100)}% meets ${Math.round(minConf*100)}%`});nAuto++;}
     else{mv.state='to_approve';mv.name=null;mv.audit.push({at:nowISO(),by:'engine',action:'Held for review: '+why.join('; ')+'.'});nRev++;}
     const id=await writeMove(mv);stDoc.lines.push({date:l.date,description:l.description,amount:l.amount,balance:l.balance,status:mv.state==='posted'?'posted':'review',move_id:id});}
@@ -2315,7 +2511,7 @@ async function removeEntity(id,progress){const docs=[...S.raw.moves.filter(m=>en
 // ================= core upgrades =================
 [Element.prototype,DocumentFragment.prototype].forEach(P=>['append','prepend'].forEach(k=>{const f=P[k];P[k]=function(...a){return f.apply(this,a.flat(Infinity).filter(x=>x!=null&&x!==false));};}));
 let downloads=null,assetsCap=null;
-const policy=()=>Object.assign({contributor_limit:25000,dual_over:250000,agents_need_review:false},(S.group&&S.group.policy)||{});
+const policy=()=>Object.assign({contributor_limit:25000,dual_over:250000,agents_need_review:false},(S.group&&S.group.policy)||{},(S.entity&&S.entity!=='all'&&S.ent&&S.ent[S.entity]&&S.ent[S.entity].agent_policy)||{});
 const toGroup=v=>(+v||0)*(fx(S.baseCur,groupCur())||1);
 async function ensureAccount(code,name,type,flags){if(S.accounts[code]) return code;
   if(!S.canEdit) throw new Error(`Account ${code} (${name}) is missing from the chart of accounts. Ask an editor to add it.`);
@@ -2349,7 +2545,7 @@ async function learnFrom(m,lines){try{if(!['bank_statement','bill'].includes(m.s
 // invoices
 function settledFor(id,withPending){let s=0;for(const m of (withPending?postedOrPending():posted())) for(const x of (m.settles||[])) if(x.invoice_id===id) s+=+x.amount||0;return r2(s);}
 function invDue(inv,withPending){return r2((+inv.total_base||0)-settledFor(inv.id,withPending));}
-function invStatus(inv){if(inv.status==='cancelled') return ['Cancelled',''];const mv=S.moves.find(m=>m.id===inv.move_id);if(mv&&mv.state==='to_approve') return ['Awaiting approval','warn'];if(mv&&mv.state==='cancelled') return ['Rejected',''];
+function invStatus(inv){if(inv.status==='cancelled') return [inv.deleted_reason?'Deleted':'Cancelled',''];const mv=S.moves.find(m=>m.id===inv.move_id);if(mv&&mv.state==='to_approve') return ['Awaiting approval','warn'];if(mv&&mv.state==='cancelled') return ['Rejected',''];
   const due=invDue(inv);if(due<=0.01) return ['Paid','ok'];if(settledFor(inv.id)>0.01) return [inv.due<today()?'Part paid, overdue':'Part paid',inv.due<today()?'bad':'acc'];return inv.due<today()?['Overdue','bad']:['Open','acc'];}
 const openInvoices=kind=>S.invoices.filter(i=>i.kind===kind&&i.status!=='cancelled'&&(S.moves.find(m=>m.id===i.move_id)||{}).state==='posted'&&invDue(i,true)>0.01);
 // payment matching: one payment can clear several invoices, net of bank charges, or part-pay the oldest
@@ -2495,8 +2691,8 @@ function invoiceBuilder(kind,onDone){const isC=kind==='customer';const st=S.sett
     box.append(W.agent?h('div',{class:'reason'},'Bills agent: '+W.agent):null,dl,h('div',{class:'formgrid'},h('label',{class:'field'},isC?'Customer':'Supplier',pIn),h('label',{class:'field'},'Tax registration number',h('input',{type:'text',value:W.trn,oninput:e=>W.trn=e.target.value})),
       isC?null:h('label',{class:'field'},'Supplier’s bill number',h('input',{type:'text',value:W.number,oninput:e=>W.number=e.target.value})),h('label',{class:'field'},'Date',h('input',{type:'date',value:W.date,onchange:e=>W.date=e.target.value})),
       h('label',{class:'field'},'Payment terms (days)',h('input',{type:'number',min:0,value:W.terms,oninput:e=>W.terms=+e.target.value||0})),h('label',{class:'field'},'Currency',cur)),isC?h('div',{class:'row'},h('label',{class:'sel'},h('input',{type:'checkbox',checked:!!W.recur,onchange:e=>W.recur=e.target.checked}),'Repeat this invoice'),(()=>{const f=h('select',{'aria-label':'Frequency',onchange:e=>W.every=+e.target.value},FREQ.map(([v,l])=>h('option',{value:v},l)));f.value=String(W.every||1);return f;})(),h('label',{class:'sel'},'until',h('input',{type:'date',value:W.rend||'','aria-label':'End date (optional)',onchange:e=>W.rend=e.target.value})),h('span',{class:'mini mut'},'Leave the end date empty to repeat until stopped.')):null);
-    const t=h('table',{class:'lines'},h('thead',{},h('tr',{},h('th',{},'Description'),h('th',{},'Account'),h('th',{class:'num'},'Qty'),h('th',{class:'num'},'Unit price'),h('th',{class:'num'},'VAT %'),h('th',{class:'num'},'Net'),h('th',{}))));const tb=h('tbody');
-    W.lines.forEach((l,i)=>tb.append(h('tr',{},h('td',{},h('input',{type:'text',value:l.desc,oninput:e=>l.desc=e.target.value,'aria-label':'Description'})),h('td',{},acctSelect(l.account,v=>l.account=v,{allowBlank:true})),
+    const t=h('table',{class:'lines'},h('thead',{},h('tr',{},h('th',{},'Description'),h('th',{},isC?'Type of income':'Type of expense'),h('th',{class:'num'},'Qty'),h('th',{class:'num'},'Unit price'),h('th',{class:'num'},'VAT %'),h('th',{class:'num'},'Net'),h('th',{}))));const tb=h('tbody');
+    W.lines.forEach((l,i)=>tb.append(h('tr',{},h('td',{},h('input',{type:'text',value:l.desc,oninput:e=>l.desc=e.target.value,'aria-label':'Description'})),h('td',{},docTypeCell(isC?'income':'expense',l)),
       h('td',{},h('input',{type:'number',step:'0.01',value:l.qty,style:'width:5rem',oninput:e=>{l.qty=+e.target.value||0;tot();},'aria-label':'Quantity'})),h('td',{},h('input',{type:'number',step:'0.01',value:l.price,style:'width:8rem',oninput:e=>{l.price=+e.target.value||0;tot();},'aria-label':'Unit price'})),
       h('td',{},h('input',{type:'number',step:'0.01',value:l.vat,style:'width:5rem',oninput:e=>{l.vat=+e.target.value||0;tot();},'aria-label':'VAT rate'})),h('td',{class:'num'},money2(r2(l.qty*l.price))),h('td',{},h('button',{class:'btn ghost sm',type:'button','aria-label':'Remove line',onclick:()=>{W.lines.splice(i,1);draw();}},'×')))));
     t.append(tb);const totals=h('div',{class:'row end mini',id:'tot-'+kind});box.append(h('div',{class:'tablewrap'},t),h('div',{class:'row'},h('button',{class:'btn ghost sm',type:'button',onclick:()=>{W.lines.push({desc:'',account:'',qty:1,price:0,vat:+(st.vat_rate||0)});draw();}},'Add a line')),totals,msg,
@@ -2504,7 +2700,7 @@ function invoiceBuilder(kind,onDone){const isC=kind==='customer';const st=S.sett
   function calc(){let net=0,vat=0;W.lines.forEach(l=>{const n=r2(l.qty*l.price);net+=n;vat+=r2(n*(l.vat||0)/100);});return {net:r2(net),vat:r2(vat),total:r2(net+vat)};}
   function tot(){const el=box.querySelector('#tot-'+kind);if(!el) return;const c=calc();el.textContent=`Net ${money2(c.net)} · VAT ${money2(c.vat)} · Total ${W.currency} ${money2(c.total)}`;}
   async function save(){msg.hidden=true;const c=calc();const fail=t=>{msg.textContent=t;msg.hidden=false;};
-    if(!W.partner.trim()) return fail(isC?'Add the customer.':'Add the supplier.');if(!(c.total>0)) return fail('Add at least one line with an amount.');if(W.lines.some(l=>l.qty*l.price&&!l.account)) return fail('Choose an account for every line.');
+    if(!W.partner.trim()) return fail(isC?'Add the customer.':'Add the supplier.');if(!(c.total>0)) return fail('Add at least one line with an amount.');if(W.lines.some(l=>l.qty*l.price&&!l.account)) return fail('Choose the type of '+(isC?'income':'expense')+' for every line.');
     if(!isC){const dup=S.invoices.find(i=>i.kind==='supplier'&&i.status!=='cancelled'&&norm(i.partner)===norm(W.partner)&&((W.number&&norm(i.supplier_ref)===norm(W.number))||(Math.abs(i.total-c.total)<0.01&&i.date===W.date)));
       if(dup&&!W.forceDup){W.forceDup=true;return fail(`This looks like a duplicate of ${dup.number} (${dup.supplier_ref||'same amount and date'}). Press Post bill again only if it is genuinely a separate bill.`);}}
     if(isC){const cl=creditLimitBlock(W,c.total);if(cl&&!W.forceCredit){W.forceCredit=true;return fail(cl);}W.creditOverride=!!cl;}
@@ -2556,22 +2752,22 @@ Use net amounts before VAT. Choose accounts only from this list (expenses, cost 
       catch(e){s2.err(sampleErr(e));}finally{fileIn.value='';}};}
   const runCard=h('div',{class:'card'});el.append(runCard);
   const partnersBox=h('div',{class:'tablewrap'});el.append(h('div',{class:'card'},h('div',{class:'cardhead'},h('div',{},h('h3',{},isC?'Customers':'Suppliers'),h('p',{class:'note'},'Select a row to open the '+(isC?'customer':'supplier')+' dashboard.'))),partnersBox));
-  const search=h('input',{type:'search',placeholder:'Search number or name','aria-label':'Search',style:'flex:1;min-width:12rem',oninput:()=>drawList()});const stSel=h('select',{'aria-label':'Status',onchange:()=>drawList()},['All','Open','Overdue','Paid','Awaiting approval'].map(s=>h('option',{value:s},s)));
+  const search=h('input',{type:'search',placeholder:'Search number or name','aria-label':'Search',style:'flex:1;min-width:12rem',oninput:()=>drawList()});const stSel=h('select',{'aria-label':'Status',onchange:()=>drawList()},['All','Open','Overdue','Paid','Awaiting approval','Rejected','Deleted'].map(s=>h('option',{value:s},s)));
   const list=h('div',{class:'tablewrap'});el.append(h('div',{class:'card'},h('div',{class:'cardhead'},h('h3',{},isC?'Invoices':'Bills'),h('div',{class:'row'},h('button',{class:'btn sm',type:'button',onclick:()=>exportXlsx(`${isC?'invoices':'bills'}-${fileSlug(S.settings.company)}.xlsx`,{[isC?'Invoices':'Bills']:[['Number','Supplier ref','Partner','Date','Due','Currency','Total','Total in '+S.baseCur,'Balance','Status'],...S.invoices.filter(i=>i.kind===kind).map(i=>[i.number,i.supplier_ref||'',i.partner,i.date,i.due,i.currency,i.total,i.total_base,invDue(i),invStatus(i)[0]])]})},'Export'))),h('div',{class:'row'},search,stSel),list));
-  function drawList(){list.textContent='';const q=norm(search.value);let ls=S.invoices.filter(i=>i.kind===kind).sort((a,b)=>a.date<b.date?1:-1);if(q) ls=ls.filter(i=>norm(i.number+' '+i.partner+' '+(i.supplier_ref||'')).includes(q));
+  function drawList(){list.textContent='';try{const nc=numberCheck(kind);if(nc) list.append(nc);}catch(e){}const q=norm(search.value);let ls=S.invoices.filter(i=>i.kind===kind).sort((a,b)=>a.date<b.date?1:-1);if(q) ls=ls.filter(i=>norm(i.number+' '+i.partner+' '+(i.supplier_ref||'')).includes(q));
     if(stSel.value!=='All') ls=ls.filter(i=>invStatus(i)[0].startsWith(stSel.value==='Open'?'Open':stSel.value)||(stSel.value==='Overdue'&&invStatus(i)[0].includes('overdue')));
     if(!ls.length){list.append(emptyNote(isC?'No invoices yet. Create one with New invoice.':'No bills yet. Upload one to the bills agent or enter it by hand.'));return;}
-    const t=h('table',{},h('thead',{},h('tr',{},h('th',{},'Number'),h('th',{},isC?'Customer':'Supplier'),h('th',{},'Date'),h('th',{},'Due'),h('th',{class:'num'},'Total'),h('th',{class:'num'},'Balance'),h('th',{},'Status'))));const tb=h('tbody');
+    const t=h('table',{},h('thead',{},h('tr',{},h('th',{},'Number'),h('th',{},isC?'Customer':'Supplier'),h('th',{},'Date'),h('th',{},'Due'),h('th',{class:'num'},'Total'),h('th',{class:'num'},'Balance'),h('th',{},'Status'),h('th',{},''))));const tb=h('tbody');
     ls.slice(0,300).forEach(i=>{const [s,k]=invStatus(i);const open=!!S.open['inv-'+i.id];tb.append(h('tr',{class:'click',tabindex:'0',onclick:()=>{S.open['inv-'+i.id]=!open;drawList();}},h('td',{class:'code'},i.number,i.supplier_ref?h('div',{class:'mini'},i.supplier_ref):null),h('td',{},i.partner),h('td',{style:'white-space:nowrap'},fmtDate(i.date)),h('td',{style:'white-space:nowrap'},fmtDate(i.due)),
-      h('td',{class:'num'},(i.currency!==S.baseCur?i.currency+' ':'')+money2(i.total)),h('td',{class:'num'},money2(invDue(i))),h('td',{},pill(s,k))));
+      h('td',{class:'num'},(i.currency!==S.baseCur?i.currency+' ':'')+money2(i.total)),h('td',{class:'num'},money2(invDue(i))),h('td',{},pill(s,k)),invQuick(i,()=>drawList())));
       if(open){const box=h('div',{class:'stack',style:'gap:.6rem'});const mv=S.moves.find(m=>m.id===i.move_id);
-        box.append(h('div',{class:'mini mut'},`${i.lines.length} line(s). Net ${money2(i.net)}, VAT ${money2(i.vat)}, total ${i.currency} ${money2(i.total)}${i.currency!==S.baseCur?` (${S.baseCur} ${money2(i.total_base)})`:''}. Entry ${mv&&mv.name||'awaiting approval'}.`),i.doc?h('div',{class:'row'},attachLinks([i.doc])):null);box.append(invoiceActions(i,()=>drawList()));
+        box.append(h('div',{class:'mini mut'},`${i.lines.length} line(s). Net ${money2(i.net)}, VAT ${money2(i.vat)}, total ${i.currency} ${money2(i.total)}${i.currency!==S.baseCur?` (${S.baseCur} ${money2(i.total_base)})`:''}. Entry ${mv&&mv.name||'awaiting approval'}.`),i.doc?h('div',{class:'row'},attachLinks([i.doc])):null);box.append(invoiceActions(i,()=>drawList()));{const db_=invDeleteBtn(i,()=>drawList());if(db_) box.append(db_);}
         if(S.canWrite&&invDue(i,true)>0.01&&mv&&mv.state==='posted') box.append(paymentForm(i,()=>{S.open['inv-'+i.id]=false;drawList();}));
         if(isC&&invDue(i)>0.01&&i.due<today()&&sample){const out=h('div',{class:'answer'});const copy=h('button',{class:'btn sm',type:'button',hidden:true,onclick:async()=>{try{await navigator.clipboard.writeText(out.textContent);copy.textContent='Copied';}catch(e){const r=document.createRange();r.selectNodeContents(out);const s_=getSelection();s_.removeAllRanges();s_.addRange(r);}}},'Copy email');
           const b=h('button',{class:'btn agent sm',type:'button',onclick:async()=>{b.disabled=true;out.textContent='Drafting…';const days=Math.floor((Date.parse(today())-Date.parse(i.due))/864e5);
             try{await sample(`You are the Collections agent for ${S.settings.company}. Draft a short, polite but firm payment reminder email to ${i.partner} for invoice ${i.number} dated ${i.date}, due ${i.due} (${days} days overdue), balance ${i.currency} ${money2(invDue(i)/(fx(i.currency,S.baseCur)||1))}. Tone: ${days>60?'firm, mention next steps':days>30?'firm':'friendly'}. Include a subject line. No placeholders for amounts. ${langLine()}`,{onText:({text})=>{out.textContent=text;}});copy.hidden=false;}catch(e){out.textContent=sampleErr(e);}finally{b.disabled=false;}}},'Draft reminder');
           box.append(h('div',{class:'row'},b,copy),out);}
-        tb.append(h('tr',{class:'detail'},h('td',{colspan:7},box)));}});t.append(tb);list.append(t);}
+        tb.append(h('tr',{class:'detail'},h('td',{colspan:8},box)));}});t.append(tb);list.append(t);}
   function refresh(){if(allGuard(el,'work with '+(isC?'invoices':'bills'))) return;newB.hidden=!S.canWrite;const nd=needData();if(nd){kpis.textContent='';kpis.append(nd);return;}
     const ls=S.invoices.filter(i=>i.kind===kind&&i.status!=='cancelled');const open=ls.reduce((s,i)=>s+invDue(i),0),over=ls.filter(i=>i.due<today()).reduce((s,i)=>s+invDue(i),0);const mo=today().slice(0,7);
     let paidM=0;posted().forEach(m=>{if(m.date.slice(0,7)===mo)(m.settles||[]).forEach(x=>{if(ls.some(i=>i.id===x.invoice_id)) paidM+=+x.amount||0;});});
@@ -5107,7 +5303,7 @@ async function boot(){applyTheme(loadPref('theme')||'system');applyFont(loadPref
   [$('#themebtn'),$('#pthemebtn')].forEach(b=>b&&(b.onclick=()=>{const dark=document.documentElement.getAttribute('data-theme')==='dark'||(!document.documentElement.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);const v=dark?'light':'dark';applyTheme(v);savePref('theme',v);const p=$('#pthemebtn');if(p) p.innerHTML=$('#themebtn').innerHTML;if(S.signedIn&&S.isEditor) refreshActive();}));
   document.addEventListener('keydown',e=>{if(e.key==='Escape') document.body.classList.remove('navopen');});
   document.addEventListener('click',e=>{if(document.body.classList.contains('navopen')&&!e.target.closest('.side')&&!e.target.closest('#menu')) document.body.classList.remove('navopen');});
-  S.prefEntity=loadPref('entity');const pc=loadPref('viewCur');if(pc){S.viewCur=pc;S.viewCurSet=true;}const pd=loadPref('fsDetail');if(pd!=null) S.fs.detail=!!pd;
+  S.prefEntity=(()=>{try{return sessionStorage.getItem('orzio-ent')||loadPref('entity')||loadPref('lastent');}catch(e){return loadPref('entity');}})();const pc=loadPref('viewCur');if(pc){S.viewCur=pc;S.viewCurSet=true;}const pd=loadPref('fsDetail');if(pd!=null) S.fs.detail=!!pd;
   const h0=(location.hash||'').slice(1);S.tab=TABS.some(t=>t[0]===h0)?h0:'dash';
   $('#login').hidden=false;drawLogin();
   const use=n=>window.claude&&window.claude.use?window.claude.use(n).catch(()=>null):Promise.resolve(null);
@@ -9747,7 +9943,7 @@ setTimeout(function coTop(){const nav=document.querySelector('.topnav');if(!nav)
 {const _wh=BUILD.wshome;BUILD.wshome=()=>{const r=_wh();const rf=r.refresh;r.refresh=function(...a){const x=rf.apply(this,a);try{const lg=wsLogo();const c=r.el.querySelector('.lh-copy');if(c&&lg&&lg.url&&!c.querySelector('.wslogo')) c.prepend(h('img',{class:'wslogo',src:lg.url,alt:''}));
   r.el.querySelectorAll('.wsco[aria-label^="Open "]').forEach(b=>{const id=Object.keys(S.ent||{}).find(k=>b.getAttribute('aria-label')===`Open ${S.ent[k].name}`);const lo=id&&((S.ent[id].brand||{}).logo);const mono=b.querySelector('.wsmono');if(lo&&lo.url&&mono&&!mono.querySelector('img')){mono.textContent='';mono.classList.add('haslogo');mono.append(h('img',{src:lo.url,alt:''}));}});}catch(e){}return x;};return r;};}
 // the launcher of each company also links to its settings
-{const _bh3=BUILD.home;BUILD.home=()=>{const r=_bh3();const rf=r.refresh;r.refresh=function(...a){const x=rf.apply(this,a);try{const c=r.el.querySelector('.lh-copy');if(c&&!c.querySelector('.lh-coset')&&canCoSettings()) c.append(h('button',{class:'lh-btn lh-coset',type:'button',style:'margin-top:1rem',onclick:()=>showTab('coset')},'Company settings'));const b=c&&c.querySelector('.lh-coset');if(b) b.hidden=!canCoSettings();}catch(e){}return x;};return r;};}
+{const _bh3=BUILD.home;BUILD.home=()=>{const r=_bh3();const rf=r.refresh;r.refresh=function(...a){const x=rf.apply(this,a);try{const c=r.el.querySelector('.lh-copy');if(false) c.append(h('button',{class:'lh-btn lh-coset',type:'button',style:'margin-top:1rem',onclick:()=>showTab('coset')},'Company settings'));const b=c&&c.querySelector('.lh-coset');if(b) b.hidden=!canCoSettings();}catch(e){}return x;};return r;};}
 
 
 // ================= Company identity: the company's first screen shows its logo and name, and the app takes its colours
@@ -9810,12 +10006,14 @@ function comboBox(opts,value,onPick,ph){const id='cb'+Math.random().toString(36)
   inp.addEventListener('blur',()=>setTimeout(()=>{const ex=opts.find(o=>o[1].toLowerCase()===inp.value.trim().toLowerCase());if(ex&&ex[0]!==value) pick(ex);else inp.value=label(value);close();},120));
   btn.onclick=()=>{if(list.hidden){inp.focus();}else close();};wrap.append(inp,btn,list);wrap.setValue=v=>{value=v;inp.value=label(v);};return wrap;}
 const EST_TYPES=[['company','Company','A separate legal company with its own books, taxes and licence.'],['subsidiary','Subsidiary','A company owned fully or partly by another company in this workspace.'],['branch','Branch','A branch of one of your companies, in the same books.'],['sales','Sales centre','A shop counter, POS terminal, kiosk or online store of a company or branch.'],['rep','Representative office','A liaison office that promotes the company but does not trade.']];
-newCompany=function(){if(!wsIsAdmin()){alert('Only the workspace admin can create establishments.');return;}S.estType=null;showTab('estnew');};
+newCompany=function(){if(!wsIsAdmin()){alert('Only the workspace admin can create establishments.');return;}S.estType=null;S.estFixed=null;showTab('estnew');};
 openSignup=function(){newCompany();};
 BUILD.estnew=()=>{const el=h('section',{class:'launch ws'});const head=h('div',{});const body=h('div',{class:'launch-body'});el.append(head,body);
   function refresh(){if(el.contains(document.activeElement)&&body.querySelector('.estform')) return;head.textContent='';body.textContent='';
-    head.append(wsHeader('Create an establishment','Choose what you are adding, fill in one screen, and the setup agent prepares the rest for its industry and country.',[h('button',{class:'lh-btn',type:'button',onclick:()=>showTab('wshome')},'Back to companies')]));
-    if(!wsIsAdmin()){body.append(h('div',{class:'card'},emptyNote('Only the workspace admin can create establishments.')));return;}
+    const fixed=S.estFixed&&S.ent[S.estFixed]?S.estFixed:null;const coAdm=!!(fixed&&canCoEdit(fixed));
+    head.append(wsHeader(fixed?`Add a sales centre to ${S.ent[fixed].name}`:'Create an establishment',fixed?'A shop counter, POS terminal, kiosk or online store of this company. It appears in Sales point once added.':'Choose what you are adding, fill in one screen, and the setup agent prepares the rest for its industry and country.',[h('button',{class:'lh-btn',type:'button',onclick:()=>{if(fixed){S.estFixed=null;openCompany(fixed);showTab('pos');}else showTab('wshome');}},fixed?'Back to Sales point':'Back to companies')]));
+    if(!wsIsAdmin()&&!coAdm){body.append(h('div',{class:'card'},emptyNote('Only the workspace admin can create establishments. Company admins add sales centres from Sales point.')));return;}
+    if(fixed){S.estType='sales';body.append(unitForm('sales'));return;}
     const hasCo=Object.keys(S.ent||{}).length>0;const t=S.estType||(hasCo?null:'company');
     body.append(h('div',{class:'esttypes',role:'radiogroup','aria-label':'What are you adding?'},EST_TYPES.map(([k,n,d])=>{const off=!hasCo&&!['company'].includes(k);return h('button',{type:'button',role:'radio','aria-checked':String(t===k),class:'esttype'+(t===k?' on':''),disabled:off,title:off?'Create a company first':'',onclick:()=>{S.estType=k;refresh();}},h('b',{},n),h('span',{},d));})));
     if(!t){body.append(h('p',{class:'note',style:'margin-top:1rem'},'Choose what you are adding.'));return;}
@@ -9834,7 +10032,12 @@ BUILD.estnew=()=>{const el=h('section',{class:'launch ws'});const head=h('div',{
     const ye=h('select',{'aria-label':'Financial year end',onchange:e=>W.year_end=e.target.value},['01-31','02-28','03-31','04-30','05-31','06-30','07-31','08-31','09-30','10-31','11-30','12-31'].map(v=>h('option',{value:v},yeLabel(v))));ye.value=W.year_end;
     const cur=h('select',{'aria-label':'Book currency',onchange:e=>{W.currency=e.target.value;drawFx();}},[...new Set([...allCurrencies(),...Object.values(COUNTRIES).map(c=>c.cur).filter(Boolean)])].sort().map(c=>h('option',{value:c},c)));cur.value=W.currency;
     const lang=h('select',{'aria-label':'Language',onchange:e=>W.language=e.target.value},Object.entries(LANGS).map(([k,n])=>h('option',{value:k},n)));lang.value=W.language;
-    const drawFx=()=>{fxBox.textContent='';if(rateOf(W.currency)) return;fxBox.append(fld(`Exchange rate: ${W.currency} per 1 US dollar`,xIn(W,'fx','number',{placeholder:'e.g. 3.6725'})));};
+    const drawFx=()=>{fxBox.textContent='';const c=W.currency;W.fxLive=null;const line=h('p',{class:'fxlive mini',role:'status'},c==='USD'?'':'Getting the live rate…');fxBox.append(line);drawViews();if(c==='USD') return;
+      liveRates().then(d=>{if(W.currency!==c) return;const r=+d.rates[c];if(r>0){W.fx=r;W.fxLive={rate:r,at:d.at,source:d.source};line.textContent=`Live rate: 1 USD = ${fmtRate(r)} ${c} · 1 ${c} = ${fmtRate(1/r)} USD. ${d.source}, ${fxWhen(d.at)}.`;}else{line.textContent=`No live rate for ${c}.`;if(!rateOf(c)) fxBox.append(fld(`Exchange rate: ${c} per 1 US dollar`,xIn(W,'fx','number',{placeholder:'e.g. 3.6725'})));}})
+        .catch(()=>{if(W.currency!==c) return;const k=rateOf(c);line.textContent=k?`Live rates are not available right now. Rate on file: 1 USD = ${fmtRate(k)} ${c}.`:'Live rates are not available right now. Enter the rate.';if(!k) fxBox.append(fld(`Exchange rate: ${c} per 1 US dollar`,xIn(W,'fx','number',{placeholder:'e.g. 3.6725'})));});};
+    const viewBox=h('div',{class:'stack',style:'gap:.5rem'});const drawViews=()=>{viewBox.textContent='';W.view_curs=(W.view_curs||[]).filter(x=>x!==W.currency);if(W.default_view&&W.default_view!==W.currency&&!W.view_curs.includes(W.default_view)) W.default_view='';
+      const dv=h('select',{'aria-label':'Show amounts by default in',onchange:e=>W.default_view=e.target.value},[W.currency,...W.view_curs].map((c,i)=>h('option',{value:c},i===0?`${c} (book currency)`:c)));dv.value=W.default_view||W.currency;
+      viewBox.append(h('div',{class:'formgrid'},fld('Show amounts by default in',dv)),h('div',{class:'field'},'View currencies (up to 4)',curPicker(W.view_curs,()=>drawViews(),4,W.currency)));};
     const file=h('input',{type:'file',accept:'.pdf,image/png,image/jpeg,image/webp','aria-label':'Trade licence document',onchange:e=>{W.licenseFile=e.target.files[0]||null;fname.textContent=W.licenseFile?W.licenseFile.name:'No file attached';}});const fname=h('span',{class:'mini mut'},W.licenseFile?W.licenseFile.name:'No file attached');
     const taxV=h('input',{type:'number',step:'0.01','aria-label':'VAT rate',oninput:e=>W.vat=e.target.value===''?null:+e.target.value}),taxC=h('input',{type:'number',step:'0.01','aria-label':'Corporate tax rate',oninput:e=>W.ct=e.target.value===''?null:+e.target.value});
     const parentSel=h('select',{'aria-label':'Parent company',onchange:e=>W.parent=e.target.value},Object.entries(S.ent||{}).map(([id,e])=>h('option',{value:id},e.name)));parentSel.value=W.parent;
@@ -9848,20 +10051,21 @@ BUILD.estnew=()=>{const el=h('section',{class:'launch ws'});const head=h('div',{
         W.plan={accounts,banks,notes,summary,vat:c.vat||0,ct:c.ct||0,thr:c.thr||0};if(W.pack){const pf=(W.pack.content||{}).profile||{};if(pf.vat!=null&&pf.vat!=='') W.plan.vat=+pf.vat;if(pf.ct!=null&&pf.ct!=='') W.plan.ct=+pf.ct;if(pf.thr!=null&&pf.thr!=='') W.plan.thr=+pf.thr;}
         if(W.vat!=null) W.plan.vat=+W.vat;if(W.ct!=null) W.plan.ct=+W.ct;
         if(!rateOf(W.currency)&&+W.fx>0){await db.doc('setup/main/fx/rates').update({rates:{...((S.fx||{}).rates||{}),[W.currency]:+W.fx},updated_by:S.me,updated_at:nowISO()});try{S.fx={...(S.fx||{}),rates:{...((S.fx||{}).rates||{}),[W.currency]:+W.fx}};}catch(x){}}
+        if(W.fxLive){try{await syncLiveRates(true);}catch(x){}}
         W.license={number:W.lic_no.trim()||null,authority:W.lic_auth.trim()||null,expiry:W.lic_expiry||null,activities:[]};W.packApply=true;W.revenue='';W.desc='';
-        await createEntity(W,log);const eid=S.entity;const patch={kind,year_end:W.year_end,partner_ctl:{required:true,auto:false}};if(kind==='subsidiary'){patch.parent=W.parent;patch.ownership=Math.max(1,Math.min(100,+W.ownership||100));}try{await saveEntOf(eid,patch);}catch(x){}S.estW=null;S.estType=null;}
+        await createEntity(W,log);const eid=S.entity;const patch={kind,year_end:W.year_end,partner_ctl:{required:true,auto:false},view_curs:(W.view_curs||[]).filter(c=>c!==W.currency).slice(0,4),default_view:W.default_view||W.currency};if(kind==='subsidiary'){patch.parent=W.parent;patch.ownership=Math.max(1,Math.min(100,+W.ownership||100));}try{await saveEntOf(eid,patch);}catch(x){}S.estW=null;S.estType=null;}
       catch(x){err.textContent=x.message;b.disabled=false;}}
     drawLegal();drawFx();drawSide();const cb=comboBox(countryList(),W.country,setCountry,'Search or choose a country');
     const sec=(t,...kids)=>h('div',{class:'card stack'},h('h3',{},t),...kids);
     return h('div',{class:'estform'},h('div',{class:'stack'},
       kind==='subsidiary'?sec('Owned by',h('div',{class:'formgrid'},fld('Parent company',parentSel),fld('Ownership (%)',xIn(W,'ownership','number')))):null,
-      sec(kind==='subsidiary'?'Subsidiary':'Company',h('div',{class:'formgrid'},fld('Name',xIn(W,'name',null,{placeholder:'e.g. Al Noor Trading LLC'})),fld('Country',cb),fld('Financial year end',ye)),legalBox,h('div',{class:'formgrid'},fld('Book currency',cur),fld('Books start on',xIn(W,'start','date')),fld('Language for agents',lang)),fxBox),
+      sec(kind==='subsidiary'?'Subsidiary':'Company',h('div',{class:'formgrid'},fld('Name',xIn(W,'name',null,{placeholder:'e.g. Al Noor Trading LLC'})),fld('Country',cb),fld('Financial year end',ye)),legalBox,h('div',{class:'formgrid'},fld('Book currency',cur),fld('Books start on',xIn(W,'start','date')),fld('Language for agents',lang)),fxBox,viewBox),
       sec('Industry',h('div',{class:'formgrid'},fld('Industry',ind),fld('Sub-industry',subSel),fld('Number of employees',emp))),
       sec('Trade licence and tax',h('div',{class:'formgrid'},fld('Trade licence number',xIn(W,'lic_no')),fld('Issuing authority',xIn(W,'lic_auth')),fld('Licence expiry',xIn(W,'lic_expiry','date')),fld('Tax registration number (TRN)',xIn(W,'trn')),fld('VAT rate (%)',taxV),fld('Corporate tax (%)',taxC)),
         h('div',{class:'row',style:'align-items:center;gap:.7rem'},h('label',{class:'btn'},'Attach the licence document',file),fname),h('p',{class:'mini mut'},'Leave the tax rates empty to use the rates for the country. Confirm them with your tax adviser.'))),
       side);}
   // ---- branch, sales centre or representative office
-  function unitForm(t){const ids=Object.keys(S.ent||{});const U={parent:(S.entity&&S.ent[S.entity]?S.entity:ids[0]),name:'',code:'',city:'',address:'',phone:'',manager:'',opened:today(),country:'',sp_type:'counter',branch:'',lic_no:'',lic_auth:'',lic_expiry:'',file:null,...(S.estU&&S.estU.t===t?S.estU:{}),t};S.estU=U;
+  function unitForm(t){const ids=S.estFixed&&S.ent[S.estFixed]?[S.estFixed]:Object.keys(S.ent||{});const U={parent:(S.entity&&S.ent[S.entity]?S.entity:ids[0]),name:'',code:'',city:'',address:'',phone:'',manager:'',opened:today(),country:'',sp_type:'counter',branch:'',lic_no:'',lic_auth:'',lic_expiry:'',file:null,...(S.estU&&S.estU.t===t?S.estU:{}),t};S.estU=U;
     const err=h('p',{class:'err',role:'alert'});const brSel=h('select',{'aria-label':'Branch'});const drawBr=()=>{brSel.textContent='';brSel.append(h('option',{value:''},'Head office'),(((S.ent[U.parent]||{}).branches)||[]).filter(b=>b.active!==false&&b.type!=='rep_office').map(b=>h('option',{value:b.id},b.name)));brSel.value=U.branch||'';};drawBr();brSel.onchange=e=>U.branch=e.target.value;
     const parent=h('select',{'aria-label':'Company',onchange:e=>{U.parent=e.target.value;drawBr();}},ids.map(id=>h('option',{value:id},S.ent[id].name)));parent.value=U.parent;
     const file=h('input',{type:'file',accept:'.pdf,image/png,image/jpeg,image/webp','aria-label':'Licence document',onchange:e=>{U.file=e.target.files[0]||null;fname.textContent=U.file?U.file.name:'No file attached';}});const fname=h('span',{class:'mini mut'},'No file attached');
@@ -9871,7 +10075,7 @@ BUILD.estnew=()=>{const el=h('section',{class:'launch ws'});const head=h('div',{
       try{let doc=null;if(U.file&&assetsCap){const a=await assetsCap.upload(U.file);doc={id:a.id,name:U.file.name,url:a.url||('/_blob/'+a.id),at:nowISO(),by:S.me};}const lic={number:U.lic_no.trim()||null,authority:U.lic_auth.trim()||null,expiry:U.lic_expiry||null,doc};const e=S.ent[U.parent]||{};
         if(t==='sales'){const X={id:'sp'+Date.now().toString(36),name:U.name.trim(),type:U.sp_type,branch:U.branch||'',address:U.address.trim(),phone:U.phone.trim(),manager:U.manager.trim(),opened:U.opened,license:lic,cash_acct:'1000',card_acct:'1010',wh:'main',prices_incl_vat:true,active:true,created_at:nowISO(),created_by:S.me};await saveEntOf(U.parent,{sales_points:[...(e.sales_points||[]),X]});}
         else{const B={id:'b'+Date.now().toString(36),type:t==='rep'?'rep_office':'branch',name:U.name.trim(),code:U.code.trim(),city:U.city.trim(),address:U.address.trim(),country:U.country||e.country||'',phone:U.phone.trim(),manager:U.manager.trim(),opened:U.opened,license:lic,staff:[],active:true,trading:t!=='rep',created_at:nowISO(),created_by:S.me};await saveEntOf(U.parent,{branches:[...(e.branches||[]),B]});}
-        S.estU=null;S.estType=null;FLASH.wshome={t:`${label} ${U.name.trim()} added to ${e.name}.`,at:Date.now()};showTab('wshome');}catch(x){err.textContent=x.message;ev.target.disabled=false;}}
+        S.estU=null;S.estType=null;if(S.estFixed||t==='sales'){const back=U.parent;S.estFixed=null;FLASH.pos={t:`${label} ${U.name.trim()} added to ${e.name}.`,at:Date.now()};openCompany(back);showTab('pos');}else{FLASH.wshome={t:`${label} ${U.name.trim()} added to ${e.name}.`,at:Date.now()};showTab('wshome');}}catch(x){err.textContent=x.message;ev.target.disabled=false;}}
     const sec=(tt,...kids)=>h('div',{class:'card stack'},h('h3',{},tt),...kids);
     return h('div',{class:'estform'},h('div',{class:'stack'},
       sec(label,h('div',{class:'formgrid'},fld('Company',parent),t==='sales'?fld('Branch',brSel):null,fld('Name',xIn(U,'name',null,{placeholder:t==='sales'?'e.g. Dubai Mall kiosk':t==='rep'?'e.g. London representative office':'e.g. Abu Dhabi branch'})),t==='branch'?fld('Branch code',xIn(U,'code')):null,t==='sales'?fld('Type',xSel(U,'sp_type',Object.entries(SP_TYPES))):null,t!=='sales'?fld('Country',cb):null,fld('City',xIn(U,'city')),fld('Manager',xIn(U,'manager')),fld('Phone',xIn(U,'phone')),fld('Opening date',xIn(U,'opened','date'))),fld('Address',h('textarea',{rows:2,oninput:e=>U.address=e.target.value},U.address)),
@@ -9883,7 +10087,7 @@ BUILD.estnew=()=>{const el=h('section',{class:'launch ws'});const head=h('div',{
 // the workspace home: "Create an establishment", and each company's branches, sales centres and offices
 {const _wh2=BUILD.wshome;BUILD.wshome=()=>{const r=_wh2();const rf=r.refresh;r.refresh=function(...a){const x=rf.apply(this,a);try{const nb=r.el.querySelector('.wsnew .wsname');if(nb) nb.textContent=Object.keys(S.ent||{}).length?'Create an establishment':'Create your first company';const nm=r.el.querySelector('.wsnew .wsmeta');if(nm) nm.textContent='A company, subsidiary, branch, sales centre or representative office, on one screen.';
   const f=FLASH.wshome;if(f&&Date.now()-f.at<30000){const body=r.el.querySelector('.launch-body');if(body&&!body.querySelector('.wsflash')) body.prepend(h('p',{class:'banner ok wsflash',role:'status'},f.t));}
-  r.el.querySelectorAll('.wsco[aria-label^="Open "]').forEach(b=>{const id=Object.keys(S.ent||{}).find(k=>b.getAttribute('aria-label')===`Open ${S.ent[k].name}`);if(!id||b.querySelector('.wsunits')) return;const e=S.ent[id];const br=(e.branches||[]).filter(z=>z.active!==false);const n1=br.filter(z=>z.type!=='rep_office').length,n2=(e.sales_points||[]).filter(z=>z.active!==false).length,n3=br.filter(z=>z.type==='rep_office').length;const parts=[n1&&`${n1} branch${n1>1?'es':''}`,n2&&`${n2} sales centre${n2>1?'s':''}`,n3&&`${n3} representative office${n3>1?'s':''}`].filter(Boolean);if(parts.length){const m=b.querySelector('.wsind');if(m) m.after(h('span',{class:'wsunits'},parts.join(' · ')));}});}catch(e){}return x;};return r;};}
+  r.el.querySelectorAll('.wsco[aria-label^="Open "]').forEach(b=>{const id=Object.keys(S.ent||{}).find(k=>b.getAttribute('aria-label')===`Open ${S.ent[k].name}`);if(!id||b.querySelector('.wsunits')) return;const e=S.ent[id];const br=(e.branches||[]).filter(z=>z.active!==false);const n1=br.filter(z=>z.type!=='rep_office').length,n2=(e.sales_points||[]).filter(z=>z.active!==false).length,n3=br.filter(z=>z.type==='rep_office').length;const parts=[n1&&`${n1} branch${n1>1?'es':''}`,n3&&`${n3} representative office${n3>1?'s':''}`].filter(Boolean);if(parts.length){const m=b.querySelector('.wsind');if(m) m.after(h('span',{class:'wsunits'},parts.join(' · ')));}});}catch(e){}return x;};return r;};}
 
 
 // ================= Projects: each project keeps its own revenue, expenses, budget and team, inside a company's books =================
@@ -9898,7 +10102,7 @@ function pjOnly(e){if(S.isOwner) return false;const ep=entAccessOf(myAccess(),e|
 // what this person may do on a project: manager, member, viewer or nothing
 function pjRole(p){if(!p) return null;if(S.isOwner) return 'manager';const m=pjMembers(p).find(x=>x.uid===S.me);if(pjOnly(entOf(p))) return m?m.role:null;if(m&&m.role==='manager') return 'manager';
   if(can('projects','edit')) return 'manager';if(m) return m.role;return can('projects','view')?'viewer':null;}
-const pjList=()=>(S.projects||[]).filter(p=>pjRole(p));
+const pjList=()=>(S.projects||[]).filter(p=>p.status!=='deleted'&&pjRole(p));
 const pjName=p=>p?`${p.code?p.code+' ':''}${p.name}`:'';
 // the project's own profit and loss, from every posted entry tagged to it
 function pjLedger(p){const rows=[];let rev=0,exp=0,held=0;(S.moves||[]).forEach(m=>{const whole=m.project_id===p.id;const ls=(m.lines||[]).filter(l=>whole||l.project_id===p.id);if(!ls.length) return;
@@ -9935,7 +10139,8 @@ BUILD.prj=()=>{const el=h('section',{class:'stack'});const later=lazyRefresh(el,
         return h('tr',{class:'click'+(p.status==='closed'?' mut':''),tabindex:'0',onclick:()=>{S.prjOpen=p.id;refresh();},onkeydown:e=>{if(e.key==='Enter'){S.prjOpen=p.id;refresh();}}},
           h('td',{},h('span',{class:'code'},p.code||''),' ',h('b',{style:'font-weight:500'},p.name),h('div',{class:'mini mut'},[p.independent?'Independent project':null,p.customer||null,p.status==='closed'?'Closed':null].filter(Boolean).join(', '))),
           h('td',{},mgr?pjWho(mgr.uid):'—'),h('td',{class:'num'},money2(x.rev)),h('td',{class:'num'},money2(x.exp)),h('td',{class:'num '+(x.profit<0?'badc':'')},money2(x.profit)),h('td',{class:'num '+(bu!=null&&bu>1?'badc':'')},bu==null?'—':Math.round(bu*100)+'%'),h('td',{},String(pjMembers(p).length)));})))),
-      h('p',{class:'note'},'Open a project to record its income and expenses, see its entries and manage who can work on it.')));}
+      h('p',{class:'note'},'Open a project to record its income and expenses, see its entries and manage who can work on it.')));
+    const del=(S.projects||[]).filter(p=>p.status==='deleted'&&!pjOnly());if(del.length) body.append(h('details',{class:'card pjdeleted'},h('summary',{},`Deleted projects (${del.length})`),h('div',{class:'tablewrap'},h('table',{},h('tbody',{},del.map(p=>h('tr',{},h('td',{},h('span',{class:'code'},p.code||''),' ',p.name),h('td',{class:'mini'},`Reason: ${p.deleted_reason||'—'}`),h('td',{class:'mini mut'},`${who(p.deleted_by)}, ${fmtDate((p.deleted_at||'').slice(0,10))}`),h('td',{},S.canWrite?h('button',{class:'btn ghost sm',type:'button',onclick:async()=>{await db.doc('projects/'+p.id).update({status:p.prev_status||'active',deleted_reason:null});p.status=p.prev_status||'active';refresh();}},'Restore'):null))))))));}
   const blank=()=>({code:'PRJ-'+String((S.projects||[]).length+1).padStart(3,'0'),name:'',customer:'',start:today(),end:'',budget_revenue:'',budget_cost:'',manager:S.me,desc:''});
   function projectForm(W){const err=h('p',{class:'err',role:'alert'});const ppl=pjPeople();
     const mgr=h('select',{'aria-label':'Project manager',onchange:e=>W.manager=e.target.value},h('option',{value:''},'Choose later'),ppl.map(([u])=>h('option',{value:u},pjWho(u))));mgr.value=W.manager||'';
@@ -9967,15 +10172,15 @@ BUILD.prj=()=>{const el=h('section',{class:'stack'});const later=lazyRefresh(el,
         :emptyNote('No entries yet. Record income or an expense, or assign earlier entries to this project.')));
     // team and access
     body.append(teamCard(p,mayMan));
-    if(mayMan) body.append(h('div',{class:'row'},h('button',{class:'btn ghost sm',type:'button',onclick:()=>{D.form={...p,manager:''};refresh();}},'Edit the project'),h('button',{class:'btn ghost sm',type:'button',onclick:async()=>{try{await db.doc('projects/'+p.id).update({status:p.status==='closed'?'active':'closed',updated_by:S.me,updated_at:nowISO()});if(p.status!=='closed'&&S.workProject===p.id) S.workProject=null;msg.textContent=p.status==='closed'?'Project reopened.':'Project closed.';}catch(e){msg.textContent=e.message;}}},p.status==='closed'?'Reopen the project':'Close the project'),msg));}
+    if(mayMan) body.append(h('div',{class:'row'},h('button',{class:'btn ghost sm',type:'button',onclick:()=>{D.form={...p,manager:''};refresh();}},'Edit the project'),h('button',{class:'btn ghost sm',type:'button',onclick:async()=>{try{await db.doc('projects/'+p.id).update({status:p.status==='closed'?'active':'closed',updated_by:S.me,updated_at:nowISO()});if(p.status!=='closed'&&S.workProject===p.id) S.workProject=null;msg.textContent=p.status==='closed'?'Project reopened.':'Project closed.';}catch(e){msg.textContent=e.message;}}},p.status==='closed'?'Reopen the project':'Close the project'),(!x.rows.length&&!x.held&&!(typeof projInvoices==='function'&&projInvoices(p).length))?(()=>{const rs=h('input',{type:'text',placeholder:'Reason for deleting','aria-label':'Reason for deleting the project',style:'min-width:13rem'});return h('span',{class:'row'},rs,h('button',{class:'btn danger sm',type:'button',onclick:async()=>{if(!rs.value.trim()){msg.textContent='Give a reason for deleting. It is kept with the project.';return;}try{const patch={status:'deleted',prev_status:p.status,deleted_reason:rs.value.trim(),deleted_by:S.me,deleted_at:nowISO()};await db.doc('projects/'+p.id).update(patch);Object.assign(p,patch);if(S.workProject===p.id) S.workProject=null;S.prjOpen=null;refresh();}catch(e){msg.textContent=e.message;}}},'Delete the project'));})():h('span',{class:'mini mut'},'Has entries, so it can be closed but not deleted.'),msg));}
   function recForm(p,R){const err=h('p',{class:'err',role:'alert'});const inc=R.kind==='income';
-    const acc=h('select',{'aria-label':inc?'Income account':'Expense account',onchange:e=>R.account=e.target.value},codes(inc?isIncome:t=>t.startsWith('expense')).map(c=>h('option',{value:c},`${c} ${aname(c)}`)));acc.value=R.account;
+    const acc=docTypeCell(inc?'income':'expense',R);
     const via=h('select',{'aria-label':inc?'Received through':'Paid through',onchange:e=>R.via=e.target.value},codes(t=>['asset_cash','asset_receivable','liability_payable','liability_current','asset_current'].includes(t)).map(c=>h('option',{value:c},`${c} ${aname(c)}`)));via.value=R.via;
     const go=h('button',{class:'btn primary',type:'button'},inc?'Post the income':'Post the expense');go.onclick=async()=>{err.textContent='';const amt=r2(+R.amount||0);if(!(amt>0)){err.textContent='Enter the amount.';return;}if(!R.account||!R.via){err.textContent='Choose both accounts.';return;}go.disabled=true;
       const desc=String(R.desc||'').trim()||(inc?'Project income':'Project expense');const L=inc?[{account:R.via,label:desc,debit:amt,credit:0,project_id:p.id},{account:R.account,label:desc,debit:0,credit:amt,project_id:p.id}]:[{account:R.account,label:desc,debit:amt,credit:0,project_id:p.id},{account:R.via,label:desc,debit:0,credit:amt,project_id:p.id}];
       try{const res=await submitMove({journal:'MISC',date:R.date||today(),ref:`${p.code||p.name} · ${desc}`,lines:L,source:'project',project_id:p.id,requested_by:S.me},{reason:`Recorded for project ${pjName(p)}`});D.rec=null;msg.textContent=res&&res.state==='to_approve'?`${inc?'Income':'Expense'} of ${money(amt)} is waiting for approval.`:`${inc?'Income':'Expense'} of ${money(amt)} posted to ${p.name}.`;refresh();body.prepend(msg);}
       catch(x){err.textContent=x.message;go.disabled=false;}};
-    return h('div',{class:'stack pjrec'},h('div',{class:'formgrid'},fld('Date',xIn(R,'date','date')),fld('Description',xIn(R,'desc',null,{placeholder:inc?'e.g. Progress bill 2':'e.g. Site materials'})),fld(inc?'Income account':'Expense account',acc),fld(`Amount (${S.baseCur})`,xIn(R,'amount','number')),fld(inc?'Received through':'Paid through',via)),
+    return h('div',{class:'stack pjrec'},h('div',{class:'formgrid'},fld('Date',xIn(R,'date','date')),fld('Description',xIn(R,'desc',null,{placeholder:inc?'e.g. Progress bill 2':'e.g. Site materials'})),fld(inc?'Type of income':'Type of expense',acc),fld(`Amount (${S.baseCur})`,xIn(R,'amount','number')),fld(inc?'Received through':'Paid through',via)),
       h('p',{class:'mini mut'},'Amounts without VAT. Invoices and bills with VAT go through Sales and Purchases with “Post everything to this project” switched on.'),err,h('div',{class:'row'},go,h('button',{class:'btn ghost',type:'button',onclick:()=>{D.rec=null;refresh();}},'Cancel')));}
   function assignBox(p){const from=addDays(today(),-365);const cand=(S.moves||[]).filter(m=>m.state==='posted'&&!m.project_id&&m.date>=from&&!(m.lines||[]).some(l=>l.project_id)&&(m.lines||[]).some(l=>{const t=typeOf(l.account);return t.startsWith('income')||t.startsWith('expense');})).sort((a,b)=>a.date<b.date?1:-1).slice(0,60);const pick=new Set();
     if(!cand.length) return h('p',{class:'note'},'No untagged income or expense entries in the last 12 months.');
@@ -10027,8 +10232,8 @@ function projectEstForm(){const ids=Object.keys(S.ent||{});const U={parent:(S.en
 // the workspace: independent projects, and projects of people limited to their projects
 {const _wh3=BUILD.wshome;BUILD.wshome=()=>{const r=_wh3();const rf=r.refresh;r.refresh=function(...a){const x=rf.apply(this,a);try{const body=r.el.querySelector('.launch-body');if(!body) return x;const nm=r.el.querySelector('.wsnew .wsmeta');if(nm) nm.textContent='A company, subsidiary, branch, sales centre, representative office or independent project, on one screen.';
     const ents=Object.keys(S.ent||{});
-    r.el.querySelectorAll('.wsco[aria-label^="Open "]').forEach(b=>{const id=ents.find(k=>b.getAttribute('aria-label')===`Open ${S.ent[k].name}`);if(!id) return;const n=(S.raw.projects||[]).filter(p=>entOf(p)===id&&p.independent&&p.status!=='closed').length;if(!n) return;const t=`${n} independent project${n>1?'s':''}`;let u=b.querySelector('.wsunits');if(u){if(!u.textContent.includes('independent')) u.textContent+=' · '+t;}else{const m=b.querySelector('.wsind');if(m) m.after(h('span',{class:'wsunits'},t));}});
-    const P=(S.raw.projects||[]).filter(p=>{const e=entOf(p);if(!S.ent[e]||p.status==='closed') return false;if(pjOnly(e)) return pjMembers(p).some(m=>m.uid===S.me);return !!p.independent;});
+    r.el.querySelectorAll('.wsco[aria-label^="Open "]').forEach(b=>{const id=ents.find(k=>b.getAttribute('aria-label')===`Open ${S.ent[k].name}`);if(!id) return;const n=(S.raw.projects||[]).filter(p=>entOf(p)===id&&p.independent&&!['closed','deleted'].includes(p.status)).length;if(!n) return;const t=`${n} independent project${n>1?'s':''}`;let u=b.querySelector('.wsunits');if(u){if(!u.textContent.includes('independent')) u.textContent+=' · '+t;}else{const m=b.querySelector('.wsind');if(m) m.after(h('span',{class:'wsunits'},t));}});
+    const P=(S.raw.projects||[]).filter(p=>{const e=entOf(p);if(!S.ent[e]||p.status==='closed'||p.status==='deleted') return false;if(pjOnly(e)) return pjMembers(p).some(m=>m.uid===S.me);return !!p.independent;});
     if(P.length){const g=h('div',{class:'wsgrid',role:'list'});P.sort((a,b)=>(a.name||'')<(b.name||'')?-1:1).forEach(p=>{const e=S.ent[entOf(p)]||{};
         g.append(h('button',{class:'wsco wsproj',type:'button',role:'listitem',style:`--cc:${coColor(e)}`,onclick:()=>openProject(p.id),'aria-label':`Open project ${p.name}`},h('span',{class:'wsmono','aria-hidden':'true'},coInitials(p.name)),h('span',{class:'wsname'},p.name),h('span',{class:'wsmeta'},[p.independent?'Independent project':'Project',`of ${e.name}`].join(' ')),h('span',{class:'wsind'},[p.city,(COUNTRIES[p.country]||{}).name].filter(Boolean).join(', ')||p.code||''),h('span',{class:'wsfoot'},h('span',{},p.end?`Completion ${fmtDate(p.end)}`:p.code||''),h('span',{},e.currency||''))));});
       body.append(h('h2',{class:'lsec'},'Projects'),g);}}catch(e){console.error(e);}return x;};return r;};}
@@ -10040,11 +10245,15 @@ Object.assign(ICONS,{customers:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6
 {const m=ACCESS_MODULES.find(x=>x[0]==='sales');if(m&&!m[2].includes('customers')) m[2].push('customers');const c=ACCESS_MODULES.find(x=>x[0]==='compl');if(c&&!c[2].includes('pqueue')) c[2].push('pqueue');}
 try{const A=APPS.find(a=>a.k==='sales');if(A&&!A.tabs.includes('customers')) A.tabs.splice(A.tabs.includes('quotes')?A.tabs.indexOf('quotes')+1:0,0,'customers');const C=APPS.find(a=>a.k==='compl');if(C&&!C.tabs.includes('pqueue')) C.tabs.splice(Math.min(1,C.tabs.length),0,'pqueue');}catch(e){}
 const PK={customer:{one:'customer',many:'customers',Many:'Customers',doc:'invoice',agent:'agent:sales',agentName:'sales agent',mod:'Sales'},supplier:{one:'supplier',many:'suppliers',Many:'Suppliers',doc:'bill',agent:'agent:purchasing',agentName:'purchasing agent',mod:'Purchases'}};
-const PST={approved:['Approved','ok'],pending:['Waiting for Compliance','warn'],rejected:['Rejected','bad'],none:['Not registered','']};
+const PST={approved:['Approved','ok'],pending:['Waiting for Compliance','warn'],rejected:['Rejected','bad'],blocked:['Blocked','bad'],deleted:['Deleted',''],none:['Not registered','']};
 function pctl(e){const x=(S.ent[e||S.entity]||{}).partner_ctl||{};return {required:!!x.required,auto:!!x.auto};}
 // records made before registration existed count as approved only if someone approved them
 const partyStatus=p=>!p?'none':p.status||(p.approved?'approved':'pending');
-const partyList=kind=>(S.raw.partners||[]).filter(p=>p.kind===kind&&p.entity===S.entity);
+const partyAll=kind=>{const seen=new Set();return (S.raw.partners||[]).filter(p=>p.kind===kind&&p.entity===S.entity&&!(p.id&&seen.has(p.id))&&(seen.add(p.id),true));};
+const partyList=kind=>partyAll(kind).filter(p=>p.status!=='deleted');
+// soft delete: the record moves to Deleted with the reason, and can be restored
+async function deleteParty(p,reason){const patch={status:'deleted',prev_status:p.status||null,deleted_reason:reason,deleted_by:S.me,deleted_at:nowISO(),history:[...(p.history||[]),{at:nowISO(),by:S.me,what:`Deleted: ${reason}`}]};await db.doc('partners/'+p.id).update(patch);Object.assign(p,patch);(S.raw.partners||[]).filter(x=>x.id===p.id).forEach(x=>Object.assign(x,patch));}
+async function restoreParty(p){const st=p.prev_status&&p.prev_status!=='deleted'?p.prev_status:'pending';const patch={status:st,approved:st==='approved',deleted_reason:null,history:[...(p.history||[]),{at:nowISO(),by:S.me,what:'Restored'}]};await db.doc('partners/'+p.id).update(patch);(S.raw.partners||[]).filter(x=>x.id===p.id).forEach(x=>Object.assign(x,patch));}
 const mayApproveParty=()=>!!(S.isOwner||S.role==='admin'||(()=>{try{return can('compl','approve');}catch(e){return false;}})());
 async function screenParty(name){try{const pl=await plat();const res=await pl.rpc('aml_screen',{p_names:[name]});const r=(res||[]).find(x=>x.name===name)||(res||[])[0]||{matches:[]};return {matches:(r.matches||[]).slice(0,5),at:nowISO()};}catch(e){return null;}}
 // register a customer or supplier; with automatic approval on, a clear sanctions check approves it straight away
@@ -10061,8 +10270,17 @@ function partyKindOf(mv){if(!mv||!mv.partner) return null;if(mv.journal==='SAL'&
 {const _sm=submitMove;submitMove=async function(mv,o){const kind=partyKindOf(mv);if(kind&&pctl().required){const K=PK[kind];let st=partyStatus(partnerRec(kind,mv.partner));
     if(st==='none'){st=await registerParty(kind,{name:mv.partner,type:'company'},K.agent);if(st!=='approved') throw new Error(`${mv.partner} is not a registered ${K.one}. The ${K.agentName} has registered them and sent them to Compliance. Post this ${K.doc} once they are approved.`);}
     else if(st==='pending') throw new Error(`${mv.partner} is waiting for Compliance approval. ${K.doc[0].toUpperCase()+K.doc.slice(1)}s go only to approved ${K.many}.`);
-    else if(st==='rejected') throw new Error(`${mv.partner} was rejected by Compliance as a ${K.one}, so this ${K.doc} cannot be posted.`);}
+    else if(st==='rejected') throw new Error(`${mv.partner} was rejected by Compliance as a ${K.one}, so this ${K.doc} cannot be posted.`);
+    else if(st==='deleted') throw new Error(`${mv.partner} was deleted as a ${K.one}. Restore them in ${K.Many} to post this ${K.doc}.`);
+    else if(st==='blocked') throw new Error(`${mv.partner} is blocked as a ${K.one}. Unblock them in ${K.Many} to post this ${K.doc}.`);}
   return _sm(mv,o);};}
+
+// ---- the data agent: possible duplicates (same TRN, email, IBAN or licence, or near-identical names)
+function partyMatch(a,b){const r=[];const eq=(x,y)=>x&&y&&String(x).replace(/\s+/g,'').toLowerCase()===String(y).replace(/\s+/g,'').toLowerCase();
+  if(eq(a.trn,b.trn)) r.push('same TRN');if(eq(a.email,b.email)) r.push('same email');if(eq(a.iban,b.iban)) r.push('same IBAN');if(eq(a.license,b.license)) r.push('same licence number');
+  const na=amlNorm(a.name),nb=amlNorm(b.name);if(na&&na===nb) r.push('same name');else{const sm=simil(na,nb);if(sm>=0.6) r.push(`similar names (${Math.round(sm*100)}%)`);}return r;}
+function dupPairs(kind){const L=partyList(kind);const out=[];for(let i=0;i<L.length;i++) for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j];if((a.dup_ok||[]).includes(b.id)||(b.dup_ok||[]).includes(a.id)) continue;const r=partyMatch(a,b);if(r.length) out.push({a,b,r});}return out;}
+const partyUsed=(kind,name)=>{const n=norm(name);const inv=S.invoices.filter(i=>i.kind===kind&&norm(i.partner)===n&&i.status!=='cancelled');const ids=new Set(inv.map(i=>i.move_id));const mv=(S.moves||[]).filter(m=>m.partner&&norm(m.partner)===n&&!ids.has(m.id)&&m.journal===(kind==='customer'?'SAL':'PUR'));return inv.length+mv.length;};
 
 // ---- the register: Customers in Sales, Suppliers in Purchases
 function partyRegister(kind){const K=PK[kind];const isC=kind==='customer';const el=h('section',{class:'stack'});const body=h('div',{class:'stack'});const later=lazyRefresh(el,()=>refresh());const D={edit:null,q:'',f:'all'};const msg=h('p',{class:'note',role:'status'});
@@ -10078,21 +10296,28 @@ function partyRegister(kind){const K=PK[kind];const isC=kind==='customer';const 
     ag.onclick=async()=>{ag.disabled=true;let n=0,a=0;for(const [nm,src] of unreg){try{const st=await registerParty(kind,{name:nm,type:'company',source:src},K.agent);n++;if(st==='approved') a++;}catch(e){}}msg.textContent=`The ${K.agentName} registered ${n} ${n===1?K.one:K.many}${a?`; ${a} approved automatically`:''}${n-a?`; ${n-a} sent to Compliance`:''}.`;refresh();};
     body.append(h('div',{class:'row'},h('button',{class:'btn primary',type:'button',disabled:!S.canWrite,onclick:()=>{D.edit={type:'company',name:'',contact:'',email:'',phone:'',country:(S.ent[S.entity]||{}).country||'',address:'',trn:'',license:'',terms:30,credit_limit:'',category:'',bank:'',iban:'',swift:'',verified:false};refresh();}},isC?'Register a customer':'Register a supplier'),ag,
       h('input',{type:'search',placeholder:`Search ${K.many}`,'aria-label':`Search ${K.many}`,value:D.q,onchange:e=>{D.q=e.target.value;refresh();}})),msg);
-    const seg=h('div',{class:'seg',role:'tablist'});[['all','All'],['approved','Approved'],['pending','Waiting'],['rejected','Rejected'],['none','Not registered']].forEach(([k,l])=>seg.append(h('button',{type:'button',role:'tab','aria-selected':String(D.f===k),onclick:()=>{D.f=k;refresh();}},l)));body.append(seg);
-    const ps=partnerSummary(kind);const rows=[...L.map(p=>[p.name,p]),...unreg.map(([n])=>[n,null])].filter(([n,p])=>(D.f==='all'||partyStatus(p)===D.f)&&(!D.q||norm(n).includes(norm(D.q)))).sort((a,b)=>a[0].localeCompare(b[0]));
+    const dups=dupPairs(kind);if(dups.length) body.append(dupCard(dups));
+    const seg=h('div',{class:'seg',role:'tablist'});[['all','All'],['approved','Approved'],['pending','Waiting'],['rejected','Rejected'],['blocked','Blocked'],['none','Not registered'],['deleted','Deleted']].forEach(([k,l])=>seg.append(h('button',{type:'button',role:'tab','aria-selected':String(D.f===k),onclick:()=>{D.f=k;refresh();}},l)));body.append(seg);
+    const ps=partnerSummary(kind);const rows=[...(D.f==='deleted'?partyAll(kind).filter(p=>p.status==='deleted'):L).map(p=>[p.name,p]),...(D.f==='deleted'?[]:unreg.map(([n])=>[n,null]))].filter(([n,p])=>(D.f==='all'||partyStatus(p)===D.f)&&(!D.q||norm(n).includes(norm(D.q)))).sort((a,b)=>a[0].localeCompare(b[0]));
     if(!rows.length){body.append(h('div',{class:'card'},emptyNote(L.length||unreg.length?'Nothing matches.':`No ${K.many} yet. Register one, or let the ${K.agentName} register them from your ${isC?'quotes':'orders'}.`)));return;}
     body.append(h('div',{class:'card'},h('div',{class:'tablewrap'},h('table',{class:'ptytab'},h('thead',{},h('tr',{},h('th',{},isC?'Customer':'Supplier'),h('th',{},'Country'),h('th',{},'Terms'),isC?h('th',{class:'num'},'Credit limit'):h('th',{},'Bank details'),h('th',{},'Status'),h('th',{},'Registered by'),h('th',{class:'num'},isC?'Owes you':'You owe'),h('th',{}))),
       h('tbody',{},rows.map(([n,p])=>{const st=partyStatus(p);const s=ps.find(x=>norm(x.partner)===norm(n))||{open:0};const P=PST[st];
         return h('tr',{},h('td',{},h('b',{style:'font-weight:500'},n),h('div',{class:'mini mut'},p?[p.type==='individual'?'Individual':null,p.email,p.trn?'TRN '+p.trn:null].filter(Boolean).join(' · '):'Used in '+((known().find(x=>norm(x[0])===norm(n))||[])[1]||'records'))),
           h('td',{class:'mini'},p&&p.country?(COUNTRIES[p.country]||{}).name||p.country:'—'),h('td',{class:'mini'},p&&p.terms?`${p.terms} days`:'—'),isC?h('td',{class:'num'},p&&+p.credit_limit?money(+p.credit_limit):'—'):h('td',{},p&&p.iban?(p.verified?pill('Verified','ok'):pill('Not verified','warn')):h('span',{class:'mini mut'},'—')),
-          h('td',{},pill(P[0],P[1]),st==='rejected'&&p.reason?h('div',{class:'mini mut'},p.reason):null),h('td',{class:'mini'},p&&p.registered_by?(String(p.registered_by).startsWith('agent:')?`${K.agentName[0].toUpperCase()+K.agentName.slice(1)}`:who(p.registered_by)):'—'),h('td',{class:'num'},money2(s.open||0)),
-          h('td',{},S.canWrite?(p?h('button',{class:'btn ghost sm',type:'button',onclick:()=>{D.edit={terms:30,...p};refresh();}},'Edit'):h('button',{class:'btn ghost sm',type:'button',onclick:()=>{D.edit={type:'company',name:n,terms:30,country:(S.ent[S.entity]||{}).country||''};refresh();}},'Register')):null));}))))));
+          h('td',{},pill(P[0],P[1]),st==='rejected'&&p.reason?h('div',{class:'mini mut'},p.reason):null,st==='deleted'?h('div',{class:'mini mut'},`Reason: ${p.deleted_reason||'—'}`):null),h('td',{class:'mini'},p&&p.registered_by?(String(p.registered_by).startsWith('agent:')?`${K.agentName[0].toUpperCase()+K.agentName.slice(1)}`:who(p.registered_by)):'—'),h('td',{class:'num'},money2(s.open||0)),
+          h('td',{},S.canWrite?(p&&p.status==='deleted'?h('button',{class:'btn ghost sm',type:'button',onclick:async()=>{await restoreParty(p);msg.textContent=`${p.name} restored.`;refresh();}},'Restore'):p?h('button',{class:'btn ghost sm',type:'button',onclick:()=>{D.edit={terms:30,...p};refresh();}},'Edit'):h('button',{class:'btn ghost sm',type:'button',onclick:()=>{D.edit={type:'company',name:n,terms:30,country:(S.ent[S.entity]||{}).country||''};refresh();}},'Register')):null));}))))));
     if(cnt('pending')&&mayApproveParty()) body.append(h('div',{class:'row'},h('button',{class:'btn sm',type:'button',onclick:()=>showTab('pqueue')},`Review ${cnt('pending')} waiting in Compliance`)));}
+  function dupCard(dups){const card=h('div',{class:'card stack dupcard'});card.append(h('div',{class:'cardhead'},h('div',{},h('h3',{},`Possible duplicates (${dups.length})`),h('p',{class:'note'},`The data agent compares names, TRN, email, licence and bank details. Keep both, edit one, or delete the extra record so ${K.many} stay clean.`))));
+    dups.slice(0,20).forEach(({a,b,r})=>{const side=p=>{const u=partyUsed(kind,p.name);return h('div',{class:'dupside'},h('b',{},p.name),h('span',{class:'mini mut'},[p.trn?'TRN '+p.trn:null,p.email,p.license?'Licence '+p.license:null,(COUNTRIES[p.country]||{}).name].filter(Boolean).join(' · ')||'No details'),h('span',{class:'mini'},pill(PST[partyStatus(p)][0],PST[partyStatus(p)][1]),' ',u?`${u} ${isC?'invoice':'bill'}${u>1?'s':''}`:'Not used yet'),
+        h('div',{class:'row',style:'gap:.35rem'},S.canWrite?h('button',{class:'btn sm',type:'button',onclick:()=>{D.edit={terms:30,...p};refresh();}},'Edit'):null,S.canWrite&&!u?h('button',{class:'btn sm danger',type:'button','aria-label':`Delete ${p.name}`,onclick:async ev=>{const other=p===a?b:a;ev.target.disabled=true;try{await deleteParty(p,`Duplicate of ${other.name}`);msg.textContent=`${p.name} moved to Deleted (duplicate of ${other.name}).`;refresh();}catch(x){msg.textContent=x.message;ev.target.disabled=false;}}},'Delete'):null));};
+      card.append(h('div',{class:'duprow'},side(a),h('div',{class:'dupmid'},h('span',{class:'mini'},r.join(', ')),S.canWrite?h('button',{class:'btn sm ghost',type:'button',onclick:async ev=>{ev.target.disabled=true;try{await db.doc('partners/'+a.id).update({dup_ok:[...(a.dup_ok||[]),b.id]});await db.doc('partners/'+b.id).update({dup_ok:[...(b.dup_ok||[]),a.id]});a.dup_ok=[...(a.dup_ok||[]),b.id];b.dup_ok=[...(b.dup_ok||[]),a.id];msg.textContent=`Kept both ${a.name} and ${b.name}.`;refresh();}catch(x){msg.textContent=x.message;ev.target.disabled=false;}}},'Keep both'):null),side(b)));});
+    return card;}
   function form(){const F=D.edit;const err=h('p',{class:'err',role:'alert'});const isNew=!F.id;const ibanWas=F.iban||'';
     const cb=comboBox(countryList(),F.country||'',k=>F.country=k,'Search or choose a country');
     const type=h('select',{'aria-label':'Type',onchange:e=>F.type=e.target.value},h('option',{value:'company'},'Company'),h('option',{value:'individual'},'Individual'));type.value=F.type||'company';
     const save=h('button',{class:'btn primary',type:'button'},isNew?(isC?'Register the customer':'Register the supplier'):'Save changes');
-    save.onclick=async()=>{err.textContent='';if(!String(F.name||'').trim()){err.textContent=`Enter the ${K.one} name.`;return;}if(isNew&&partnerRec(kind,F.name)&&partnerRec(kind,F.name).status){err.textContent=`${F.name} is already registered.`;return;}save.disabled=true;
+    save.onclick=async()=>{err.textContent='';if(!String(F.name||'').trim()){err.textContent=`Enter the ${K.one} name.`;return;}if(isNew&&partnerRec(kind,F.name)&&partnerRec(kind,F.name).status){err.textContent=`${F.name} is already registered.`;return;}if(isNew&&!F._dupAck){const hit=partyList(kind).map(p=>[p,partyMatch({...F,name:String(F.name).trim(),trn:String(F.trn||'').replace(/\s+/g,'')},p)]).filter(([,r])=>r.length);if(hit.length){F._dupAck=true;err.textContent=`This looks like ${hit.map(([p,r])=>`${p.name} (${r.join(', ')})`).join('; ')}. Press ${save.textContent} again to register it anyway.`;return;}}
+      save.disabled=true;
       const d={type:F.type||'company',contact:String(F.contact||'').trim(),email:String(F.email||'').trim(),phone:String(F.phone||'').trim(),country:F.country||'',address:String(F.address||'').trim(),trn:String(F.trn||'').replace(/\s+/g,''),license:String(F.license||'').trim(),terms:+F.terms||0};
       if(isC) d.credit_limit=+F.credit_limit||0;else{Object.assign(d,{category:String(F.category||'').trim(),bank:String(F.bank||'').trim(),iban:String(F.iban||'').replace(/\s+/g,'').toUpperCase(),swift:String(F.swift||'').trim()});d.verified=d.iban!==ibanWas.replace(/\s+/g,'').toUpperCase()&&ibanWas?false:!!F.verified;if(d.verified) d.verified_by=S.me;if(ibanWas&&d.iban!==ibanWas.replace(/\s+/g,'').toUpperCase()) d.bank_changed_at=nowISO();}
       try{if(isNew||!F.status){const st=await registerParty(kind,{...d,name:F.name},S.me);msg.textContent=st==='approved'?`${F.name} is registered and approved.`:`${F.name} is registered and waiting for Compliance approval.`;}
@@ -10101,7 +10326,10 @@ function partyRegister(kind){const K=PK[kind];const isC=kind==='customer';const 
     body.append(h('div',{class:'stack'},sec(isNew?(isC?'Register a customer':'Register a supplier'):`Edit ${F.name}`,h('div',{class:'formgrid'},fld('Type',type),fld('Name',h('input',{type:'text',value:F.name||'',disabled:!isNew,oninput:e=>F.name=e.target.value})),fld('Contact person',xIn(F,'contact')),fld('Email',xIn(F,'email','email')),fld('Phone',xIn(F,'phone','tel')),fld('Country',cb),fld('Tax registration number (TRN)',xIn(F,'trn')),fld(F.type==='individual'?'ID or passport number':'Trade licence number',xIn(F,'license')),fld('Payment terms (days)',xIn(F,'terms','number')),isC?fld(`Credit limit (${S.baseCur})`,xIn(F,'credit_limit','number')):fld('Category',xIn(F,'category',null,{placeholder:'e.g. Equipment, IT, Logistics'}))),
         fld('Address',h('textarea',{rows:2,oninput:e=>F.address=e.target.value},F.address||''))),
       isC?null:sec('Bank details',h('div',{class:'formgrid'},fld('Bank',xIn(F,'bank')),fld('IBAN',xIn(F,'iban')),fld('SWIFT',xIn(F,'swift'))),h('label',{class:'sel'},h('input',{type:'checkbox',checked:!!F.verified,onchange:e=>F.verified=e.target.checked}),'Bank details confirmed by phone with a known contact')),
-      h('div',{class:'card stack'},h('p',{class:'note'},isNew?(pctl().auto?'Compliance approves it automatically when the sanctions check is clear; otherwise it waits for a reviewer.':`It goes to Compliance for approval before ${K.doc}s can be posted for it.`):`Status: ${PST[partyStatus(F)][0]}.`),err,h('div',{class:'row'},save,h('button',{class:'btn ghost',type:'button',onclick:()=>{D.edit=null;refresh();}},'Cancel')))));}
+      h('div',{class:'card stack'},h('p',{class:'note'},isNew?(pctl().auto?'Compliance approves it automatically when the sanctions check is clear; otherwise it waits for a reviewer.':`It goes to Compliance for approval before ${K.doc}s can be posted for it.`):`Status: ${PST[partyStatus(F)][0]}.`),err,h('div',{class:'row'},save,h('button',{class:'btn ghost',type:'button',onclick:()=>{D.edit=null;refresh();}},'Cancel'),isNew?null:removeBtns(F,err)))));}
+  function removeBtns(F,err){const used=partyUsed(kind,F.name);const box=h('span',{class:'row',style:'margin-left:auto'});
+    if(!used){const rs=h('input',{type:'text',placeholder:'Reason for deleting','aria-label':'Reason for deleting',style:'min-width:13rem'});box.append(rs,h('button',{class:'btn danger',type:'button',onclick:async ev=>{if(!rs.value.trim()){err.textContent='Give a reason for deleting. It is kept with the record.';return;}ev.target.disabled=true;try{await deleteParty(partyAll(kind).find(x=>x.id===F.id)||F,rs.value.trim());msg.textContent=`${F.name} moved to Deleted.`;D.edit=null;refresh();}catch(x){err.textContent='Could not delete: '+x.message;ev.target.disabled=false;}}},`Delete ${K.one}`));}
+    else{const bl=F.status==='blocked';box.append(h('span',{class:'mini mut'},`Used in ${used} ${isC?'invoice':'bill'}${used>1?'s':''} or entr${used>1?'ies':'y'}, so it can't be deleted.`),h('button',{class:'btn danger',type:'button',onclick:async ev=>{ev.target.disabled=true;try{const st=bl?(F.approved?'approved':'pending'):'blocked';await db.doc('partners/'+F.id).update({status:st,history:[...(F.history||[]),{at:nowISO(),by:S.me,what:bl?'Unblocked':'Blocked'}]});const r=(S.raw.partners||[]).find(x=>x.id===F.id);if(r) r.status=st;msg.textContent=`${F.name} ${bl?'unblocked':'blocked'}.`;D.edit=null;refresh();}catch(x){err.textContent=x.message;ev.target.disabled=false;}}},bl?`Unblock ${K.one}`:`Block ${K.one}`));}return box;}
   return {el,refresh};}
 BUILD.customers=()=>partyRegister('customer');
 BUILD.suppliers=()=>partyRegister('supplier');
@@ -10118,6 +10346,7 @@ BUILD.pqueue=()=>{const el=h('section',{class:'stack'});const body=h('div',{clas
       const scr=h('button',{class:'btn ghost sm',type:'button'},sc?'Screen again':'Run the sanctions check');scr.onclick=async()=>{scr.disabled=true;const s=await screenParty(p.name);if(!s){msg.textContent='The sanctions check could not run. Try again later.';scr.disabled=false;return;}await db.doc('partners/'+p.id).update({screen:s});p.screen=s;refresh();};
       body.append(h('div',{class:'card stack pqitem'},h('div',{class:'cardhead'},h('div',{},h('h3',{},p.name),h('p',{class:'mini mut'},[K.one[0].toUpperCase()+K.one.slice(1),p.type==='individual'?'individual':null,(COUNTRIES[p.country]||{}).name,p.trn?'TRN '+p.trn:null,p.license?(p.type==='individual'?'ID ':'Licence ')+p.license:null].filter(Boolean).join(' · '))),pill('Waiting','warn')),
         h('p',{class:'mini'},`Registered by ${String(p.registered_by||'').startsWith('agent:')?'the '+K.agentName:who(p.registered_by)} on ${fmtDate((p.registered_at||'').slice(0,10))}.${p.email?' Email '+p.email+'.':''}${p.contact?' Contact '+p.contact+'.':''}`),
+        (()=>{const m=partyList(p.kind).filter(x=>x.id!==p.id).map(x=>[x,partyMatch(p,x)]).filter(([,r])=>r.length);return m.length?h('p',{class:'banner warn'},`Possible duplicate of ${m.map(([x,r])=>`${x.name} (${r.join(', ')})`).join('; ')}. Check before approving.`):null;})(),
         h('div',{class:'row',style:'align-items:center'},sc?(sc.matches.length?pill(`${sc.matches.length} possible sanctions match${sc.matches.length>1?'es':''}`,'bad'):pill('Sanctions check clear','ok')):pill('Not screened yet'),scr),
         sc&&sc.matches.length?h('ul',{class:'bul mini'},sc.matches.map(m=>h('li',{},`${m.name} (${m.source||'list'}${m.score?`, ${Math.round(m.score*100)}%`:''})`))):null,
         ok?h('div',{class:'row'},ap,h('input',{type:'text',placeholder:'Reason, if rejecting','aria-label':`Reason for rejecting ${p.name}`,value:rs.reason,oninput:e=>rs.reason=e.target.value,style:'flex:1;min-width:12rem'}),rj):h('p',{class:'note'},'Only Compliance reviewers or admins approve customers and suppliers.'),own?h('p',{class:'mini mut'},'You registered this one, so someone else approves it.'):null));});
@@ -10161,6 +10390,209 @@ function appPicker(eid,ro){const box=h('div',{class:'stack'});const msg=h('p',{c
     try{await saveEntOf(eid,{apps_off:[...off],modules,modules_by:S.me,modules_at:nowISO()});S.ent[eid]={...S.ent[eid],apps_off:[...off],modules};try{S.app=null;buildTabs();applyRole();}catch(z){}
       const A=APPS.find(x=>x.k===k);msg.textContent=`${A?A.name:k} ${on?'switched on':'switched off'}.`;draw();}catch(x){msg.textContent=x.message;}}
   draw();return box;}
+
+
+// ================= Sidebar: only the options of the module the screen belongs to; none on workspace screens =================
+const NO_SIDE=['home','wshome','wsset','estnew','coset'];
+function appForTab(id){const cur=S.app&&APPS.find(a=>a.k===S.app);if(cur&&cur.tabs.includes(id)) return cur;try{return APPS.find(a=>!a.hidden&&a.tabs.includes(id)&&appTabs(a).includes(id))||APPS.find(a=>!a.hidden&&a.tabs.includes(id))||null;}catch(e){return null;}}
+{const _st=showTab;showTab=function(id,...a){try{if(id&&!NO_SIDE.includes(id)){const A=appForTab(id);if(A&&A.k!==S.app){S.app=A.k;buildTabs();}}}catch(e){}
+  const r=_st.call(this,id,...a);try{const t=S.tab;const A=!NO_SIDE.includes(t)&&appForTab(t);document.body.classList.toggle('noside',NO_SIDE.includes(t)||!A);if(A&&A.k!==S.app){S.app=A.k;buildTabs();}}catch(e){}return r;};}
+
+
+// ================= Currencies: live market rates, up to four view currencies per company, and a currency drop-down on every screen =================
+let FXL=null;
+async function liveRates(){if(FXL&&Date.now()-FXL.t<20*60e3) return FXL.d;const r=await fetch('/api/fx',{cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok||!d.rates) throw new Error(d.error||'Live exchange rates are not available right now.');FXL={t:Date.now(),d};return d;}
+const fmtRate=v=>{v=+v;return v>=100?v.toFixed(2):v>=1?v.toFixed(4):String(+v.toPrecision(4));};
+const fxWhen=at=>{try{const d=new Date(at);return d.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}};
+// keep the workspace's rate table on live rates (checked every six hours, or on demand)
+async function syncLiveRates(force){if(!S.isEditor) return null;const was=(S.fx||{}).live_at_checked;if(!force&&was&&Date.now()-Date.parse(was)<6*3600e3) return null;
+  try{const d=await liveRates();const rates={...((S.fx&&S.fx.rates)||DEFAULT_FX)};Object.entries(d.rates).forEach(([k,v])=>{if(/^[A-Z]{3}$/.test(k)&&+v>0) rates[k]=+v;});
+    const doc={base:'USD',rates,source:d.source,live_at:d.at,live_at_checked:nowISO(),updated_by:'agent:fx',updated_at:nowISO()};if(S.fx) await db.doc('setup/main/fx/rates').update(doc);else await db.doc('setup/main/fx/rates').set(doc);S.fx={...(S.fx||{}),...doc};return d;}catch(e){return null;}}
+{const _rh=refreshHeader;refreshHeader=function(...a){const r=_rh.apply(this,a);try{if(S.isEditor&&!S._fxSync&&S.signedIn){S._fxSync=1;setTimeout(()=>syncLiveRates(false).then(d=>{if(d){try{derive();}catch(e){}}}),2500);}drawCurSel();}catch(e){}return r;};}
+// currency names for search: "AED · UAE dirham, United Arab Emirates"
+const curName=c=>{const k=Object.entries(COUNTRIES).find(([,x])=>x.cur===c);return k?`${c} · ${k[1].name}`:c;};
+const curOpts=()=>[...new Set([...allCurrencies(),...Object.values(COUNTRIES).map(c=>c.cur).filter(Boolean)])].filter(c=>/^[A-Z]{3}$/.test(c)).sort().map(c=>[c,curName(c)]);
+// pick up to four view currencies
+function curPicker(list,onChange,max,exclude){max=max||4;const box=h('div',{class:'curpick'});const draw=()=>{box.textContent='';const L=list.filter(c=>c!==exclude);
+    box.append(h('div',{class:'chipl'},L.map(c=>h('span',{class:'chip'},c,h('button',{class:'chipx',type:'button','aria-label':`Remove ${c}`,onclick:()=>{list.splice(list.indexOf(c),1);onChange(list);draw();}},'×'))),!L.length?h('span',{class:'mini mut'},'None yet'):null));
+    if(L.length<max){const cb=comboBox(curOpts().filter(([c])=>!list.includes(c)&&c!==exclude),'',c=>{if(list.length<max&&!list.includes(c)){list.push(c);onChange(list);draw();setTimeout(()=>{const i=box.querySelector('.combo input');if(i) i.focus();},0);}},`Add a currency (${max-L.length} left)`);cb.querySelector('input').setAttribute('aria-label','Add a view currency');box.append(cb);}
+    else box.append(h('p',{class:'mini mut'},`Up to ${max} view currencies. Remove one to add another.`));};draw();return box;}
+// the view currencies for what is open: the company's, or the group's for the consolidated view
+function viewCurs(){if(S.entity==='all'){const g=S.group||{};const base=g.group_currency||S.baseCur;const L=Array.isArray(g.view_curs)?g.view_curs:[...new Set(Object.values(S.ent||{}).map(e=>e.currency))].filter(c=>c&&c!==base).slice(0,4);return {base,list:L.filter(c=>c!==base).slice(0,4),def:g.default_view||base};}
+  const e=S.ent[S.entity]||{};const base=e.currency||S.baseCur;return {base,list:(e.view_curs||[]).filter(c=>c!==base).slice(0,4),def:e.default_view||base};}
+function setViewCur(c){const V=viewCurs();S.viewCur=c;S.viewCurSet=c!==V.def;try{savePref('viewCur',null);}catch(e){}try{derive();}catch(e){}
+  try{Object.keys(VIEWS).forEach(k=>{if(k!=='signup'){VIEWS[k].el.remove();delete VIEWS[k];}});}catch(e){}refreshHeader();showTab(S.tab);}
+// the drop-down at the top of every screen
+function drawCurSel(){const host=document.querySelector('.tright');if(!host) return;let s=document.getElementById('tb-cur');const chip=document.getElementById('curchip');
+  const on=S.signedIn&&S.isEditor&&S.entity&&(S.entity==='all'||S.ent[S.entity])&&!['wshome','wsset','estnew'].includes(S.tab);if(!on){if(s) s.parentElement.hidden=true;return;}
+  if(chip) chip.hidden=true;const V=viewCurs();const opts=[V.base,...V.list];
+  if(!s){s=h('select',{id:'tb-cur','aria-label':'Show amounts in',onchange:e=>setViewCur(e.target.value)});host.querySelector('.hdr').before(h('label',{class:'tbcur',title:'Reports, dashboards and statements show amounts in this currency. Invoices, bills and entries keep their own currency.'},h('span',{},'View in'),s));}
+  s.parentElement.hidden=false;const key=opts.join()+'|'+S.viewCur;if(s._k!==key){s._k=key;s.textContent='';opts.forEach((c,i)=>s.append(h('option',{value:c},i===0?`${c} (book)`:c)));if(!opts.includes(S.viewCur)) s.append(h('option',{value:S.viewCur},S.viewCur));s.value=S.viewCur||V.base;}}
+{const _st=showTab;showTab=function(...a){const r=_st.apply(this,a);try{drawCurSel();}catch(e){}return r;};}
+{const _se=switchEntity;switchEntity=function(id,...a){S.viewCurSet=false;return _se.call(this,id,...a);};}
+// the default view currency when a company opens
+function defaultViewCur(){try{const V=viewCurs();return V.def&&rateOf(V.def)?V.def:null;}catch(e){return null;}}
+
+// ---- Company settings: book currency, default view and up to four view currencies, live rates
+{const _cs=BUILD.coset;BUILD.coset=()=>{const r=_cs();const rf=r.refresh;r.refresh=function(...a){const x=rf.apply(this,a);try{if(S.entity==='all'||!S.ent[S.entity]) return x;const eid=S.entity;const e=S.ent[eid];const ro=!canCoEdit(eid);const m=h('p',{class:'note',role:'status'});
+    const base=e.currency||S.baseCur;const list=(e.view_curs||[]).slice();const rates=h('div',{class:'mini fxrates'});
+    const drawRates=()=>{rates.textContent='';const L=list.filter(c=>c!==base);if(!L.length){rates.append(h('span',{class:'mut'},'Add view currencies to see their rates.'));return;}const at=(S.fx||{}).live_at;
+      rates.append(h('span',{},L.map(c=>{const k=fx(base,c);return k?`1 ${base} = ${fmtRate(k)} ${c}`:`${c}: no rate yet`;}).join(' · ')),h('span',{class:'mut',style:'display:block'},at?`Live market rates, ${fxWhen(at)}.`:'Rates from Settings, Currencies.'));};
+    const def=h('select',{'aria-label':'Show amounts by default in',disabled:ro});const fillDef=()=>{const v=e.default_view||base;def.textContent='';[base,...list.filter(c=>c!==base)].forEach((c,i)=>def.append(h('option',{value:c},i===0?`${c} (book currency)`:c)));def.value=[base,...list].includes(v)?v:base;};fillDef();
+    const save=async(patch,t)=>{try{await saveEntOf(eid,patch);m.textContent=t;try{drawCurSel();}catch(z){}}catch(z){m.textContent=z.message;}};
+    def.onchange=()=>save({default_view:def.value},`Amounts open in ${def.value} by default.`);
+    const pick=ro?h('div',{class:'chipl'},list.map(c=>h('span',{class:'chip'},c))):curPicker(list,async L=>{const keep=[...L];if(!keep.includes(e.default_view)&&e.default_view&&e.default_view!==base) await saveEntOf(eid,{default_view:base});await save({view_curs:keep},`View currencies: ${keep.join(', ')||'none'}.`);fillDef();drawRates();},4,base);
+    const upd=h('button',{class:'btn sm ghost',type:'button',disabled:ro},'Update to live rates now');upd.onclick=async()=>{upd.disabled=true;m.textContent='Getting live rates…';const d=await syncLiveRates(true);m.textContent=d?`Rates updated: ${d.source}, ${fxWhen(d.at)}.`:'Live rates are not available right now. The rates on file stay in use.';try{derive();}catch(z){}drawRates();upd.disabled=ro;};
+    drawRates();const card=h('div',{class:'card stack cocur'},h('h3',{},'Currencies'),h('p',{class:'note'},`Books are kept in ${base}. Choose up to four other currencies to view reports, dashboards and statements in, and which one opens by default. The drop-down at the top of every screen switches between them.`),
+      h('div',{class:'formgrid'},fld('Book currency',h('input',{type:'text',value:curName(base),disabled:true})),fld('Show amounts by default in',def)),h('div',{class:'field'},'View currencies (up to 4)',pick),rates,h('div',{class:'row'},upd),m);
+    const mc=r.el.querySelector('.comods');if(mc) mc.before(card);else r.el.append(card);}catch(y){console.error(y);}return x;};return r;};}
+
+
+// ================= Top bar: a context path on the left, quiet icon actions on the right =================
+// left:  [Orzio] [workspace ▾] / [← Companies] [company] [Modules] › module
+// right: [View in] [Review] [notifications] [library] [Ask] | [company settings] [workspace settings] [theme] [sign out]
+const TB_ICON={
+  back:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
+  ask:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>',
+  review:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>'};
+const tbIsWs=()=>['wshome','wsset','estnew'].includes(S.tab)||!S.entity;
+const tbMulti=()=>{try{return wsIsAdmin()||myEnts().length>1;}catch(e){return false;}};
+function tbTip(el,t){if(!el) return;el.title=t;el.setAttribute('aria-label',t);}
+function topArrange(){const tb=document.querySelector('.topbar');if(!tb||!S.signedIn) return;const nav=tb.querySelector('.topnav');const tr=tb.querySelector('.tright');if(!nav||!tr) return;
+  document.body.classList.add('tb2');const ws=tbIsWs();document.body.classList.toggle('tbws',ws);
+  // left context path
+  let ctx=tb.querySelector('.tctx');if(!ctx){ctx=h('div',{class:'tctx'});nav.before(ctx);}
+  const back=document.getElementById('tn-ws');if(back){if(!back.classList.contains('tbback')){back.classList.add('tbback');back.innerHTML=TB_ICON.back+'<span>Companies</span>';}tbTip(back,'Back to all companies');back.hidden=S.tab==='wshome'||(!['wsset','estnew'].includes(S.tab)&&(ws||!tbMulti()));}
+  const br=tb.querySelector('.tbrand');if(br&&!br._ws){br._ws=1;br.setAttribute('href','#wshome');br.setAttribute('aria-label','Orzio, workspace home');br.addEventListener('click',ev=>{ev.preventDefault();showTab('wshome');});}
+  let co=document.getElementById('tb-co');if(!co){co=h('button',{id:'tb-co',type:'button',class:'tbco',onclick:()=>{S.app=null;try{buildTabs();}catch(e){}showTab('home');}});}
+  const e=S.entity==='all'?null:S.ent[S.entity];co.hidden=ws||!(e||S.entity==='all');
+  if(!co.hidden){const key=S.entity+'|'+(e?(e.name||'')+((e.brand||{}).logo||{}).url:'all');if(co._k!==key){co._k=key;co.textContent='';const lg=e&&(e.brand||{}).logo&&(e.brand.logo.url);
+      co.append(lg?h('img',{src:lg,alt:'',class:'tbco-lg'}):h('span',{class:'tbco-in',style:`--cc:${e?coColor(e):'#334155'}`},e?coInitials(e.name):'∑'),h('span',{class:'tbco-n'},e?e.name:'Consolidated group'));tbTip(co,`${e?e.name:'Consolidated group'}: modules`);}}
+  const mods=document.getElementById('tn-mods');if(mods){mods.hidden=ws;mods.setAttribute('aria-current',S.tab==='home'?'page':'false');}
+  const dash=document.getElementById('tn-dash');if(dash) dash.hidden=true;
+  [back,co,mods,document.getElementById('tn-app')].forEach(x=>{if(x&&x.parentNode!==nav) nav.append(x);});
+  if(back&&nav.firstChild!==back) nav.prepend(back);if(co&&back&&back.nextSibling!==co) back.after(co);if(mods&&co&&co.nextSibling!==mods) co.after(mods);
+  // right: actions as icons with tooltips
+  const cs=document.getElementById('tn-coset'),wss=document.getElementById('tn-wsset');
+  [cs,wss].forEach(x=>{if(x&&x.parentNode!==tr) tr.append(x);if(x){x.classList.add('tbic');const s=x.querySelector('span');if(s) s.classList.add('vh');}});
+  tbTip(cs,'Company settings');tbTip(wss,'Workspace settings');if(cs&&ws) cs.hidden=true;
+  const ask=document.getElementById('askbtn');if(ask&&!ask.classList.contains('tbic')){ask.classList.remove('btn','agent','sm');ask.classList.add('tbic','tbask');ask.innerHTML=TB_ICON.ask+'<span class="vh">Ask</span>';tbTip(ask,'Ask the assistant');}if(ask) ask.hidden=ws;
+  const rv=document.getElementById('tb-review');if(rv){if(!rv.querySelector('svg')){rv.insertAdjacentHTML('afterbegin',TB_ICON.review);const s=rv.querySelector('span');if(s) s.classList.add('vh');}tbTip(rv,'Approvals');rv.hidden=ws;}
+  const lib=document.getElementById('libbtn');if(lib) tbTip(lib,'Knowledge library');const bell=document.getElementById('bell');if(bell) tbTip(bell,'Notifications');
+  const th=document.getElementById('themebtn');if(th) th.title=th.getAttribute('aria-label')||'Switch theme';const out=document.getElementById('tbout');if(out) tbTip(out,'Sign out');
+  let sep=tr.querySelector('.tbsep');if(!sep){sep=h('span',{class:'tbsep','aria-hidden':'true'});tr.append(sep);}
+  ['tb-cur','tb-review','bell','libbtn','askbtn'].forEach((id,i)=>{const x=document.getElementById(id);const n=x&&(id==='tb-cur'?x.closest('.tbcur'):x);if(n) n.style.order=String(10+i);});sep.style.order='20';
+  ['tn-coset','tn-wsset','themebtn','conn','tbout'].forEach((id,i)=>{const x=document.getElementById(id);if(x) x.style.order=String(30+i);});
+  const sx=document.getElementById('sx-co');if(sx) sx.style.order='1';
+  // the company home no longer repeats these in its header
+  document.querySelectorAll('.launch .lh-back, .launch .lh-coset').forEach(x=>x.hidden=true);if(S.tab==='wshome') document.querySelectorAll('.wshero .wsacts button').forEach(x=>{if(/Workspace settings/.test(x.textContent)) x.hidden=true;});}
+{const _rh=refreshHeader;refreshHeader=function(...a){const r=_rh.apply(this,a);try{topArrange();}catch(e){console.error(e);}return r;};}
+{const _st=showTab;showTab=function(...a){const r=_st.apply(this,a);try{topArrange();}catch(e){console.error(e);}return r;};}
+setInterval(()=>{try{if(S.signedIn) topArrange();}catch(e){}},1500);
+// the interface typeface
+(function(){if(document.getElementById('geist-font')) return;const l=document.createElement('link');l.id='geist-font';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap';document.head.append(l);})();
+try{if(!ICONS.prj) ICONS.prj='<path d="M3 7h18v13H3z"/><path d="M8 7V4h8v3M3 12h18"/>';}catch(e){}
+
+
+// ================= Customer and supplier fields: a search-plus-drop-down of the registered ones, everywhere =================
+// Any field labelled Customer, Client, Supplier or Vendor gets the list. Invoices and bills accept only approved ones
+// (when approval is required); quotes and requests for quotation can still go to anyone.
+const PF_KIND=t=>{t=String(t||'').trim().toLowerCase().replace(/\s*\(optional\)$/,'');return /^(customer|client|customer name|bill to)$/.test(t)?'customer':/^(supplier|vendor|supplier name)$/.test(t)?'supplier':null;};
+function pfLabelText(lab){const n=lab.firstChild;return n&&n.nodeType===3?n.textContent:'';}
+function pfStrict(inp){const sec=inp.closest('section');const id=(sec&&sec.id)||'';const tab=S.tab||'';return !/quote|rfq|crm|lead|agree/i.test(id+' '+tab)&&pctl().required;}
+function attachPartyList(inp,kind){if(inp._pf) return;inp._pf=true;inp.removeAttribute('list');inp.setAttribute('autocomplete','off');inp.setAttribute('role','combobox');inp.setAttribute('aria-expanded','false');
+  const K=PK[kind];const wrap=h('div',{class:'combo pfcombo'});inp.replaceWith(wrap);const btn=h('button',{type:'button',class:'combo-btn','aria-label':`Show ${K.many}`,tabindex:'-1'});btn.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  const list=h('ul',{class:'combo-list',role:'listbox',hidden:true});const hint=h('div',{class:'pfhint mini',role:'status'});wrap.append(inp,btn,list);wrap.after(hint);let act=-1,shown=[];
+  const set=v=>{inp.value=v;inp.dispatchEvent(new Event('input',{bubbles:true}));inp.dispatchEvent(new Event('change',{bubbles:true}));check();};
+  const opts=()=>partyList(kind).filter(p=>!['rejected','blocked'].includes(partyStatus(p))).sort((a,b)=>(partyStatus(a)==='approved'?0:1)-(partyStatus(b)==='approved'?0:1)||a.name.localeCompare(b.name));
+  function draw(q){list.textContent='';const n=String(q||'').toLowerCase().trim();const strict=pfStrict(inp);shown=opts().filter(p=>!n||p.name.toLowerCase().includes(n)||(p.trn||'').includes(n)).slice(0,60);
+    shown.forEach((p,i)=>{const st=partyStatus(p);list.append(h('li',{role:'option','aria-selected':String(i===act),class:st!=='approved'?'pfwait':'',onmousedown:ev=>{ev.preventDefault();pick(p);}},h('span',{},p.name),st!=='approved'?h('span',{class:'mini mut'},' · waiting for Compliance'):p.trn?h('span',{class:'mini mut'},' · TRN '+p.trn):null));});
+    const typed=inp.value.trim();const exact=opts().some(p=>norm(p.name)===norm(typed));
+    if(typed&&!exact&&S.canWrite) list.append(h('li',{role:'option',class:'pfnew',onmousedown:async ev=>{ev.preventDefault();close();hint.textContent=`Registering ${typed}…`;try{const st=await registerParty(kind,{name:typed,type:'company'},S.me);set(typed);hint.textContent=st==='approved'?`${typed} is registered and approved.`:`${typed} is registered and sent to Compliance. ${strict?`You can post the ${K.doc} once they approve.`:''}`;}catch(x){hint.textContent=x.message;}}},`+ Register “${typed}” as a new ${K.one}`));
+    if(!shown.length&&!typed) list.append(h('li',{class:'combo-none'},`No registered ${K.many} yet. Type a name to register one.`));}
+  const open=q=>{draw(q);list.hidden=false;inp.setAttribute('aria-expanded','true');};const close=()=>{list.hidden=true;inp.setAttribute('aria-expanded','false');act=-1;};
+  const pick=p=>{close();set(p.name);};
+  function check(){const v=inp.value.trim();hint.textContent='';hint.className='pfhint mini';if(!v) return;const p=partnerRec(kind,v);const st=partyStatus(p);
+    if(st==='approved') return;if(!pfStrict(inp)){if(st==='none') hint.textContent=`Not a registered ${K.one}. That is fine for a ${/rfq/i.test(S.tab)?'request for quotation':'quote'}; register them before invoicing.`;return;}
+    hint.classList.add('warn');hint.textContent=st==='none'?`${v} is not a registered ${K.one}. Choose one from the list or register them.`:st==='pending'?`${v} is waiting for Compliance approval.`:`${v} is ${st} as a ${K.one}.`;}
+  inp.addEventListener('focus',()=>open(''));inp.addEventListener('input',()=>{act=-1;if(document.activeElement===inp) open(inp.value);});
+  inp.addEventListener('keydown',ev=>{const items=[...list.querySelectorAll('li[role=option]')];if(ev.key==='ArrowDown'||ev.key==='ArrowUp'){ev.preventDefault();if(list.hidden) open(inp.value);act=Math.max(0,Math.min(items.length-1,act+(ev.key==='ArrowDown'?1:-1)));items.forEach((li,i)=>li.setAttribute('aria-selected',String(i===act)));if(items[act]) items[act].scrollIntoView({block:'nearest'});}
+    else if(ev.key==='Enter'&&!list.hidden&&act>=0&&items[act]){ev.preventDefault();items[act].dispatchEvent(new MouseEvent('mousedown'));}else if(ev.key==='Escape') close();});
+  inp.addEventListener('blur',()=>setTimeout(()=>{close();check();},150));btn.onclick=()=>{if(list.hidden) inp.focus();else close();};check();}
+function enhancePartyFields(root){(root||document).querySelectorAll('label.field').forEach(lab=>{const kind=PF_KIND(pfLabelText(lab));if(!kind) return;const inp=lab.querySelector('input[type=text]:not([data-nopf])');if(inp&&!inp._pf&&!inp.closest('.combo')) attachPartyList(inp,kind);});}
+// the invoice and bill editor builds its partner field without a label text node
+function enhanceInvoicePartner(root){(root||document).querySelectorAll('input[placeholder="Customer name"],input[placeholder="Supplier name"]').forEach(inp=>{if(!inp._pf&&!inp.closest('.combo')) attachPartyList(inp,inp.placeholder.startsWith('Customer')?'customer':'supplier');});}
+{let q=false;new MutationObserver(()=>{if(q) return;q=true;requestAnimationFrame(()=>{q=false;try{const m=document.getElementById('main');if(m){enhancePartyFields(m);enhanceInvoicePartner(m);}const d=document.querySelector('.drill,.dlg,dialog[open]');if(d){enhancePartyFields(d);enhanceInvoicePartner(d);}}catch(e){}});}).observe(document.body,{childList:true,subtree:true});}
+
+// a refresh keeps the company that was open (per browser tab), and new sign-ins open the last one used
+{const _se=switchEntity;switchEntity=function(id,...a){try{if(id){sessionStorage.setItem('orzio-ent',id);savePref('lastent',id);}}catch(e){}return _se.call(this,id,...a);};}
+
+
+// ================= Document lines: choose the type of income or expense in plain words; the account code follows =================
+const DOC_KINDS={income:[['Sale of goods',/sale|goods|product|merchandis/i],['Services',/servic|consult|professional/i],['Commission',/commission/i],['Fees',/\bfee/i],['Rental income',/rent/i],['Subscriptions',/subscri|licen|recurring/i],['Interest income',/interest/i],['Other income',/other|misc|sundry/i],['Revenue',/revenue|income/i]],
+  expense:[['Goods for resale or stock',/purchas|cost of (goods|sales)|cogs|stock|inventor|material/i],['Rent',/rent|lease/i],['Utilities',/utilit|electric|water/i],['Telephone and internet',/tele|phone|internet|communicat/i],['Professional fees',/professional|legal|audit|consult/i],['Marketing and advertising',/marketing|advertis/i],['IT and software',/software|computer|information tech|\bit\b/i],['Travel',/travel/i],['Fuel, transport and freight',/fuel|transport|freight|courier|deliver|logistic/i],['Repairs and maintenance',/repair|mainten/i],['Office supplies',/office|stationer|supplies/i],['Insurance',/insurance/i],['Bank charges',/bank/i],['Licences and government fees',/licen|government|visa|permit/i],['Salaries and staff costs',/salar|wage|staff|payroll/i],['Depreciation',/depreciat/i],['Other expenses',/other|general|sundry|misc/i]]};
+function docKinds(cls){const pred=cls==='income'?(t=>t.startsWith('income')):(t=>t.startsWith('expense'));const accs=codes(pred);const used=new Set();const out=[];
+  DOC_KINDS[cls].forEach(([label,re])=>{const a=accs.find(c=>re.test(aname(c))&&!used.has(c));if(a){used.add(a);out.push([label,a]);}});accs.filter(c=>!used.has(c)).forEach(c=>{used.add(c);out.push([aname(c),c]);});return out;}
+// the line cell: a Type drop-down; the account is shown underneath and can be changed by those who need to
+function docTypeCell(cls,l,onChange){const T=docKinds(cls);const box=h('div',{class:'dtype'});const acc=h('div',{class:'mini mut dtacc'});
+  const sel=h('select',{'aria-label':cls==='income'?'Type of income':'Type of expense',onchange:e=>{if(e.target.value==='__other'){box.replaceWith(acctSelect(l.account,v=>{l.account=v;if(onChange) onChange(v);},{allowBlank:true}));return;}l.account=e.target.value;show();if(onChange) onChange(l.account);}},
+    h('option',{value:''},cls==='income'?'Choose the type of income':'Choose the type of expense'),T.map(([label,a])=>h('option',{value:a},label)),h('option',{value:'__other'},'Another account…'));
+  const show=()=>{sel.value=T.some(x=>x[1]===l.account)?l.account:'';acc.textContent=l.account?`Account ${l.account} · ${aname(l.account)}`:'';};show();box.append(sel,acc);return box;}
+
+
+// ================= Getting paid: quick "Mark as paid", bank-matched status, Approvals in the top bar, agents with or without approval =================
+// how an invoice was settled
+function paidVia(inv){const ms=(S.moves||[]).filter(m=>m.state==='posted'&&(m.settles||[]).some(x=>x.invoice_id===inv.id));if(!ms.length) return null;return ms.some(m=>m.source==='bank_statement')?'bank':'manual';}
+async function quickPaid(inv){const isC=inv.kind==='customer';const due=invDue(inv,true);if(!(due>0.01)) return;const bank=S.accounts['1010']?'1010':cashCodes()[0];if(!bank) throw new Error('Add a bank or cash account first.');
+  return submitMove({journal:'BNK1',date:today(),ref:`${isC?'Receipt':'Payment'} ${inv.number} ${inv.partner}`,partner:inv.partner,lines:isC?[{account:bank,label:inv.number,debit:due,credit:0},{account:'1100',label:inv.number,debit:0,credit:due}]:[{account:'2000',label:inv.number,debit:due,credit:0},{account:bank,label:inv.number,debit:0,credit:due}],settles:[{invoice_id:inv.id,amount:due}],source:'payment'},{reason:isC?'Marked as paid':'Marked as paid to the supplier'});}
+// the action cell on the invoices and bills lists
+function invQuick(inv,redraw){const td=h('td',{class:'invq',onclick:e=>e.stopPropagation()});const mv=(S.moves||[]).find(m=>m.id===inv.move_id);const due=invDue(inv,true);
+  if(inv.status==='cancelled') return td;
+  if(due<=0.01){const v=paidVia(inv);td.append(h('span',{class:'mini mut'},v==='bank'?'Matched from the bank':v?'Marked as paid':''));return td;}
+  if(mv&&mv.state==='posted'&&S.canWrite&&inv.currency===S.baseCur){const b=h('button',{class:'btn sm',type:'button','aria-label':`Mark ${inv.number} as paid`},'Mark as paid');
+    b.onclick=async()=>{b.disabled=true;b.textContent='Recording…';try{const r=await quickPaid(inv);b.textContent=r&&r.state==='to_approve'?'Sent for approval':'Paid';setTimeout(redraw,600);}catch(e){b.textContent='Mark as paid';b.disabled=false;alert(e.message);}};td.append(b);}
+  return td;}
+// Approvals: customers and suppliers waiting for Compliance join the list
+{const _ri=reviewItems;reviewItems=function(){const out=_ri();try{const e=S.entity;if(!e||e==='all') return out;(S.raw.partners||[]).filter(p=>p.entity===e&&p.status==='pending').forEach(p=>out.push({kind:'party',mod:'compl',c:'#0E7C66',ic:p.kind==='customer'?'CU':'SU',t:`${p.kind==='customer'?'Customer':'Supplier'}: ${p.name}`,d:`${String(p.registered_by||'').startsWith('agent:')?'Registered by the '+PK[p.kind].agentName:'Registered by '+who(p.registered_by)} · waiting for Compliance`,agent:String(p.registered_by||'').startsWith('agent:'),go:'pqueue',approve:mayApproveParty()&&p.registered_by!==S.me?async()=>decideParty(p,true):null}));}catch(x){}return out;};}
+setInterval(()=>{try{const rv=document.getElementById('tb-review');if(rv&&!rv._ap){rv._ap=1;const s=rv.querySelector('span');if(s) s.textContent='Approvals';rv.title='Approvals: agent work and requests waiting for you';rv.setAttribute('aria-label','Approvals');}}catch(e){}},1000);
+// Company settings: agents need approval, or act on their own within the limits
+{const _cs=BUILD.coset;BUILD.coset=()=>{const r=_cs();const rf=r.refresh;r.refresh=function(...a){const x=rf.apply(this,a);try{if(S.entity==='all'||!S.ent[S.entity]) return x;const eid=S.entity;const e=S.ent[eid];const ro=!canCoEdit(eid);const need=policy().agents_need_review;const m=h('p',{class:'note',role:'status'});
+    const sw=h('input',{type:'checkbox',checked:!!need,disabled:ro,'aria-label':'Agents need approval',onchange:async ev=>{try{await saveEntOf(eid,{agent_policy:{...(e.agent_policy||{}),agents_need_review:ev.target.checked},agent_policy_by:S.me,agent_policy_at:nowISO()});m.textContent=ev.target.checked?'Every agent action now waits in Approvals.':'Agents now act on their own within your limits.';r.refresh();}catch(z){m.textContent=z.message;}}});
+    const card=h('div',{class:'card stack coagents'},h('h3',{},'Agents'),h('label',{class:'sel'},sw,h('span',{},h('b',{},'Agents need approval'),h('span',{class:'mini mut',style:'display:block'},need?'On: entries, payment matches and registrations prepared by agents wait in Approvals in the top bar until a person approves them.':'Off: agents post on their own within the auto-post limits and confidence you set; anything outside them still waits in Approvals.'))),m);
+    const pc=r.el.querySelector('.pctl');if(pc) pc.after(card);else{const mc=r.el.querySelector('.comods');if(mc) mc.after(card);else r.el.append(card);}}catch(y){console.error(y);}return x;};return r;};}
+
+
+// ================= Sequential numbering without gaps, and deleted documents kept in a Deleted tab with the reason =================
+// a number is held for a moment while an invoice is being saved; if the save fails, it is released so the sequence has no gaps
+const invRes={};
+nextInvNo=function(kind,date){const p=(kind==='customer'?'INV-':'BILL-')+date.slice(0,4)+'-';let n=0;S.invoices.filter(i=>i.kind===kind).forEach(i=>{if(i.number&&i.number.startsWith(p)){const k=parseInt(i.number.slice(p.length),10);if(k>n) n=k;}});
+  const r=invRes[p];if(r&&r.n>n&&Date.now()-r.at<20000) n=r.n;invRes[p]={n:n+1,at:Date.now()};return p+String(n+1).padStart(4,'0');};
+{const _sm=submitMove;submitMove=async function(mv,o){try{return await _sm(mv,o);}catch(e){try{const m=String((mv&&mv.ref)||'').match(/^((?:INV|BILL)-\d{4}-)(\d+)/);if(m){const r=invRes[m[1]];if(r&&r.n===parseInt(m[2],10)) invRes[m[1]]={n:r.n-1,at:r.at};}}catch(x){}throw e;}};}
+// the numbering check: every number from the first in the series to the latest exists (deleted ones keep their number)
+function numberGaps(kind){const out=[];const by={};S.invoices.filter(i=>i.kind===kind&&i.doc_type!=='credit_note').forEach(i=>{const m=String(i.number||'').match(/^((?:INV|BILL)-\d{4}-)(\d+)$/);if(!m) return;(by[m[1]]=by[m[1]]||new Set()).add(parseInt(m[2],10));});
+  Object.entries(by).forEach(([p,set])=>{const mx=Math.max(...set),mn=Math.min(...set);for(let k=mn;k<=mx;k++) if(!set.has(k)) out.push(p+String(k).padStart(4,'0'));});return {gaps:out,count:Object.values(by).reduce((s,x)=>s+x.size,0)};}
+function numberCheck(kind){const g=numberGaps(kind);if(!g.count) return null;const what=kind==='customer'?'invoice':'bill';
+  return g.gaps.length?h('div',{class:'banner warn numcheck'},`Numbering check: ${g.gaps.length} ${what} number${g.gaps.length>1?'s are':' is'} missing from the sequence (${g.gaps.slice(0,6).join(', ')}${g.gaps.length>6?'…':''}). Every number must be accounted for; ask your accountant to review.`)
+    :h('div',{class:'mini mut numcheck'},`Numbering check: ${g.count} ${what}s in sequence, none missing. Deleted ${what}s keep their number and are listed under Deleted.`);}
+// delete an invoice or bill: it keeps its number, its entry is reversed, and it moves to Deleted with the reason
+async function deleteInvoice(inv,reason){const mv=(S.moves||[]).find(m=>m.id===inv.move_id);const isC=inv.kind==='customer';let rev=null;
+  if(settledFor(inv.id,true)>0.01) throw new Error(`This ${isC?'invoice':'bill'} has payments. Reverse the payment first, or issue a credit note.`);
+  if(mv&&mv.state==='posted'){rev=await submitMove({journal:mv.journal,date:today()>((S.settings||{}).lock_date||'')?today():addDays(S.settings.lock_date,1),ref:`Reversal of ${inv.number} (deleted): ${reason}`,partner:inv.partner,lines:(mv.lines||[]).map(l=>({...l,debit:l.credit,credit:l.debit,label:`Reversal: ${l.label||inv.number}`})),source:'void',void_of:inv.id},{reason:`Deleted ${inv.number}: ${reason}`});}
+  else if(mv&&mv.state==='to_approve'){await db.doc('moves/'+mv.id).update({state:'cancelled',audit:[...(mv.audit||[]),{at:nowISO(),by:S.me,action:`Deleted before approval: ${reason}`}]});mv.state='cancelled';}
+  const patch={status:'cancelled',deleted_reason:reason,deleted_by:S.me,deleted_at:nowISO(),reversal_move_id:rev?rev.id:null};await db.doc('invoices/'+inv.id).update(patch);Object.assign(inv,patch);return rev;}
+function invDeleteBtn(inv,redraw){if(!S.canWrite||inv.status==='cancelled'||inv.doc_type==='credit_note') return null;const isC=inv.kind==='customer';const box=h('div',{class:'row invdel',style:'align-items:center'});
+  const b=h('button',{class:'btn ghost sm danger',type:'button'},isC?'Delete invoice':'Delete bill');b.onclick=()=>{box.textContent='';const rs=h('input',{type:'text',placeholder:'Reason (required)','aria-label':'Reason for deleting',style:'flex:1;min-width:14rem'});const er=h('span',{class:'err'});
+    const go=h('button',{class:'btn sm danger',type:'button'},'Delete');go.onclick=async()=>{if(!rs.value.trim()){er.textContent='Give a reason. It is kept with the record.';return;}go.disabled=true;try{const r=await deleteInvoice(inv,rs.value.trim());er.textContent='';box.textContent='';box.append(h('span',{class:'mini'},`${inv.number} deleted${r&&r.state==='to_approve'?'; its reversal is waiting for approval':''}. It keeps its number and is listed under Deleted.`));setTimeout(()=>redraw&&redraw(),800);}catch(x){er.textContent=x.message;go.disabled=false;}};
+    box.append(rs,go,h('button',{class:'btn ghost sm',type:'button',onclick:()=>{box.textContent='';box.append(b);}},'Cancel'),er);setTimeout(()=>rs.focus(),0);};box.append(b);return box;}
+// the reason shows on deleted rows
+{const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);if(inv.status==='cancelled'&&inv.deleted_reason) td.append(h('span',{class:'mini mut',title:`Deleted by ${who(inv.deleted_by)} on ${fmtDate((inv.deleted_at||'').slice(0,10))}`},`Reason: ${inv.deleted_reason}`));return td;};}
+
+
+// ================= Sales centres live inside the company: company admins add them from Sales point =================
+{const _bp=BUILD.pos;BUILD.pos=()=>{const r=_bp();const el=r.el||r;const rf=r.refresh;const add=()=>{try{const ph=el.querySelector('.pagehead');if(!ph||ph.querySelector('.spadd')) return;const eid=S.entity;
+    const b=h('button',{class:'btn primary spadd',type:'button',onclick:()=>{S.estFixed=S.entity;S.estType='sales';S.estU=null;showTab('estnew');}},'Add a sales centre');b.hidden=!(eid&&eid!=='all'&&canCoEdit(eid));ph.append(b);}catch(e){}};
+  const fl=()=>{try{const f=FLASH.pos;if(f&&Date.now()-f.at<30000&&!el.querySelector('.spflash')){const ph=el.querySelector('.pagehead');if(ph) ph.after(h('p',{class:'banner ok spflash',role:'status'},f.t));}}catch(e){}};
+  if(rf) r.refresh=function(...a){const x=rf.apply(this,a);add();fl();const b=el.querySelector('.spadd');if(b) b.hidden=!(S.entity&&S.entity!=='all'&&canCoEdit(S.entity));return x;};add();return r;};}
 
 
 // test hook (local development only)
