@@ -1405,6 +1405,18 @@ table.lines select.linesvc{display:block;width:100%;margin-bottom:.3rem;font-siz
 .qpay{display:flex;flex-direction:column;gap:.35rem;min-width:12rem}.qpay label{display:flex;flex-direction:column;gap:.15rem}
 .wsaddr-cur a{font-weight:600;font-size:1.05rem;color:var(--blue,#2550C9)}
 .wsaddr-link{display:inline-block;margin-top:.4rem;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:.15rem .6rem}
+/* employee record */
+.emppanel h2{font-size:1.35rem;font-weight:600;letter-spacing:-.015em}
+/* organogram: compact and fitted to the screen */
+.orgcompact .orgwrap{overflow:auto;padding:.8rem}
+.orgzoom{display:flex;gap:.4rem;justify-content:flex-end;margin-bottom:.6rem}
+.orgcompact .orgtree ul{padding-top:.9rem}
+.orgcompact .orgtree li{padding:.9rem .25rem 0}
+.orgcompact .orgtree li::before,.orgcompact .orgtree li::after{height:.9rem}
+.orgcompact .orgtree ul ul::before{height:.9rem}
+.orgcompact .orgcard{min-width:7.2rem;max-width:9.5rem;padding:.4rem .5rem;border-radius:9px;gap:.05rem;box-shadow:none}
+.orgcompact .orgcard b{font-size:.76rem}.orgcompact .orgcard .orgwho{font-size:.72rem}.orgcompact .orgcard .mini{font-size:.66rem}
+.orgcompact .orgkey{font-size:.58rem}
 
 </style>
 
@@ -10948,16 +10960,16 @@ async function assignPosition(empId,posId){const cur=posOf(empId);if(cur&&cur.id
     await db.doc('org_positions/'+posId).update({holder_emp:empId,updated_by:S.me,updated_at:nowISO()});if(p) p.holder_emp=empId;}}
 BUILD.hremp=()=>{const el=h('section',{class:'stack'});const body=h('div',{class:'stack'});const later=lazyRefresh(el,()=>refresh());const D={edit:null,q:'',f:'active'};let saving=false;const msg=h('p',{class:'note',role:'status'});
   el.append(h('div',{class:'pagehead'},h('div',{},h('h1',{},'Employees'),h('p',{class:'lede'},'Everyone on the team, with their position from the organogram, department and line manager. Pay details here feed Payroll.'))),body);
-  function refresh(){if(allGuard(el,'manage employees')) return;if(later()) return;body.textContent='';if(D.edit) return form();const all=empAll();const act=all.filter(e=>e.active!==false&&!e.left_at);const pos=orgPos();const vac=pos.filter(p=>!p.holder_emp);
+  function refresh(){if(allGuard(el,'manage employees')) return;if(later()) return;body.textContent='';if(D.edit) return form();if(S.empView&&typeof empPanel==='function'){const e=empOf(S.empView);if(e){body.append(empPanel(e,id=>{S.empView=typeof id==='string'?id:null;refresh();}));return;}S.empView=null;}const all=empAll();const act=all.filter(e=>empCurrent(e));const pos=orgPos();const vac=pos.filter(p=>!p.holder_emp);
     body.append(h('div',{class:'kpis'},kpiT('Employees',String(act.length),`${all.length-act.length} former`),kpiT('Positions in the organogram',String(pos.length),pos.length?`${vac.length} vacant`:'Set it up in Organogram'),kpiT('Without a position',String(act.filter(e=>!posOf(e.id)).length),'Assign them a position',act.some(e=>!posOf(e.id))?'warn':'')));
     body.append(h('div',{class:'row'},h('button',{class:'btn primary',type:'button',disabled:!S.canWrite,onclick:()=>{D.edit={name:'',emp_no:'EMP-'+String(all.length+1).padStart(3,'0'),email:'',phone:'',nationality:'',id_no:'',dob:'',gender:'',join_date:today(),pos_id:'',position:'',department:'',basic:'',housing:'',transport:'',other:'',bank:'',iban:'',leave_days:30};refresh();}},'Add employee'),
       pos.length?null:h('button',{class:'btn',type:'button',onclick:()=>showTab('orgchart')},'Set up the organogram'),h('input',{type:'search',placeholder:'Search employees','aria-label':'Search employees',value:D.q,onchange:e=>{D.q=e.target.value;refresh();}}),
       (()=>{const s=h('select',{'aria-label':'Show',onchange:e=>{D.f=e.target.value;refresh();}},h('option',{value:'active'},'Current employees'),h('option',{value:'left'},'Former employees'),h('option',{value:'all'},'Everyone'));s.value=D.f;return s;})()),msg);
-    const L=all.filter(e=>(D.f==='all'||(D.f==='left'?(e.active===false||e.left_at):(e.active!==false&&!e.left_at)))&&(!D.q||norm(e.name+' '+(e.emp_no||'')+' '+(e.position||'')).includes(norm(D.q)))).sort((a,b)=>(a.emp_no||'').localeCompare(b.emp_no||''));
+    const L=all.filter(e=>(D.f==='all'||(D.f==='left'?!empCurrent(e):empCurrent(e)))&&(!D.q||norm(e.name+' '+(e.emp_no||'')+' '+(e.position||'')).includes(norm(D.q)))).sort((a,b)=>(a.emp_no||'').localeCompare(b.emp_no||''));
     const dups=empDups();if(dups.length) body.append(empDupCard(dups,refresh,msg));
     if(!L.length){body.append(h('div',{class:'card'},emptyNote(all.length?'Nothing matches.':'No employees yet. Add your first employee and give them a position from the organogram.')));return;}
     body.append(h('div',{class:'card'},h('div',{class:'tablewrap'},h('table',{class:'emptab'},h('thead',{},h('tr',{},h('th',{},'No.'),h('th',{},'Employee'),h('th',{},'Position'),h('th',{},'Department'),h('th',{},'Reports to'),h('th',{},'Joined'),h('th',{}))),
-      h('tbody',{},L.map(e=>{const p=posOf(e.id);const m=managerOf(p);return h('tr',{class:e.left_at||e.active===false?'mut':''},h('td',{class:'code'},e.emp_no||''),h('td',{},h('b',{style:'font-weight:500'},e.name),h('div',{class:'mini mut'},[e.email,e.phone].filter(Boolean).join(' · '))),
+      h('tbody',{},L.map(e=>{const p=posOf(e.id);const m=managerOf(p);return h('tr',{class:empCurrent(e)?'':'mut'},h('td',{class:'code'},e.emp_no||''),h('td',{},h('b',{style:'font-weight:500'},e.name),h('div',{class:'mini mut'},[e.email,e.phone].filter(Boolean).join(' · '))),
         h('td',{},p?p.title:(e.position?h('span',{},e.position,h('span',{class:'mini warnc'},' · not in the organogram')):h('span',{class:'mini warnc'},'No position'))),h('td',{class:'mini'},(p&&p.dept)||e.department||'—'),h('td',{class:'mini'},m?(m.emp?m.emp.name+' · ':'')+m.pos.title:'—'),h('td',{class:'mini'},e.join_date?fmtDate(e.join_date):'—'),
         h('td',{},S.canWrite?h('button',{class:'btn ghost sm',type:'button',onclick:()=>{D.edit={...e,pos_id:p?p.id:''};refresh();}},'Edit'):null));}))))));}
   function form(){const F=D.edit;const err=h('p',{class:'err',role:'alert'});const pos=orgPos().slice().sort((a,b)=>(a.dept||'').localeCompare(b.dept||'')||(a.order||0)-(b.order||0));const info=h('p',{class:'mini mut'});
@@ -10983,12 +10995,86 @@ function empAll(){const seen=new Set();return (S.employees||[]).filter(e=>e.stat
 function empMatch(a,b){if(a.id&&b.id&&a.id===b.id) return [];const r=[];const eq=(x,y)=>x&&y&&String(x).replace(/\s+/g,'').toLowerCase()===String(y).replace(/\s+/g,'').toLowerCase();
   if(eq(a.email,b.email)) r.push('same email');if(eq(a.id_no,b.id_no)) r.push('same ID or passport number');if(eq(a.emp_no,b.emp_no)) r.push('same employee number');
   const na=amlNorm(a.name||''),nb=amlNorm(b.name||'');if(na&&na===nb) r.push('same name');else if(na&&nb&&simil(na,nb)>=0.8) r.push('very similar name');return r;}
-function empDups(){const L=empAll().filter(e=>e.active!==false&&!e.left_at);const out=[];for(let i=0;i<L.length;i++) for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j];if((a.dup_ok||[]).includes(b.id)||(b.dup_ok||[]).includes(a.id)) continue;const r=empMatch(a,b);if(r.length) out.push({a,b,r});}return out;}
+function empDups(){const L=empAll().filter(e=>empCurrent(e));const out=[];for(let i=0;i<L.length;i++) for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j];if((a.dup_ok||[]).includes(b.id)||(b.dup_ok||[]).includes(a.id)) continue;const r=empMatch(a,b);if(r.length) out.push({a,b,r});}return out;}
 const empPaid=id=>JSON.stringify(S.raw.payruns||[]).includes(id);
 function empDupCard(dups,refresh,msg){const card=h('div',{class:'card stack dupcard'},h('div',{},h('h3',{},`Possible duplicate employees (${dups.length})`),h('p',{class:'note'},'The HR agent compares names, email, ID or passport and employee numbers. Keep both if they are different people; otherwise remove the extra record.')));
   dups.slice(0,20).forEach(({a,b,r})=>{const side=(e,other)=>{const paid=empPaid(e.id);const p=posOf(e.id);return h('div',{class:'dupside'},h('b',{},e.name),h('span',{class:'mini mut'},[e.emp_no,e.email,p?p.title:e.position].filter(Boolean).join(' · ')||'No details'),h('span',{class:'mini'},paid?'In payroll runs':'Not in any payroll run'),
       S.canWrite&&!paid?h('button',{class:'btn sm danger',type:'button','aria-label':`Remove ${e.name} (${e.emp_no||''})`,onclick:async ev=>{ev.target.disabled=true;try{const cur=posOf(e.id);if(cur) await db.doc('org_positions/'+cur.id).update({holder_emp:null});await db.doc('employees/'+e.id).update({status:'deleted',active:false,deleted_reason:`Duplicate of ${other.name}`,deleted_by:S.me,deleted_at:nowISO()});e.status='deleted';e.active=false;(S.raw.employees||[]).filter(x=>x.id===e.id).forEach(x=>{x.status='deleted';x.active=false;});try{derive();}catch(z){}msg.textContent=`${e.name} (${e.emp_no||''}) removed as a duplicate of ${other.name}.`;refresh();}catch(x){msg.textContent=x.message;ev.target.disabled=false;}}},'Remove this record'):null);};
     card.append(h('div',{class:'duprow'},side(a,b),h('div',{class:'dupmid'},h('span',{class:'mini'},r.join(', ')),S.canWrite?h('button',{class:'btn sm ghost',type:'button',onclick:async ev=>{ev.target.disabled=true;try{await db.doc('employees/'+a.id).update({dup_ok:[...(a.dup_ok||[]),b.id]});await db.doc('employees/'+b.id).update({dup_ok:[...(b.dup_ok||[]),a.id]});a.dup_ok=[...(a.dup_ok||[]),b.id];b.dup_ok=[...(b.dup_ok||[]),a.id];refresh();}catch(x){msg.textContent=x.message;ev.target.disabled=false;}}},'Keep both'):null),side(b,a)));});return card;}
+
+const empCurrent=e=>e.active!==false&&!(e.left_at&&e.left_at<today());
+
+
+// ================= Employee record: salary changes from a date, one-off payments, transfers, leaving with notice =================
+const PAY_KEYS=[['basic','Basic salary'],['housing','Housing allowance'],['transport','Transport allowance'],['other','Other allowances']];
+const ONEOFF_TYPES=['Bonus','Commission','Overtime','Incentive','Other payment'];
+const EXIT_TYPES={resignation:'Resignation',termination:'Termination',contract_end:'End of contract',retirement:'Retirement'};
+const empOf=id=>(S.raw.employees||[]).find(e=>e.id===id)||null;
+// the salary in force on a date: the latest change on or before it, otherwise the salary on the record
+function salAt(e,d){const ch=(e.salary_changes||[]).filter(c=>c.from<=d).sort((a,b)=>a.from<b.from?-1:1).pop();const src=ch||e;return Object.fromEntries(PAY_KEYS.map(([k])=>[k,+src[k]||0]));}
+// payroll: blend the salaries in force over the month, and add the month's one-off payments
+{const _cs=calcSlip;calcSlip=function(e,M,adj,R){try{const ms=M+'-01',me=lastDay(M);const start=e.join_date>ms?e.join_date:ms,end=e.left_at&&e.left_at<me?e.left_at:me;
+    if((e.salary_changes||[]).length&&start<=end){const pts=[start,...(e.salary_changes||[]).map(c=>c.from).filter(d=>d>start&&d<=end)].sort();const days=d=>Math.round(Date.parse(d)/864e5);const tot=days(end)-days(start)+1;const blend=Object.fromEntries(PAY_KEYS.map(([k])=>[k,0]));
+      pts.forEach((p,i)=>{const nx=i+1<pts.length?pts[i+1]:addDays(end,1);const w=(days(nx)-days(p))/tot;const s=salAt(e,p);PAY_KEYS.forEach(([k])=>blend[k]+=s[k]*w);});e={...e,...Object.fromEntries(PAY_KEYS.map(([k])=>[k,r2(blend[k])]))};}
+    const oo=(e.one_offs||[]).filter(x=>x.month===M&&!x.cancelled);if(oo.length){const a={...(adj||{})};const add=r2(oo.reduce((s,x)=>s+(+x.amount||0),0));a.add=r2((+a.add||0)+add);a.add_label=[a.add?null:null,...oo.map(x=>`${x.type}${x.note?': '+x.note:''}`)].filter(Boolean).join(', ')+(adj&&+adj.add?' and other additions':'');adj=a;}}catch(x){console.error(x);}return _cs(e,M,adj,R);};}
+async function empUpdate(e,patch,what){const hist=[...(e.history||[]),{at:nowISO(),by:S.me,what}];await db.doc('employees/'+e.id).update({...patch,history:hist,updated_by:S.me,updated_at:nowISO()});Object.assign(e,patch,{history:hist});(S.raw.employees||[]).filter(x=>x.id===e.id).forEach(x=>Object.assign(x,patch,{history:hist}));try{derive();}catch(z){}}
+// changes whose date has come: the record shows the salary and position in force; leavers' positions are freed after their last day
+let empApplied='';async function empApplyDue(){if(!S.canWrite||empApplied===S.entity+today()) return;empApplied=S.entity+today();const t=today();
+  for(const e of empAll()){try{const cur=salAt(e,t);if((e.salary_changes||[]).length&&PAY_KEYS.some(([k])=>(+e[k]||0)!==cur[k])) await empUpdate(e,cur,'Salary change took effect');
+    const tr=(e.transfers||[]).find(x=>x.from<=t&&!x.applied);if(tr){await assignPosition(e.id,tr.to_pos);const p=orgPos().find(x=>x.id===tr.to_pos);await empUpdate(e,{transfers:(e.transfers||[]).map(x=>x===tr?{...x,applied:true}:x),position:p?p.title:e.position,department:p?p.dept||'':e.department,position_id:tr.to_pos},`Transfer to ${p?p.title:'new position'} took effect`);}
+    if(e.left_at&&e.left_at<t&&e.active!==false){const p=posOf(e.id);if(p) await db.doc('org_positions/'+p.id).update({holder_emp:null});await empUpdate(e,{active:false},'Left the company');}}catch(x){console.error(x);}}}
+// the employee panel: salary, one-off payments, transfer, leaving
+function empPanel(e,back){const box=h('div',{class:'stack emppanel'});const msg=h('p',{class:'note',role:'status'});const p=posOf(e.id);const t=today();const lv=e.leaving||null;
+  const sec=(tt,...k)=>h('div',{class:'card stack'},h('h3',{},tt),...k);const tbl=(head,rows)=>rows.length?h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},head.map(x=>h('th',{},x)))),h('tbody',{},rows.map(r=>h('tr',{},r.map(c=>h('td',{},c))))))):null;
+  box.append(h('div',{class:'row',style:'justify-content:space-between;align-items:center'},h('div',{},h('h2',{style:'margin:0'},e.name),h('p',{class:'mini mut',style:'margin:.2rem 0 0'},[e.emp_no,p?p.title:e.position,p?p.dept:e.department,lv?`${EXIT_TYPES[lv.type]||'Leaving'}: last day ${fmtDate(lv.last_day)}`:null].filter(Boolean).join(' · '))),h('button',{class:'btn ghost',type:'button',onclick:back},'Back to employees')),msg);
+  const ed=S.canWrite;
+  // salary
+  {const cur=salAt(e,t);const F={from:addDays(t,1).slice(0,8)+'01',...cur,reason:''};if(F.from<=t) F.from=t;
+    const rows=[...(e.salary_changes||[])].sort((a,b)=>a.from<b.from?1:-1).map(c=>[fmtDate(c.from),money2(PAY_KEYS.reduce((s,[k])=>s+(+c[k]||0),0)),PAY_KEYS.map(([k,l])=>+c[k]?`${l.split(' ')[0]} ${money2(+c[k])}`:null).filter(Boolean).join(', '),c.reason||'',c.from>t?pill('Upcoming','warn'):pill('In force','ok')]);
+    const save=h('button',{class:'btn primary sm',type:'button'},'Save the salary change');save.onclick=async()=>{if(!F.from){msg.textContent='Choose the date it takes effect.';return;}if(!(+F.basic>0)){msg.textContent='Enter the basic salary.';return;}save.disabled=true;
+      const base=(e.salary_changes||[]).length?[]:[{from:e.join_date||'2000-01-01',...Object.fromEntries(PAY_KEYS.map(([k])=>[k,+e[k]||0])),reason:'Salary on joining',by:S.me,at:nowISO()}];
+      const ch={from:F.from,...Object.fromEntries(PAY_KEYS.map(([k])=>[k,+F[k]||0])),reason:String(F.reason||'').trim(),by:S.me,at:nowISO()};const list=[...base,...(e.salary_changes||[]).filter(c=>c.from!==F.from),ch];
+      try{await empUpdate(e,{salary_changes:list,...(F.from<=t?Object.fromEntries(PAY_KEYS.map(([k])=>[k,ch[k]])):{})},`Salary change from ${fmtDate(F.from)}: total ${money2(PAY_KEYS.reduce((s,[k])=>s+ch[k],0))}${ch.reason?' ('+ch.reason+')':''}`);msg.textContent=`Salary change saved, effective ${fmtDate(F.from)}. Payroll uses it from that date.`;back(e.id);}catch(x){msg.textContent=x.message;save.disabled=false;}};
+    box.append(sec(`Salary (${S.baseCur} a month)`,h('p',{class:'mini mut'},`In force today: ${PAY_KEYS.map(([k,l])=>`${l} ${money2(cur[k])}`).join(' · ')}`),tbl(['From','Total','Breakdown','Reason',''],rows),
+      ed?h('div',{class:'stack sal-form'},h('b',{},'Change the salary'),h('div',{class:'formgrid'},fld('Effective from',xIn(F,'from','date')),...PAY_KEYS.map(([k,l])=>fld(l,xIn(F,k,'number'))),fld('Reason',xIn(F,'reason',null,{placeholder:'e.g. Annual increment'}))),h('div',{class:'row'},save)):null));}
+  // one-off payments
+  {const F={month:t.slice(0,7),type:'Bonus',amount:'',note:''};const rows=(e.one_offs||[]).slice().sort((a,b)=>a.month<b.month?1:-1).map((x,i)=>[mLabel(x.month,true),x.type,money2(+x.amount||0),x.note||'',x.cancelled?pill('Cancelled'):(S.payruns||[]).some(r=>r.month===x.month&&r.status!=='cancelled')?pill('Paid in payroll','ok'):ed?h('button',{class:'btn ghost sm',type:'button',onclick:async()=>{await empUpdate(e,{one_offs:(e.one_offs||[]).map(y=>y===x?{...y,cancelled:true}:y)},`${x.type} for ${x.month} cancelled`);back(e.id);}},'Cancel'):'']);
+    const save=h('button',{class:'btn primary sm',type:'button'},'Add the payment');save.onclick=async()=>{if(!(+F.amount>0)){msg.textContent='Enter the amount.';return;}if((S.payruns||[]).some(r=>r.month===F.month&&r.status!=='cancelled')){msg.textContent=`Payroll for ${mLabel(F.month,true)} is already posted. Choose a later month.`;return;}save.disabled=true;
+      try{await empUpdate(e,{one_offs:[...(e.one_offs||[]),{month:F.month,type:F.type,amount:r2(+F.amount),note:String(F.note||'').trim(),by:S.me,at:nowISO()}]},`${F.type} of ${money2(+F.amount)} for ${F.month}`);msg.textContent=`${F.type} of ${money(+F.amount)} added to ${mLabel(F.month,true)} payroll.`;back(e.id);}catch(x){msg.textContent=x.message;save.disabled=false;}};
+    box.append(sec('Bonus and one-off payments',h('p',{class:'mini mut'},'Paid with that month’s payroll, through gross pay, social security and tax as usual.'),tbl(['Month','Type','Amount','Note',''],rows),
+      ed?h('div',{class:'stack'},h('div',{class:'formgrid'},fld('Month',h('input',{type:'month',value:F.month,onchange:e_=>F.month=e_.target.value,'aria-label':'Month'})),fld('Type',xSel(F,'type',ONEOFF_TYPES)),fld(`Amount (${S.baseCur})`,xIn(F,'amount','number')),fld('Note',xIn(F,'note',null,{placeholder:'e.g. Q3 performance'}))),h('div',{class:'row'},save)):null));}
+  // transfer
+  {const pos=orgPos().filter(x=>!x.holder_emp||x.holder_emp===e.id);const F={to:'',from:t,reason:''};const pend=(e.transfers||[]).filter(x=>!x.applied);
+    const ps=h('select',{'aria-label':'New position',onchange:ev=>F.to=ev.target.value},h('option',{value:''},'Choose the new position'),...[...new Set(pos.map(x=>x.dept||'Other'))].map(d=>h('optgroup',{label:d},pos.filter(x=>(x.dept||'Other')===d&&(!p||x.id!==p.id)).map(x=>h('option',{value:x.id},`${x.title} (vacant)`)))));
+    const save=h('button',{class:'btn primary sm',type:'button'},'Transfer');save.onclick=async()=>{if(!F.to){msg.textContent='Choose the new position.';return;}save.disabled=true;const np=orgPos().find(x=>x.id===F.to);
+      try{if(F.from<=t){await assignPosition(e.id,F.to);await empUpdate(e,{position:np.title,department:np.dept||'',position_id:np.id,transfers:[...(e.transfers||[]),{from:F.from,from_pos:p?p.id:null,to_pos:F.to,reason:F.reason,applied:true,by:S.me,at:nowISO()}]},`Transferred from ${p?p.title:'no position'} to ${np.title}${np.dept?' ('+np.dept+')':''} from ${fmtDate(F.from)}`);}
+        else await empUpdate(e,{transfers:[...(e.transfers||[]),{from:F.from,from_pos:p?p.id:null,to_pos:F.to,reason:F.reason,applied:false,by:S.me,at:nowISO()}]},`Transfer to ${np.title} scheduled from ${fmtDate(F.from)}`);
+        msg.textContent=`${e.name} ${F.from<=t?'transferred':'will transfer'} to ${np.title}${np.dept?' in '+np.dept:''} from ${fmtDate(F.from)}.`;back(e.id);}catch(x){msg.textContent=x.message;save.disabled=false;}};
+    box.append(sec('Transfer',h('p',{class:'mini mut'},`Now: ${p?`${p.title}${p.dept?' in '+p.dept:''}`:'no position'}.${pend.length?` Scheduled: ${pend.map(x=>`${(orgPos().find(y=>y.id===x.to_pos)||{}).title||'new position'} from ${fmtDate(x.from)}`).join(', ')}.`:''}`),
+      ed?h('div',{class:'stack'},h('div',{class:'formgrid'},fld('New position',ps),fld('Effective from',xIn(F,'from','date')),fld('Reason',xIn(F,'reason'))),h('div',{class:'row'},save)):null));}
+  // leaving
+  {const F={type:'resignation',notice_date:t,notice_days:30,last_day:addDays(t,30),reason:''};const ld=h('input',{type:'date',value:F.last_day,'aria-label':'Last working day',onchange:ev=>F.last_day=ev.target.value});
+    const nd=h('input',{type:'number',min:'0',value:F.notice_days,'aria-label':'Notice period (days)',oninput:ev=>{F.notice_days=+ev.target.value||0;F.last_day=addDays(F.notice_date,F.notice_days);ld.value=F.last_day;}});
+    const nt=h('input',{type:'date',value:F.notice_date,'aria-label':'Notice given on',onchange:ev=>{F.notice_date=ev.target.value;F.last_day=addDays(F.notice_date,F.notice_days);ld.value=F.last_day;}});
+    const save=h('button',{class:'btn primary sm',type:'button'},'Record');save.onclick=async()=>{if(!F.last_day){msg.textContent='Enter the last working day.';return;}save.disabled=true;const L={type:F.type,notice_date:F.notice_date,notice_days:F.notice_days,last_day:F.last_day,reason:String(F.reason||'').trim(),by:S.me,at:nowISO()};
+      try{await empUpdate(e,{leaving:L,left_at:F.last_day},`${EXIT_TYPES[F.type]}: notice given ${fmtDate(F.notice_date)}, ${F.notice_days} days’ notice, last working day ${fmtDate(F.last_day)}`);msg.textContent=`${EXIT_TYPES[F.type]} recorded. Last working day ${fmtDate(F.last_day)}; payroll and end of service run to that date.`;back(e.id);}catch(x){msg.textContent=x.message;save.disabled=false;}};
+    const undo=lv&&ed&&lv.last_day>=t?h('button',{class:'btn ghost sm',type:'button',onclick:async()=>{await empUpdate(e,{leaving:null,left_at:null},`${EXIT_TYPES[lv.type]||'Leaving'} withdrawn`);back(e.id);}},'Withdraw'):null;
+    box.append(sec('Resignation or leaving',lv?h('div',{class:'banner warn'},`${EXIT_TYPES[lv.type]||'Leaving'}: notice given ${fmtDate(lv.notice_date)}, ${lv.notice_days} days’ notice. Last working day ${fmtDate(lv.last_day)}${lv.last_day>=t?` (${Math.round((Date.parse(lv.last_day)-Date.parse(t))/864e5)} days left)`:''}.${lv.reason?' '+lv.reason:''}`):h('p',{class:'mini mut'},'Record a resignation or other leaving with the notice period. Payroll and end-of-service benefits run to the last working day; the position is freed after it.'),undo,
+      ed&&!lv?h('div',{class:'stack'},h('div',{class:'formgrid'},fld('Type',xSel(F,'type',Object.entries(EXIT_TYPES))),fld('Notice given on',nt),fld('Notice period (days)',nd),fld('Last working day',ld),fld('Reason',xIn(F,'reason'))),h('div',{class:'row'},save)):null));}
+  if((e.history||[]).length) box.append(h('details',{class:'card'},h('summary',{},`History (${e.history.length})`),h('ul',{class:'bul mini'},e.history.slice().reverse().slice(0,40).map(x=>h('li',{},`${fmtDate((x.at||'').slice(0,10))} · ${who(x.by)} · ${x.what}`)))));
+  return box;}
+// the Employees page: open an employee's record; leavers serving notice show their last day
+{const _he=BUILD.hremp;BUILD.hremp=()=>{const r=_he();const rf=r.refresh;const deco=()=>{try{empApplyDue();r.el.querySelectorAll('.emptab tbody tr').forEach(tr=>{if(tr._p) return;const no=(tr.querySelector('td.code')||{}).textContent;const nm=(tr.querySelector('td b')||{}).textContent;const e=empAll().find(z=>z.name===nm&&(z.emp_no||'')===no);if(!e) return;tr._p=1;tr.classList.add('click');
+      const open=()=>{S.empView=e.id;r.refresh();};tr.onclick=ev=>{if(ev.target.closest('button')) return;open();};
+      if(e.leaving&&e.leaving.last_day>=today()){const td=tr.children[1];if(td) td.append(h('div',{class:'mini warnc'},`${EXIT_TYPES[e.leaving.type]||'Leaving'}: last day ${fmtDate(e.leaving.last_day)}`));}
+      const last=tr.lastElementChild;if(last) last.prepend(h('button',{class:'btn sm openemp',type:'button','aria-label':`Open ${e.name}`,onclick:open},'Open'));});}catch(y){console.error(y);}};
+  let q=false;new MutationObserver(()=>{if(q) return;q=true;requestAnimationFrame(()=>{q=false;deco();});}).observe(r.el,{childList:true,subtree:true});r.refresh=function(...a){const x=rf.apply(this,a);deco();return x;};return r;};}
+
+// ================= Organogram: compact, fitted to the screen =================
+{const _oc=BUILD.orgchart;BUILD.orgchart=()=>{const r=_oc();const rf=r.refresh;let fit=true;const ctl=()=>{const w=r.el.querySelector('.orgwrap');const t=w&&w.querySelector('.orgtree');if(!w||!t) return;
+    if(!w.querySelector('.orgzoom')){w.prepend(h('div',{class:'orgzoom'},h('button',{class:'btn sm',type:'button',onclick:()=>{fit=true;apply();}},'Fit to screen'),h('button',{class:'btn sm ghost',type:'button',onclick:()=>{fit=false;apply();}},'Actual size')));}
+    const apply=()=>{t.style.zoom='1';if(!fit) return;let z=1;for(let i=0;i<4&&w.scrollWidth>w.clientWidth+1;i++){z=Math.max(.4,z*(w.clientWidth-8)/w.scrollWidth);t.style.zoom=String(z);if(z<=.4) break;}};apply();if(!w._ro){w._ro=new ResizeObserver(()=>apply());w._ro.observe(w);}};
+  r.refresh=function(...a){const x=rf.apply(this,a);try{r.el.classList.add('orgcompact');setTimeout(ctl,30);}catch(y){}return x;};return r;};}
 
 
 // test hook (local development only)
