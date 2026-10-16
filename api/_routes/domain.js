@@ -36,7 +36,7 @@ async function bySlug(slug) {
   if (o) return { data: { org_id: o.id, name: o.name }, ent: null };
   const { data: es } = await db.from('docs').select('org_id,path,data').like('path', 'setup/main/entities/%').ilike('data->>name', pat).limit(50);
   const e = (es || []).find((x) => slugOf(x.data && x.data.name) === slug && !/^(deleted|closed|archived)$/.test(String((x.data || {}).status || '')));
-  if (e) return { data: { org_id: e.org_id, name: e.data.name }, ent: e.data };
+  if (e) return { data: { org_id: e.org_id, name: e.data.name }, ent: { ...e.data, _id: e.path.split('/').pop() } };
   return null;
 }
 async function brandOf(org, base, ent) {
@@ -74,6 +74,8 @@ module.exports = async (req, res) => {
       // <name>.orzio.ai that was never registered: find the workspace or company with that name
       if ((!data || !data.org_id) && host.endsWith('.' + BASE())) { const f = await bySlug(host.slice(0, -(BASE().length + 1))); if (f) { data = f.data; ent = f.ent; } }
       if (!data || !data.org_id) return res.status(404).json({ error: 'No workspace uses this address yet.' });
+      if (!ent) { try { const { data: row } = await admin().from('org_domains').select('detail').eq('domain', host).maybeSingle(); const eid = row && row.detail && row.detail.entity;
+        if (eid) { const { data: d } = await admin().from('docs').select('data').eq('org_id', data.org_id).eq('path', 'setup/main/entities/' + eid).maybeSingle(); if (d && d.data) { ent = { ...d.data, _id: eid }; } } } catch (e) { /* workspace brand */ } }
       const b = await brandOf(data.org_id, data, ent);
       if (req.query.logo) {
         if (!b.logo) return res.status(404).send('No logo');
@@ -82,14 +84,14 @@ module.exports = async (req, res) => {
         res.setHeader('Cache-Control', 'public, max-age=300');
         res.writeHead(302, { Location: su.signedUrl }); return res.end();
       }
-      return res.status(200).json({ org_id: data.org_id, name: b.name, color: b.color || null, has_logo: !!b.logo, companies: b.count });
+      return res.status(200).json({ org_id: data.org_id, name: b.name, color: b.color || null, has_logo: !!b.logo, companies: b.count, entity: ent ? (ent._id || ent.id || null) : null });
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'Not allowed' });
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } } b = b || {};
     const { user, sb } = await verify(bearer(req));
     const org = String(b.org || ''); if (!UUID.test(org)) return res.status(400).json({ error: 'Choose a workspace.' });
     const { data: m } = await sb.from('members').select('role,status').eq('org_id', org).eq('user_id', user.id).maybeSingle();
-    if (!m || m.status !== 'active' || m.role !== 'owner') return res.status(403).json({ error: 'Only the workspace owner can manage its domain.' });
+    if (!m || m.status !== 'active' || !(m.role === 'owner' || (m.role === 'admin' && String(b.action || '') === 'subdomain') || String(b.action || '') === 'list')) return res.status(403).json({ error: 'Only the workspace owner or an admin can manage addresses.' });
     const action = String(b.action || 'list');
     // the workspace's own address on the Orzio domain: <name>.orzio.ai (served by the *.orzio.ai wildcard, no DNS work for the customer)
     if (action === 'subdomain') {
@@ -101,10 +103,14 @@ module.exports = async (req, res) => {
       const { data: taken } = await sb.from('org_domains').select('org_id').eq('domain', domain).maybeSingle();
       const { data: owner } = await admin().from('org_domains').select('org_id').eq('domain', domain).maybeSingle();
       if ((taken && taken.org_id !== org) || (owner && owner.org_id !== org)) return res.status(409).json({ error: `${domain} is already taken. Choose another name.` });
+      // an address belongs to one company of the workspace (or to the workspace itself when no company is given)
+      const entity = /^[A-Za-z0-9_-]{1,64}$/.test(String(b.entity || '')) ? String(b.entity) : null;
+      const { data: other } = await admin().from('org_domains').select('detail').eq('domain', domain).maybeSingle();
+      if (other && other.detail && other.detail.entity && other.detail.entity !== entity) return res.status(409).json({ error: `${domain} is already used by another company. Choose another name.` });
       const { data: mine } = await admin().from('org_domains').select('domain,detail').eq('org_id', org);
-      for (const d of (mine || [])) if (d.detail && d.detail.kind === 'subdomain' && d.domain !== domain) await admin().from('org_domains').delete().eq('domain', d.domain);
-      await admin().from('org_domains').upsert({ domain, org_id: org, status: 'verified', detail: { kind: 'subdomain' }, created_by: user.id, verified_at: new Date().toISOString() });
-      return res.status(200).json({ domain, status: 'verified' });
+      for (const d of (mine || [])) if (d.detail && d.detail.kind === 'subdomain' && (d.detail.entity || null) === entity && d.domain !== domain) await admin().from('org_domains').delete().eq('domain', d.domain);
+      await admin().from('org_domains').upsert({ domain, org_id: org, status: 'verified', detail: entity ? { kind: 'subdomain', entity } : { kind: 'subdomain' }, created_by: user.id, verified_at: new Date().toISOString() });
+      return res.status(200).json({ domain, status: 'verified', entity });
     }
     if (action === 'list') { const { data } = await sb.from('org_domains').select('*').eq('org_id', org); return res.status(200).json({ domains: data || [], enabled: !!(process.env.VERCEL_TOKEN && process.env.VERCEL_PROJECT_ID) }); }
     const domain = String(b.domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');

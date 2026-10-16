@@ -11803,6 +11803,30 @@ function accessEditor(F){const box=h('div',{class:'acced'});const apps=accApps(F
 {const _ra=roleAllows;roleAllows=t=>{const ok=_ra(t);if(!ok) return ok;try{const tp=((myPerms()||{})._tabs||{})[t];if(tp&&!tp.view) return false;}catch(e){}return ok;};}
 {const _ap=applyTabPerms;applyTabPerms=function(id){const r=_ap.apply(this,arguments);try{const tp=((myPerms()||{})._tabs||{})[id];if(tp){S.canWrite=S.canWrite&&!!tp.edit;S.canApprove=S.canApprove&&!!tp.approve;S.canDelete=S.canDelete&&!!tp.delete;}}catch(e){}return r;};}
 
+// ===== Every company has its own address: <company>.orzio.ai opens that company's sign-in, with its name and logo =====
+const coAddrOf=eid=>((WSADDR.list||[]).find(d=>d.detail&&d.detail.kind==='subdomain'&&d.detail.entity===eid)||{}).domain||'';
+const CO_ADDR={busy:{}};
+async function coAddrEnsure(eid){const e=S.ent[eid];if(!e||eid==='all'||CO_ADDR.busy[eid]) return;if(!(S.isOwner||(typeof wsIsAdmin==='function'&&wsIsAdmin()))) return;CO_ADDR.busy[eid]=true;
+  try{if(WSADDR.list===null||WSADDR.list===undefined) await wsAddrLoad();if(coAddrOf(eid)) return;const taken=new Set((WSADDR.list||[]).map(d=>d.domain));const base=wsSlug(e.name);
+    for(let k=0;k<6;k++){const slug=k?`${base}-${k+1}`:base;if(taken.has(`${slug}.${ORZIO_BASE}`)) continue;try{await wsAddrCall({action:'subdomain',slug,entity:eid});await wsAddrLoad();break;}catch(x){if(!/taken|reserved|used/i.test(x.message||'')) break;}}}
+  finally{CO_ADDR.busy[eid]=false;}}
+function coAddrCard(eid){const box=h('div',{class:'card stack coaddr'});const msg=h('p',{class:'note',role:'status'});const ro=!(S.isOwner||(typeof wsIsAdmin==='function'&&wsIsAdmin()));
+  const draw=()=>{box.textContent='';const cur=coAddrOf(eid);const e=S.ent[eid]||{};
+    box.append(h('div',{class:'cardhead'},h('div',{},h('h3',{},'Company address'),h('p',{class:'note'},`${e.name||'This company'} has its own web address. Its team signs in there and sees the company’s name and logo, then lands straight in this company.`))));
+    box.append(cur?h('div',{class:'row',style:'align-items:center;gap:.6rem'},h('a',{class:'coaddr-link',href:'https://'+cur,target:'_blank',rel:'noopener'},'https://'+cur),h('button',{class:'btn ghost sm',type:'button',onclick:async ev=>{try{await navigator.clipboard.writeText('https://'+cur);ev.target.textContent='Copied';}catch(x){}}},'Copy')):h('p',{class:'mini mut'},WSADDR.list===null?'Loading…':'No address yet.'));
+    if(!ro){const inp=h('input',{type:'text','aria-label':'Company address name',value:(cur||'').split('.')[0]||wsSlug(e.name),style:'width:14rem'});const save=h('button',{class:'btn sm',type:'button'},cur?'Change address':'Set address');
+      save.onclick=async()=>{msg.textContent='';const slug=wsSlug(inp.value);save.disabled=true;try{await wsAddrCall({action:'subdomain',slug,entity:eid});await wsAddrLoad();msg.textContent=`Saved: https://${slug}.${ORZIO_BASE}`;draw();}catch(x){msg.textContent=x.message||'Could not save it.';}finally{save.disabled=false;}};
+      box.append(h('div',{class:'row',style:'align-items:center;gap:.4rem'},h('span',{class:'mini'},'https://'),inp,h('span',{class:'mini'},'.'+ORZIO_BASE),save),h('p',{class:'mini mut'},'Letters, numbers and hyphens. Changing it stops the old address working.'));}
+    box.append(msg);};
+  draw();if(WSADDR.list===null||WSADDR.list===undefined) wsAddrLoad().then(()=>{coAddrEnsure(eid).then(draw);draw();});else coAddrEnsure(eid).then(draw);return box;}
+// in Company settings → Company details
+{const _b=BUILD.coset;BUILD.coset=(...a)=>{const r=_b(...a);const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);try{const eid=S.entity;if(eid&&eid!=='all'&&S.ent[eid]){const old=r.el.querySelector('.coaddr');const c=coAddrCard(eid);if(S.cosetTab==='logins') c.hidden=true;
+      if(old) old.replaceWith(c);else{const head=r.el.querySelector('.pagehead');const segs=r.el.querySelector('.cosetseg');const acc=segs&&segs.nextElementSibling;(acc||segs||head).after(c);}}}catch(e){console.warn(e);}return y;};return r;};}
+// each company gets an address as soon as it exists
+{const _sw=switchEntity;switchEntity=function(...a){const r=_sw.apply(this,a);setTimeout(()=>{try{if(S.entity&&S.entity!=='all') coAddrEnsure(S.entity);}catch(e){}},2500);return r;};}
+// companies carry the addresses now; the workspace no longer takes one automatically
+wsAddrEnsure=async function(){};
+
 
 // test hook (local development only)
 if(location.hostname==='localhost'){window.__dbg=c=>eval(c);}

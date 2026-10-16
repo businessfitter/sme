@@ -45,7 +45,7 @@
   const HB_KEY = 'orzio-hostbrand:' + HOST; let hbCache = null; try { hbCache = JSON.parse(localStorage.getItem(HB_KEY) || 'null'); } catch (e) {}
   const hostFetch = PLATFORM_HOST ? Promise.resolve(null) : fetch('/api/domain?host=' + encodeURIComponent(HOST)).then((r) => (r.ok ? r.json() : null)).then((d) => { try { if (d && d.org_id) localStorage.setItem(HB_KEY, JSON.stringify(d)); else localStorage.removeItem(HB_KEY); } catch (e) {} return d; }).catch(() => null);
   const hostOrgP = PLATFORM_HOST ? Promise.resolve(null) : (hbCache && hbCache.org_id ? Promise.resolve(hbCache) : Promise.race([hostFetch, new Promise((r) => setTimeout(() => r(null), 8000))]));
-  hostOrgP.then((d) => { if (!d || !d.org_id) return; window.__hostOrg = d; document.title = d.name + ' · Sign in'; });
+  hostOrgP.then((d) => { if (!d || !d.org_id) return; window.__hostOrg = d; document.title = d.name + ' · Sign in'; if (d.entity) { try { sessionStorage.setItem('orzio-ent', d.entity); } catch (e) {} } });
 
   // ---------- shared screen styles (sign-in, company setup) ----------
   const SCREEN_CSS = `
