@@ -5601,7 +5601,7 @@ const poToBill=p=>(p.lines||[]).some(l=>(l.item_id?(+l.received||0):(+l.qty||0))
 const PO_ST={draft:['Draft',''],to_approve:['Waiting for approval','warn'],approved:['Approved','acc'],partial:['Partly received','acc'],received:['Received','ok'],billed:['Billed','ok'],cancelled:['Cancelled','']};
 function poStatus(p){if(p.status==='cancelled') return 'cancelled';if(p.status==='draft'||p.status==='to_approve') return p.status;const rec=(p.lines||[]).filter(l=>l.item_id);const anyR=rec.some(l=>+l.received>0);if(!poToBill(p)&&!poRecvLeft(p)&&(p.lines||[]).some(l=>+l.billed>0)) return 'billed';if(rec.length&&!poRecvLeft(p)) return 'received';return anyR?'partial':'approved';}
 
-BUILD.porders=()=>{const el=h('section',{class:'stack'});const body=h('div',{class:'stack'});const later=lazyRefresh(el,()=>refresh());const D={edit:null,open:null,filter:'open'};
+BUILD.porders=()=>{const el=h('section',{class:'stack'});const body=h('div',{class:'stack'});const later=lazyRefresh(el,()=>refresh());const D={edit:null,open:null,filter:'open'};S._poD=D;
   el.append(h('div',{class:'pagehead'},h('div',{},h('h1',{},'Purchase orders'),h('p',{class:'lede'},'Raise a purchase order, get it approved, receive the goods into stock and turn what was received into the supplier bill. Bills can never exceed what was ordered and received.'))),body);
   function refresh(){if(allGuard(el,'raise purchase orders')) return;if(later()) return;body.textContent='';const nd=needData();if(nd){body.append(nd);return;}
     const L=pos().map(p=>({...p,st:poStatus(p)}));const open=L.filter(p=>!['billed','cancelled'].includes(p.st));
@@ -5614,7 +5614,7 @@ BUILD.porders=()=>{const el=h('section',{class:'stack'});const body=h('div',{cla
     body.append(h('div',{class:'card'},h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},h('th',{},'Number'),h('th',{},'Supplier'),h('th',{},'Date'),h('th',{},'Expected'),h('th',{class:'num'},'Total'),h('th',{},'Status'))),
       h('tbody',{},list.map(p=>{const o=D.open===p.id;const rows=[h('tr',{class:'click',tabindex:'0',onclick:()=>{D.open=o?null:p.id;refresh();}},h('td',{class:'code'},p.number),h('td',{},p.supplier),h('td',{},fmtDate(p.date)),h('td',{},fmtDate(p.expected)),h('td',{class:'num'},money2(poNet(p)+poVat(p))),h('td',{},pill(...PO_ST[p.st])))];
         if(o) rows.push(h('tr',{class:'detail'},h('td',{colspan:6},poDetail(p))));return rows;}))))));}
-  function poForm(){const F=D.edit;const err=h('p',{class:'err',hidden:true});const items=invItems().filter(i=>i.active!==false);const sup=[...new Set([...(S.raw.partners||[]).filter(p=>p.kind==='supplier'&&p.entity===S.entity).map(p=>p.name),...S.invoices.filter(i=>i.kind==='supplier').map(i=>i.partner)])].sort();
+  function poForm(){const F=D.edit;S._poF=F;const err=h('p',{class:'err',hidden:true});const items=invItems().filter(i=>i.active!==false);const sup=[...new Set([...(S.raw.partners||[]).filter(p=>p.kind==='supplier'&&p.entity===S.entity).map(p=>p.name),...S.invoices.filter(i=>i.kind==='supplier').map(i=>i.partner)])].sort();
     const dl=h('datalist',{id:'po-sup'},sup.map(n=>h('option',{value:n})));const lines=h('tbody',{});
     const draw=()=>{lines.textContent='';F.lines.forEach((l,i)=>{const it=h('select',{onchange:e=>{l.item_id=e.target.value;const x=items.find(z=>z.id===l.item_id);if(x){l.desc=x.name;if(!+l.price) l.price=+x.cost||0;}draw();}},h('option',{value:''},'Service or non-stock'),items.map(x=>h('option',{value:x.id},`${x.sku?x.sku+' · ':''}${x.name}`)));it.value=l.item_id||'';
       lines.append(h('tr',{},h('td',{},it),h('td',{},h('input',{type:'text',value:l.desc,placeholder:'Description',oninput:e=>l.desc=e.target.value})),h('td',{},h('input',{type:'number',min:0,step:'any',value:l.qty,style:'width:5.5rem',oninput:e=>{l.qty=+e.target.value||0;tot();}})),h('td',{},h('input',{type:'number',min:0,step:'0.01',value:l.price,style:'width:7rem',oninput:e=>{l.price=+e.target.value||0;tot();}})),h('td',{},h('input',{type:'number',min:0,step:'0.01',value:l.vat,style:'width:4.5rem',oninput:e=>{l.vat=+e.target.value||0;tot();}})),
@@ -5623,7 +5623,7 @@ BUILD.porders=()=>{const el=h('section',{class:'stack'});const body=h('div',{cla
     const save=async(submit)=>{err.hidden=true;const fail=t=>{err.textContent=t;err.hidden=false;};if(!F.supplier.trim()) return fail('Enter the supplier.');F.lines=F.lines.filter(l=>(l.desc||l.item_id)&&+l.qty>0);if(!F.lines.length) return fail('Add at least one line with a quantity.');
       if(F.lines.some(l=>!l.item_id&&!l.account)) return fail('Choose an expense account for each non-stock line.');
       const lim=+invCfg().po_limit||0;const total_=poNet(F)+poVat(F);const needs=submit&&(lim===0||total_>lim);
-      const doc={entity:S.entity,number:F.number||poNo(),supplier:F.supplier.trim(),date:F.date,expected:F.expected,wh:F.wh,ref:F.ref,notes:F.notes,lines:F.lines.map(l=>({item_id:l.item_id||null,desc:l.desc,qty:+l.qty,price:+l.price,vat:+l.vat,account:l.account||null,received:+l.received||0,billed:+l.billed||0})),
+      const doc={entity:S.entity,number:F.number||poNo(),supplier:F.supplier.trim(),date:F.date,expected:F.expected,wh:F.wh,recurring:F.recurring||null,recurring_from:F.recurring_from||null,ref:F.ref,notes:F.notes,lines:F.lines.map(l=>({item_id:l.item_id||null,desc:l.desc,qty:+l.qty,price:+l.price,vat:+l.vat,account:l.account||null,received:+l.received||0,billed:+l.billed||0})),
         status:submit?(needs?'to_approve':'approved'):'draft',updated_by:S.me,updated_at:nowISO()};if(!F.id){doc.created_by=S.me;doc.created_at=nowISO();}if(submit&&!needs){doc.approved_by='engine';doc.approved_at=nowISO();}
       try{const ref=F.id?db.doc('porders/'+F.id):db.collection('porders').doc();await ref.set({...(F.id?pos().find(p=>p.id===F.id):{}),...doc});const i=(S.raw.porders||(S.raw.porders=[])).findIndex(x=>x.id===ref.id);const loc={...(i>=0?S.raw.porders[i]:{}),...doc,id:ref.id};if(i>=0) S.raw.porders[i]=loc;else rawPut('porders',loc);D.edit=null;D.open=ref.id;refresh();}catch(e){fail(e.message);}};
     const whs=h('select',{onchange:e=>F.wh=e.target.value},invCfg().warehouses.map(w=>h('option',{value:w.id},w.name)));whs.value=F.wh;
@@ -11551,8 +11551,9 @@ function txCell(m,ed,other,inflow,onAcc){const T=S.revT||(S.revT={});const st=T[
   const drawP=()=>{pbox.textContent='';const kind=st.t==='receipt'?'customer':(st.t==='supplier'||st.t==='adv_supplier')?'supplier':st.t==='salary'?'employee':null;if(!kind) return;
     const names=kind==='employee'?(S.employees||[]).filter(e=>e.active!==false).map(e=>e.name):(S.raw.partners||[]).filter(p=>p.kind===kind&&p.entity===S.entity&&!['deleted','rejected','blocked'].includes(p.status)).map(p=>p.name).sort();
     const ps=h('select',{'aria-label':kind==='customer'?'Customer':kind==='supplier'?'Supplier':'Employee',class:'txparty'},h('option',{value:''},kind==='customer'?'Choose the customer':kind==='supplier'?'Choose the supplier':'Employee (optional)'),names.map(n=>h('option',{value:n},n)));ps.value=names.includes(st.partner)?st.partner:'';
-    ps.onchange=()=>{st.partner=ps.value;st.changed=true;const due=st.partner&&kind!=='employee'?openInvoices(kind).filter(i=>norm(i.partner)===norm(st.partner)).reduce((s,i)=>s+invDue(i,true),0):0;hint.textContent=st.partner&&kind!=='employee'?(due>0.009?`Open ${kind==='customer'?'invoices':'bills'}: ${money2(due)}. Applied oldest first; anything left stays on account.`:'Nothing open; it stays on account for the next one.'):'';};
-    const hint=h('div',{class:'mini mut'});pbox.append(ps,hint);if(st.partner) ps.onchange();};
+    const showHint=()=>{const due=st.partner&&kind!=='employee'?openInvoices(kind).filter(i=>norm(i.partner)===norm(st.partner)).reduce((s,i)=>s+invDue(i,true),0):0;hint.textContent=st.partner&&kind!=='employee'?(due>0.009?`Open ${kind==='customer'?'invoices':'bills'}: ${money2(due)}. Applied oldest first; anything left stays on account.`:'Nothing open; it stays on account for the next one.'):'';};
+    ps.onchange=()=>{st.partner=ps.value;st.changed=true;showHint();};
+    const hint=h('div',{class:'mini mut'});pbox.append(ps,hint);if(st.partner) showHint();};
   sel.onchange=async()=>{st.t=sel.value;st.changed=true;msg.textContent='';if(st.t==='expense'||st.t==='other_in'||st.t==='other_out'||!st.t){drawP();return;}
     try{const acc=await txAccount(st.t);if(acc){ed[other.i]=acc;onAcc(acc);}}catch(e){msg.textContent=e.message;}drawP();};
   drawP();return h('td',{class:'revtype'},sel,pbox,msg);}
@@ -11597,6 +11598,44 @@ function moveEditor(m,onClose){const box=h('div',{class:'stack mvedit'});const e
 {const _rc=reviewCard;reviewCard=function(m){const el=_rc(m);try{if(m.state==='to_approve'&&(S.canApprove||S.canEdit)){const rows=el.querySelectorAll(':scope > .row');const bar=rows[rows.length-1];
       const ed=h('button',{class:'btn ghost sm',type:'button'},'Edit entry');ed.onclick=()=>{const keep=[...el.children];el.textContent='';el.append(h('div',{class:'qdesc'},'Correct the entry'),moveEditor(m,changed=>{el.textContent='';if(changed){el.append(h('div',{class:'banner ok'},'Saved.'));}else keep.forEach(c=>el.append(c));}));};
       if(bar) bar.append(ed);}}catch(e){}return el;};}
+
+// ===== Procurement for service companies: LPOs for services (no warehouse or stock), and monthly recurring orders =====
+function svcCo(){const e=S.ent[S.entity]||{};try{if(entAppsOff(e).includes('inventory')) return true;}catch(x){}return typeof SVC_IND!=='undefined'&&SVC_IND.includes(e.industry);}
+const SVC_WORDS=[[/receive the goods into stock/g,'confirm the services were delivered'],[/Goods not yet in/g,'Services not yet delivered'],[/^To receive$/,'To confirm'],[/^Received$/,'Delivered'],[/^Receive goods$/,'Confirm services delivered'],[/goods received/gi,'services delivered'],
+  [/Add your stock items in Inventory, then raise the first order here\./g,'Raise the first order for the services you need.'],[/^Goes to$/,'Expense account'],[/^Description$/,'Service required'],[/^Item$/,'Service'],[/Into stock/g,''],[/^Purchasing & Inventory$/,'Procurement'],
+  [/received into stock/gi,'delivered'],[/stock on hand, movements and valuation/gi,'supplier services'],[/^Delivery$/,'Completion'],[/^Unit$/,'Unit (month, hour, job)']];
+function svcWords(root){if(!root) return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const ns=[];while(w.nextNode()) ns.push(w.currentNode);
+  ns.forEach(n=>{let t=n.nodeValue;const tt=t.trim();if(!tt) return;for(const [rx,to] of SVC_WORDS){if(rx.source.startsWith('^')){if(rx.test(tt)){t=t.replace(tt,to);break;}}else t=t.replace(rx,to);}if(t!==n.nodeValue) n.nodeValue=t;});
+  root.querySelectorAll('input[placeholder="Description"]').forEach(i=>i.placeholder='Describe the service you need from the supplier');}
+function svcPoForm(el){const F=S._poF;if(!F) return;
+  // no warehouse, no stock item column: services are described in words
+  el.querySelectorAll('label.field').forEach(l=>{if(/Warehouse/.test(l.firstChild&&l.firstChild.textContent||'')) l.hidden=true;});
+  el.querySelectorAll('table.lines').forEach(t=>{const th=t.tHead&&t.tHead.rows[0]&&t.tHead.rows[0].cells[0];if(th&&/^(Item|Service)$/.test(th.textContent.trim())&&t.querySelector('tbody select')){th.style.display='none';[...t.tBodies].forEach(b=>[...b.rows].forEach(r=>{if(r.cells[0]) r.cells[0].style.display='none';}));}});
+  (F.lines||[]).forEach(l=>{l.item_id='';});recBox(el);}
+function recBox(el){const F=S._poF;if(!F) return;
+  if(!el.querySelector('.porec')){const R=F.recurring||{};const on=h('input',{type:'checkbox',checked:!!R.on,'aria-label':'Repeat every month'});const until=h('input',{type:'date',value:R.until||'','aria-label':'Repeat until'});const day=h('input',{type:'number',min:1,max:28,value:R.day||+String(F.date||today()).slice(8,10)||1,style:'width:5rem','aria-label':'Day of the month'});
+    const sync=()=>{F.recurring=on.checked?{on:true,every:'month',day:Math.min(28,Math.max(1,+day.value||1)),until:until.value||null}:null;opt.hidden=!on.checked;};const opt=h('span',{class:'row',style:'gap:.6rem;align-items:center'},h('label',{class:'mini'},'Raise on day ',day),h('label',{class:'mini'},'Until (optional) ',until));
+    on.onchange=sync;day.oninput=sync;until.onchange=sync;sync();
+    const box=h('div',{class:'porec card'},h('label',{class:'sel'},on,h('span',{},h('b',{},'Repeat every month'),h('span',{class:'mini mut',style:'display:block'},'For monthly services (cleaning, security, IT support, retainers). A new order is raised each month for approval.'))),opt);
+    const lines=el.querySelector('table.lines');const anchor=lines&&lines.closest('.tablewrap');if(anchor) anchor.before(box);}}
+// monthly recurring orders: raise the next one when it is due
+const addMonth=(d,day)=>{const y=+d.slice(0,4),m=+d.slice(5,7);const ny=m===12?y+1:y,nm=m===12?1:m+1;return `${ny}-${String(nm).padStart(2,'0')}-${String(Math.min(28,day||+d.slice(8,10)||1)).padStart(2,'0')}`;};
+function poRecurring(){return (S.raw.porders||[]).filter(p=>p.entity===S.entity&&p.recurring&&p.recurring.on&&p.status!=='cancelled');}
+function recNext(p){const kids=(S.raw.porders||[]).filter(x=>x.recurring_from===p.id&&x.status!=='cancelled').map(x=>x.date).sort();const last=kids.length?kids[kids.length-1]:p.date;return addMonth(last,p.recurring.day);}
+function recurringCard(){const L=poRecurring();if(!L.length) return null;const D=S._poD;const tb=h('tbody');
+  L.forEach(p=>{const nx=recNext(p);const ended=p.recurring.until&&nx>p.recurring.until;const due=!ended&&nx<=today();const net=(p.lines||[]).reduce((s,l)=>s+(+l.qty||0)*(+l.price||0),0);
+    const raise=h('button',{class:'btn sm '+(due?'primary':'ghost'),type:'button',disabled:ended||!S.canWrite},due?'Raise this month’s order':'Raise early');
+    raise.onclick=()=>{if(!D) return;D.edit={supplier:p.supplier,date:nx>today()?today():nx,expected:addDays(nx,7),wh:p.wh,ref:p.ref||'',notes:p.notes||'',recurring_from:p.id,lines:(p.lines||[]).map(l=>({item_id:'',desc:l.desc,qty:l.qty,price:l.price,vat:l.vat,account:l.account||''}))};try{(S._poRefresh||(()=>{}))();window.scrollTo({top:0,behavior:'smooth'});}catch(e){}};
+    const stop=h('button',{class:'btn ghost sm danger',type:'button',disabled:!S.canWrite},'Stop');stop.onclick=async()=>{stop.disabled=true;try{await db.doc('porders/'+p.id).update({recurring:{...p.recurring,on:false,stopped_by:S.me,stopped_at:nowISO()}});p.recurring.on=false;tr.remove();}catch(e){stop.disabled=false;}};
+    const tr=h('tr',{},h('td',{},h('b',{style:'font-weight:500'},p.supplier),h('div',{class:'mini mut'},(p.lines||[]).map(l=>l.desc).filter(Boolean).join('; ').slice(0,90))),h('td',{class:'num'},money2(net)),h('td',{},ended?'Ended':fmtDate(nx),due?h('div',{},pill('Due','warn')):null),h('td',{class:'mini'},p.recurring.until?'Until '+fmtDate(p.recurring.until):'No end date'),h('td',{class:'acts'},h('div',{class:'row'},raise,stop)));tb.append(tr);});
+  return h('div',{class:'card stack porecur'},h('div',{class:'cardhead'},h('div',{},h('h3',{},'Monthly recurring orders'),h('p',{class:'note'},'Services ordered every month. Each month’s order is raised for approval like any other.'))),h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},h('th',{},'Supplier and services'),h('th',{class:'num'},'Monthly amount (excl. VAT)'),h('th',{},'Next order'),h('th',{},'Ends'),h('th',{class:'acts'},''))),tb)));}
+{const _b=BUILD.porders;BUILD.porders=(...a)=>{const r=_b(...a);const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);S._poRefresh=()=>r.refresh();try{const el=r.el;
+      if(svcCo()){if(S._poF&&el.querySelector('table.lines tbody input[type=text]')) svcPoForm(el);svcWords(el);}
+      else if(S._poF&&el.querySelector('table.lines tbody input[type=text]')) recBox(el);
+      if(!el.querySelector('table.lines tbody input[type=text]')){const old=el.querySelector('.porecur');const c=recurringCard();if(old) old.remove();if(c){const k=el.querySelector('.kpis');if(k) k.after(c);else el.append(c);}}}catch(e){console.warn(e);}return y;};return r;};}
+// the rest of procurement speaks services too
+for(const k of ['rfqs','purchases','suppliers','payables','pqueue']){const _b=BUILD[k];if(!_b) continue;BUILD[k]=(...a)=>{const r=_b(...a);const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);try{if(svcCo()) svcWords(r.el);}catch(e){}return y;};return r;};}
+{const _ra=refreshHeader;refreshHeader=function(...a){const y=_ra.apply(this,a);try{if(svcCo()){const A=APPS.find(x=>x.k==='purchasing');if(A&&!A._svc){A._svc=A.name;}if(A) A.name='Procurement';}else{const A=APPS.find(x=>x.k==='purchasing');if(A&&A._svc) A.name=A._svc;}}catch(e){}return y;};}
 
 
 // test hook (local development only)
