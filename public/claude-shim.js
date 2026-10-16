@@ -403,13 +403,28 @@ ${info.can_create_org && info.mode !== 'single' ? '<button class="sw" type="butt
     }
     return { text, truncated: true };
   }
+  function salvageJson(t) {
+    const st = []; let inS = false, esc = false, cut = null;
+    for (let i = 0; i < t.length; i++) {
+      const ch = t[i];
+      if (inS) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inS = false; continue; }
+      if (ch === '"') inS = true;
+      else if (ch === '{' || ch === '[') st.push(ch);
+      else if (ch === '}' || ch === ']') { st.pop(); if (st.length && st[st.length - 1] === '[' && (!cut || st.length <= cut.stack.length)) cut = { pos: i + 1, stack: st.slice() }; if (!st.length) return undefined; }
+    }
+    if (!cut) return undefined;
+    const close = cut.stack.slice().reverse().map((c) => (c === '{' ? '}' : ']')).join('');
+    try { return JSON.parse(t.slice(0, cut.pos) + close); } catch (e) { return undefined; }
+  }
   sample.json = async (input, opts) => {
     const r = await sample(input, opts);
     let t = r.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
     try { return JSON.parse(t); } catch (e) {}
     const a = t.search(/[\[{]/); const b = Math.max(t.lastIndexOf('}'), t.lastIndexOf(']'));
     if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
-    const err = new Error('The AI answer was not valid JSON.'); err.code = 'bad_json'; err.text = r.text; throw err;
+    // an answer cut off part-way: keep every complete item and close the brackets
+    if (a >= 0) { const fixed = salvageJson(t.slice(a)); if (fixed !== undefined) { if (fixed && typeof fixed === 'object') try { Object.defineProperty(fixed, '_truncated', { value: true }); } catch (e) {} return fixed; } }
+    const err = new Error(r.truncated ? 'The AI answer was too long and was cut off. Try a shorter file or period.' : 'The AI answer was not valid JSON. Try again.'); err.code = 'bad_json'; err.text = r.text; throw err;
   };
   sample.limits = async () => ({ images: { maxCount: 10 } });
 

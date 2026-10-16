@@ -8,7 +8,7 @@ const MODELS = {
   default: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
   complex: process.env.ANTHROPIC_MODEL_COMPLEX || 'claude-opus-5-5',
 };
-const MAX_TOKENS = 8192;            // per reply
+const MAX_TOKENS = 16000;           // per reply (long statements are also read in parts)
 const MAX_REQUEST_CHARS = 2_500_000; // about 2.5 MB of conversation and images per call
 const MAX_IMAGES = 20;
 

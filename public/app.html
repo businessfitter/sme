@@ -2147,7 +2147,7 @@ async function processStatement(file,bank,bankName,logEl,resEl,signal){const st=
   try{src=await readStatement(file);s1.done(`Read ${fileName}`+(src.text?` (${nf0.format(src.text.length)} characters)`:` (${src.images.length} page image${src.images.length>1?'s':''})`));}catch(e){s1.err(e.message);return;}
   if(src.note) st.add(src.note,'step');
   const s2=st.add('Bank agent is reading the transactions…');let res;
-  try{res=await sample.json(bankPrompt(src,fileName,bank,bankName),{signal,images:src.images&&src.images.length?src.images:undefined,modelTier:'default',onText:({text})=>s2.set(`Bank agent is writing entries… ${nf0.format(text.length)} characters so far`)});}
+  try{res=await bankAgentRead(src,fileName,bank,bankName,{signal,onPart:(d,n)=>s2.set(`Bank agent is reading the statement in ${n} parts… ${d} of ${n} done`)});}
   catch(e){s2.err(sampleErr(e));return;}
   if(src.std) res=stdToRes(src.std,res);const raw=Array.isArray(res&&res.lines)?res.lines:[];
   const lines=raw.map(l=>({date:String(l.date||'').slice(0,10),description:String(l.description||'').slice(0,200),amount:r2(l.amount),balance:l.balance==null||l.balance===''?null:r2(l.balance),counterparty:l.counterparty?String(l.counterparty).slice(0,120):null,entry:l.entry||{}}))
@@ -11176,6 +11176,27 @@ function perAll(){document.querySelectorAll('.perbar').forEach(b=>b._sync&&b._sy
 {let tm=null;const run=()=>{tm=null;perApply(document.querySelector('#main > section:not([hidden])'));};
   const mo=new MutationObserver(ms=>{if(ms.every(m=>[...m.addedNodes,...m.removedNodes].every(n=>n.nodeType!==1||(n.classList&&n.classList.contains('perbar'))))) return;if(!tm) tm=setTimeout(run,120);});
   const start=()=>{const m=document.getElementById('main');if(m) mo.observe(m,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});else setTimeout(start,300);};start();}
+
+// ===== Bank agent: read long statements in parts so the answer is never cut off =====
+const BANK_PART_ROWS=40;
+async function bankAgentRead(src,fileName,bank,bankName,{signal,onPart}={}){
+  const ask=(s,extra)=>sample.json(bankPrompt(s,fileName,bank,bankName)+(extra||''),{signal,images:s.images&&s.images.length?s.images:undefined,modelTier:'default'});
+  let parts=[];
+  if(src.std||(!src.text&&!(src.images&&src.images.length>2))) return ask(src);
+  if(src.text){const L=src.text.split('\n');const rows=L.filter(x=>x.trim());if(rows.length<=BANK_PART_ROWS+8){const r=await ask(src);if(!r||!r._truncated) return r;}
+    const head=rows.slice(0,6).join('\n');let cur=[];const chunks=[];
+    for(const x of L){if(!x.trim()) continue;cur.push(x);if(cur.length>=BANK_PART_ROWS){chunks.push(cur.join('\n'));cur=[];}}if(cur.length) chunks.push(cur.join('\n'));
+    parts=chunks.map((c,i)=>({s:{...src,text:(i?`Top of the statement (context only; these lines are NOT part of this section, do not return them):\n${head}\n\n`:'')+`Section ${i+1} of ${chunks.length}:\n${c}`},
+      extra:`\n\nIMPORTANT: The statement is long, so you are reading section ${i+1} of ${chunks.length}. Return only the transactions in section ${i+1}. Give opening_balance only if this section shows the opening balance, and closing_balance only if it shows the closing balance; otherwise null.`}));}
+  else{const im=src.images;for(let i=0;i<im.length;i+=2) parts.push({s:{...src,text:'',images:im.slice(i,i+2)},extra:`\n\nIMPORTANT: These are pages ${i+1}${im[i+1]?'–'+(i+2):''} of ${im.length}. Return only the transactions on these pages. Give opening_balance only if these pages show it, and closing_balance only if they show it; otherwise null.`});}
+  const out=new Array(parts.length);let done=0,next=0;
+  const worker=async()=>{while(next<parts.length){const i=next++;out[i]=await ask(parts[i].s,parts[i].extra);done++;onPart&&onPart(done,parts.length);}};
+  await Promise.all([worker(),worker(),worker()].slice(0,Math.min(3,parts.length)));
+  const first=k=>{for(const r of out){if(r&&r[k]!=null&&r[k]!=='') return r[k];}return null;};const last=k=>{for(let i=out.length-1;i>=0;i--){const r=out[i];if(r&&r[k]!=null&&r[k]!=='') return r[k];}return null;};
+  const res={bank_name:first('bank_name'),account_hint:first('account_hint'),currency:first('currency'),opening_balance:first('opening_balance'),closing_balance:last('closing_balance'),period_start:first('period_start'),period_end:last('period_end'),lines:[]};
+  out.forEach(r=>{if(r&&Array.isArray(r.lines)) res.lines.push(...r.lines);});
+  const ds=res.lines.map(l=>String(l.date||'')).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort();if(ds.length){res.period_start=res.period_start||ds[0];res.period_end=res.period_end||ds[ds.length-1];}
+  return res;}
 
 
 // test hook (local development only)
