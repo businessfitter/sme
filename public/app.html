@@ -4104,7 +4104,7 @@ async function invoicePdf(inv,B,co,paid,balance,pay){await loadScript(JSPDF_URL,
   cl.forEach((t,k)=>d.text(d.splitTextToSize(String(t),220)[0],W-M,(modern?60:62)+k*(fs+3),{align:'right'}));
   y=Math.max(modern?110:84+cl.length*(fs+3),logo?80:0)+14;d.setTextColor(20,24,31);
   d.setFont(F,'bold');d.text(cn?'Credit to':'Bill to',M,y);d.text('Details',W/2+20,y);d.setFont(F,'normal');
-  const L=[inv.partner,...partyAddrLines(inv),inv.trn?'TRN '+inv.trn:''].filter(Boolean),R=[['Number',inv.number],['Date',fmtDate(inv.date)],cn?['Against',inv.reverses_number||'']:[inv.doc_type==='quote'?'Valid until':'Due',fmtDate(inv.due)],['Currency',cur],...(!cn&&paidOn(inv)?[['Paid on',fmtDate(paidOn(inv))]]:[])];
+  const L=[inv.partner,...partyAddrLines(inv),inv.trn?'TRN '+inv.trn:''].filter(Boolean),R=[['Number',inv.number],['Date',fmtDate(inv.date)],cn?['Against',inv.reverses_number||'']:[inv.doc_type==='quote'?'Valid until':'Due',fmtDate(inv.due)],['Currency',cur]];
   L.forEach((t,k)=>d.text(String(t),M,y+14+k*(fs+3)));R.forEach(([a,b],k)=>{d.setTextColor(100,108,120);d.text(a,W/2+20,y+14+k*(fs+3));d.setTextColor(20,24,31);d.text(String(b||''),W-M,y+14+k*(fs+3),{align:'right'});});
   y+=14+Math.max(L.length,R.length)*(fs+3)+16;
   const cols=[[M,'Description','left'],[W-M-250,'Qty','right'],[W-M-170,'Unit price','right'],[W-M-95,'VAT %','right'],[W-M,'Net','right']];
@@ -4128,7 +4128,7 @@ async function staffInvoicePdf(i){const B=brandFor(i.entity);const co=companyCar
 function printInvoiceHtml(i){const B=brandFor(i.entity),co=companyCard(S.ent[i.entity]||{}),c=B.color;const box=h('div',{id:'printzone'});const cn=i.doc_type==='credit_note';const bal=invBalDoc(i);
   box.append(h('div',{style:`border-top:6px solid ${c};padding-top:12px;font-family:${B.font==='times'?'Georgia,serif':B.font==='courier'?'monospace':'inherit'}`},
     h('div',{style:'display:flex;justify-content:space-between;gap:1rem'},h('div',{},B.logo?h('img',{src:B.logo.url,alt:'',style:'height:48px'}):null),h('div',{style:'text-align:right'},h('h2',{style:'margin:0'},cn?'Credit note':(co.trn?'Tax invoice':'Invoice')),h('div',{},co.name),h('div',{},co.address||''),co.trn?h('div',{},'TRN '+co.trn):null)),
-    h('p',{},h('b',{},(cn?'Credit to: ':'Bill to: ')+i.partner),...partyAddrLines(i).flatMap(x=>[h('br'),x]),i.trn?h('span',{},h('br'),'TRN '+i.trn):'',h('br'),`${i.number} · ${fmtDate(i.date)}${cn?'':' · due '+fmtDate(i.due)} · ${i.currency}${!cn&&paidOn(i)?' · paid '+fmtDate(paidOn(i)):''}`),
+    h('p',{},h('b',{},(cn?'Credit to: ':'Bill to: ')+i.partner),...partyAddrLines(i).flatMap(x=>[h('br'),x]),i.trn?h('span',{},h('br'),'TRN '+i.trn):'',h('br'),`${i.number} · ${fmtDate(i.date)}${cn?'':' · due '+fmtDate(i.due)} · ${i.currency}`),
     h('table',{style:'width:100%;border-collapse:collapse'},h('thead',{},h('tr',{style:`background:${c};color:#fff`},['Description','Qty','Unit price','VAT %','Net'].map((t,k)=>h('th',{style:`padding:4px;text-align:${k?'right':'left'}`},t)))),
       h('tbody',{},(i.lines||[]).map(l=>h('tr',{},h('td',{style:'padding:4px'},l.desc||''),h('td',{style:'text-align:right'},String(l.qty)),h('td',{style:'text-align:right'},money2(+l.price||0)),h('td',{style:'text-align:right'},String(l.vat||0)),h('td',{style:'text-align:right'},money2(r2((+l.qty||0)*(+l.price||0)))))))),
     h('p',{style:'text-align:right'},`Net ${money2(Math.abs(i.net))} · VAT ${money2(Math.abs(i.vat))} · `,h('b',{},`Total ${i.currency} ${money2(Math.abs(i.total))}`),!cn&&bal<Math.abs(i.total)-0.01?h('div',{},`Balance due ${money2(bal)}`):null),
