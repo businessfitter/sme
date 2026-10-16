@@ -42,7 +42,7 @@
   const HOST = (/^(localhost|127\.)/.test(location.hostname) && new URLSearchParams(location.search).get('__host')) || location.hostname;
   const PLATFORM_HOST = /^(localhost|127\.|.*\.vercel\.app$|(www\.)?orzio\.(ai|com)$)/.test(HOST);
   const hostOrgP = PLATFORM_HOST ? Promise.resolve(null) : Promise.race([fetch('/api/domain?host=' + encodeURIComponent(HOST)).then((r) => (r.ok ? r.json() : null)).catch(() => null), new Promise((r) => setTimeout(() => r(null), 2500))]);
-  hostOrgP.then((d) => { if (!d || !d.org_id) return; window.__hostOrg = d; document.title = d.name + ' · Orzio'; const paint = () => { const s = document.getElementById('sb-s'); if (s && !s.dataset.host) { s.dataset.host = '1'; s.textContent = 'Sign in to ' + d.name + '.'; } }; paint(); setTimeout(paint, 400); setTimeout(paint, 1500); });
+  hostOrgP.then((d) => { if (!d || !d.org_id) return; window.__hostOrg = d; document.title = d.name + ' · Sign in'; });
 
   // ---------- shared screen styles (sign-in, company setup) ----------
   const SCREEN_CSS = `
@@ -62,9 +62,46 @@
   const legalLine = (verb) => (cfg.termsUrl || cfg.privacyUrl)
     ? `<div class="legal">By ${verb} you agree to the ${cfg.termsUrl ? `<a href="${esc(cfg.termsUrl)}" target="_blank" rel="noopener">Terms of Service</a>` : ''}${cfg.termsUrl && cfg.privacyUrl ? ' and ' : ''}${cfg.privacyUrl ? `<a href="${esc(cfg.privacyUrl)}" target="_blank" rel="noopener">Privacy Policy</a>` : ''}.</div>`
     : '';
+  // a company's own address (<name>.orzio.ai): split sign-in page in the company's colours with its logo and name
+  const HOST_CSS = `
+#sb-auth.hosted{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);place-items:stretch;padding:0;background:#F6F7F9;font-family:Geist,Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+#sb-auth.hosted .hs-side{position:relative;background:var(--hb);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(1.5rem,5vw,3.5rem);overflow:hidden}
+#sb-auth.hosted .hs-side::after{content:"";position:absolute;right:-18%;bottom:-30%;width:70%;aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.12);box-shadow:0 0 0 60px rgba(255,255,255,.035),0 0 0 140px rgba(255,255,255,.025);pointer-events:none}
+#sb-auth.hosted .co{position:relative;z-index:1;display:flex;flex-direction:column;gap:1.4rem;margin:auto 0}
+#sb-auth.hosted .logo{width:5.5rem;height:5.5rem;border-radius:20px;background:#fff;display:grid;place-items:center;overflow:hidden;box-shadow:0 18px 40px -18px rgba(0,0,0,.45)}
+#sb-auth.hosted .logo img{max-width:80%;max-height:80%;object-fit:contain;display:block}
+#sb-auth.hosted .logo span{font-size:1.9rem;font-weight:600;color:var(--hb);letter-spacing:-.02em}
+#sb-auth.hosted .co h2{font-size:clamp(1.9rem,3.6vw,2.9rem);line-height:1.08;letter-spacing:-.025em;font-weight:600;margin:0;max-width:16ch;color:#fff}
+#sb-auth.hosted .co p{margin:0;color:rgba(255,255,255,.78);font-size:1rem;line-height:1.5;max-width:34ch}
+#sb-auth.hosted .pw{position:relative;z-index:1;display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:rgba(255,255,255,.7)}
+#sb-auth.hosted .pw img{width:1.1rem;height:1.1rem;opacity:.9}
+#sb-auth.hosted .hs-main{display:grid;place-items:center;padding:clamp(1.5rem,5vw,3rem);background:#fff}
+#sb-auth.hosted .c{box-shadow:none;border-radius:0;padding:0;width:min(24rem,100%)}
+#sb-auth.hosted h1{font-size:1.65rem;letter-spacing:-.02em;font-weight:600;margin:0 0 .35rem}
+#sb-auth.hosted button:not(.alt):not(.sw){background:var(--hb)}#sb-auth.hosted .sw,#sb-auth.hosted .legal a{color:var(--hb)}
+#sb-auth.hosted input:not([type=checkbox]):focus{outline:2px solid var(--hb);outline-offset:1px;border-color:transparent}
+#sb-auth.hosted .c>.brand{display:none}
+#sb-auth.hosted .mlogo{display:none}
+@media (max-width:820px){#sb-auth.hosted{grid-template-columns:1fr;grid-template-rows:auto 1fr}#sb-auth.hosted .hs-side{padding:1.4rem 1.25rem}#sb-auth.hosted .co{flex-direction:row;align-items:center;gap:1rem;margin:0}#sb-auth.hosted .logo{width:3.4rem;height:3.4rem;border-radius:14px;flex:none}#sb-auth.hosted .logo span{font-size:1.2rem}#sb-auth.hosted .co h2{font-size:1.35rem}#sb-auth.hosted .co p,#sb-auth.hosted .pw{display:none}#sb-auth.hosted .hs-side::after{display:none}#sb-auth.hosted .hs-main{place-items:start center;padding:1.75rem 1.25rem}}`;
+  // brand colour, darkened until white text reads clearly on it
+  function hostShade(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim()); let [r, g, b] = m ? [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)) : [18, 32, 58];
+    const lum = () => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+    for (let k = 0; k < 20 && 1.05 / (lum() + 0.05) < 5.2; k++) { r = Math.round(r * 0.88); g = Math.round(g * 0.88); b = Math.round(b * 0.88); }
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+  const initials = (n) => String(n || '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '·';
   function screen(html) {
     const wrap = document.createElement('div');
     wrap.id = 'sb-auth';
+    const ho = window.__hostOrg;
+    if (ho && ho.org_id) {
+      wrap.className = 'hosted'; wrap.style.setProperty('--hb', hostShade(ho.color));
+      const logo = ho.has_logo ? `<img src="/api/domain?host=${encodeURIComponent(HOST)}&logo=1" alt="${esc(ho.name)} logo" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:${esc(JSON.stringify(initials(ho.name)))}}))">` : `<span>${esc(initials(ho.name))}</span>`;
+      wrap.innerHTML = `<style>${SCREEN_CSS}${HOST_CSS}</style><div class="hs-side"><div class="co"><div class="logo">${logo}</div><div><h2>${esc(ho.name)}</h2></div><p>Secure sign-in for the ${esc(ho.name)} team.</p></div><div class="pw"><img src="/brand/app-icon.svg" alt="">Powered by ${esc(APP)}</div></div><div class="hs-main"><div class="c">${html}</div></div>`;
+      document.body.append(wrap);
+      return wrap;
+    }
     wrap.innerHTML = `<style>${SCREEN_CSS}</style><div class="c"><div class="brand"><img src="/brand/app-icon.svg" alt="">${esc(APP)}</div>${html}</div>`;
     document.body.append(wrap);
     return wrap;
@@ -87,13 +124,15 @@
     const setMode = (m) => {
       mode = m;
       $('sb-t').textContent = mode === 'in' ? 'Sign in' : 'Create your account';
-      $('sb-s').textContent = mode === 'in' ? 'Use your work email.' : 'Start with a free trial for your business, or join a company that invited you.';
+      const hn = window.__hostOrg && window.__hostOrg.name;
+      $('sb-t').textContent = mode === 'in' ? (hn ? 'Welcome back' : 'Sign in') : (hn ? 'Join ' + hn : 'Create your account');
+      $('sb-s').textContent = mode === 'in' ? (hn ? 'Sign in with your ' + hn + ' work email.' : 'Use your work email.') : (hn ? 'Use the email address your invitation was sent to.' : 'Start with a free trial for your business, or join a company that invited you.');
       $('sb-go').textContent = mode === 'in' ? 'Sign in' : 'Create account';
-      $('sb-sw').textContent = mode === 'in' ? 'New here? Create an account' : 'Already have an account? Sign in';
+      $('sb-sw').textContent = mode === 'in' ? (hn ? 'Invited to ' + hn + '? Create your account' : 'New here? Create an account') : 'Already have an account? Sign in';
       $('sb-p').autocomplete = mode === 'in' ? 'current-password' : 'new-password';
       $('sb-nm').hidden = mode === 'in'; $('sb-lg').hidden = mode === 'in'; $('sb-fp').hidden = mode !== 'in'; msg('');
     };
-    if (startUp) setMode('up');
+    setMode(startUp ? 'up' : 'in');
     $('sb-sw').onclick = () => setMode(mode === 'in' ? 'up' : 'in');
     $('sb-f').onsubmit = async (e) => {
       e.preventDefault(); msg(''); $('sb-go').disabled = true;
@@ -185,7 +224,7 @@ ${info.can_create_org && info.mode !== 'single' ? '<button class="sw" type="butt
   const ready = (async () => {
     const { data } = await sb.auth.getSession();
     session = data.session; setCookie(session);
-    if (!session) { await whenDom(); authScreen(); await new Promise(() => {}); }
+    if (!session) { await whenDom(); const hb = await hostOrgP; if (hb && hb.org_id) window.__hostOrg = hb; authScreen(); await new Promise(() => {}); }
     if (/[?&]reset\b/.test(location.search)) { await whenDom(); resetScreen(); await new Promise(() => {}); }
     const uid = session.user.id;
     const [i, o, p] = await Promise.all([

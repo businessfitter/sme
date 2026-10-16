@@ -69,20 +69,44 @@ module.exports = async (req, res) => {
   }).then(() => {}, () => {});
 
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify(payload),
-    });
-    const j = await r.json().catch(() => ({}));
+    let r, j;
+    // overloaded or a passing server error: try again a couple of times before giving up
+    for (let attempt = 0; attempt < 3; attempt++) {
+      r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify(payload),
+      });
+      j = await r.json().catch(() => ({}));
+      if (r.ok || ![500, 502, 503, 504, 529].includes(r.status)) break;
+      await new Promise((ok) => setTimeout(ok, 1500 * (attempt + 1)));
+    }
     await finish(j, r.ok);
-    if (!r.ok) return res.status(r.status === 429 ? 429 : 502).json({ error: { message: r.status === 429 ? 'The AI service is busy. Try again in a moment.' : 'The AI service returned an error. Try again.' } });
+    if (!r.ok) {
+      const why = String((j && j.error && j.error.message) || '');
+      console.error('[ai] anthropic', r.status, payload.model, why.slice(0, 500));
+      return res.status(r.status === 429 ? 429 : 502).json({ error: { message: aiReason(r.status, why), status: r.status } });
+    }
     return res.status(200).json({ content: j.content, stop_reason: j.stop_reason, usage: j.usage });
   } catch (e) {
     await finish(null, false);
     return res.status(502).json({ error: { message: 'Could not reach the AI service.' } });
   }
 };
+
+// the AI provider's error in words the person (or the platform admin) can act on
+function aiReason(status, why) {
+  const w = why.toLowerCase();
+  if (/credit balance|billing|purchase credits/.test(w)) return 'The AI service has run out of credit. The platform administrator needs to top up the Anthropic account (Plans & Billing).';
+  if (status === 401 || /api key|authentication|x-api-key/.test(w)) return 'The AI key on the server is not valid. The platform administrator needs to check ANTHROPIC_API_KEY in Vercel.';
+  if (status === 403) return 'The AI key on the server is not allowed to do this. The platform administrator needs to check the Anthropic account.';
+  if (status === 404 || /model/.test(w) && /not.?found|does not exist|invalid/.test(w)) return 'The AI model set on the server is not available. The platform administrator needs to check the ANTHROPIC_MODEL settings in Vercel.';
+  if (status === 429) return 'The AI service is busy. Try again in a moment.';
+  if (status === 529 || status >= 500) return 'The AI service is overloaded right now. Try again in a minute.';
+  if (/image|pdf|document/.test(w) && /(too large|exceed|could not process|invalid)/.test(w)) return 'The AI could not read this file. Try a smaller file, fewer pages, or export the statement as CSV or Excel.';
+  if (/prompt is too long|too many tokens|context/.test(w)) return 'This file is too long for one read. Upload a shorter period (for example one month) or a CSV/Excel export.';
+  return 'The AI service could not process this request' + (why ? ': ' + why.slice(0, 200) : '.');
+}
 
 async function packRun(req, res, who) {
   const { data: adm } = await who.sb.from('platform_admins').select('user_id').eq('user_id', who.user.id).maybeSingle();

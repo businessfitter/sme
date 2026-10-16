@@ -25,6 +25,30 @@ function dnsFor(domain, vercelDomain) {
   (vercelDomain && vercelDomain.verification || []).forEach((v) => recs.push({ type: v.type, name: v.domain, value: v.value, why: 'Proves you own the domain' }));
   return recs;
 }
+// the sign-in page brand for a workspace address: one company -> that company; several -> the workspace (its logo, else the first company logo)
+async function brandOf(org, base) {
+  const out = { name: base.name, color: base.color, logo: null, count: 0 };
+  try {
+    const db = admin();
+    const [{ data: o }, { data: rows }] = await Promise.all([
+      db.from('orgs').select('name').eq('id', org).maybeSingle(),
+      db.from('docs').select('path,data').eq('org_id', org).or('path.eq.setup/main,path.like.setup/main/entities/%'),
+    ]);
+    const idOf = (l) => (l && typeof l === 'object' ? l.id : null);
+    const ws = (rows || []).find((r) => r.path === 'setup/main');
+    const ents = (rows || []).filter((r) => /^setup\/main\/entities\/[^/]+$/.test(r.path) && r.data && !/^(deleted|closed|archived)$/.test(String(r.data.status || '')))
+      .map((r) => ({ name: r.data.name, logo: idOf(r.data.brand && r.data.brand.logo), color: r.data.brand && r.data.brand.color }));
+    out.count = ents.length;
+    if (ents.length === 1) { out.name = ents[0].name || out.name; out.logo = ents[0].logo; out.color = ents[0].color || out.color; }
+    else {
+      if (o && o.name) out.name = o.name;
+      out.logo = idOf(ws && ws.data && ws.data.logo) || (ents.find((e) => e.logo) || {}).logo || null;
+      if (!out.color) out.color = (ents.find((e) => e.color) || {}).color || null;
+    }
+    if (out.logo && !/^[A-Za-z0-9_-]{6,64}$/.test(out.logo)) out.logo = null;
+  } catch (e) { /* fall back to the lookup */ }
+  return out;
+}
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
@@ -32,7 +56,16 @@ module.exports = async (req, res) => {
       const host = String((req.query && req.query.host) || '').toLowerCase();
       if (!DOMAIN.test(host)) return res.status(404).json({});
       const { data } = await admin().rpc('domain_lookup', { p_host: host });
-      return data ? res.status(200).json(data) : res.status(404).json({});
+      if (!data || !data.org_id) return res.status(404).json({});
+      const b = await brandOf(data.org_id, data);
+      if (req.query.logo) {
+        if (!b.logo) return res.status(404).send('No logo');
+        const { data: su } = await admin().storage.from('assets').createSignedUrl(data.org_id + '/' + b.logo, 3600);
+        if (!su || !su.signedUrl) return res.status(404).send('No logo');
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        res.writeHead(302, { Location: su.signedUrl }); return res.end();
+      }
+      return res.status(200).json({ org_id: data.org_id, name: b.name, color: b.color || null, has_logo: !!b.logo, companies: b.count });
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'Not allowed' });
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } } b = b || {};
