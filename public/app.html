@@ -1497,6 +1497,9 @@ table.revtab td.revtype{position:relative}
 .mmcard.wide{width:min(56rem,100%)}.mmhead{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.2rem;border-bottom:1px solid var(--line,#E4E7EE)}.mmhead h3{margin:0;font-size:1.02rem}
 .mmbody{padding:1rem 1.2rem}
 @media (prefers-reduced-motion:reduce){#revtoast .rt,.icob{transition:none}}
+.logincred{border:1px solid #ABEFC6;background:#F6FEF9;border-radius:12px;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.6rem}
+.logincred .lch{display:flex;flex-direction:column;gap:.15rem}
+.logincred dl{display:grid;grid-template-columns:max-content 1fr;gap:.3rem 1rem;margin:0}.logincred dt{color:var(--ink2,#5B6472);font-size:.85rem}.logincred dd{margin:0;font-weight:500;overflow-wrap:anywhere}
 
 </style>
 
@@ -5474,7 +5477,7 @@ function permMatrix(perms,editable,onChange){const t=h('table',{class:'lines per
   t.append(h('thead',{},head),body);return h('div',{class:'tablewrap'},t);}
 function companiesLabel(x){const staff=STAFF.concat(['custom','admin']).includes(x.role);if(staff){const e=Array.isArray(x.entities)&&x.entities.length?x.entities:null;if(!e) return 'All companies';return e.map(id=>(S.ent[id]||{}).name||id).join(', ');}return (S.ent[x.entity]||{}).name||'All companies';}
 function companyPicker(sel,onChange,editable){const ids=Object.keys(S.ent).sort((a,b)=>(S.ent[a].name||'')<(S.ent[b].name||'')?-1:1);const all=!sel;const box=h('fieldset',{class:'compset'},h('legend',{},'Companies this person can access'),h('label',{class:'sel'},h('input',{type:'checkbox',checked:all,disabled:!editable,onchange:e=>onChange(e.target.checked?null:ids.slice(0,1))}),h('span',{},h('b',{},'All companies'),' — every company in the group, including ones added later')),h('div',{class:'compgrid'},ids.map(id=>h('label',{class:'compchip'+(all||sel.includes(id)?' on':'')},h('input',{type:'checkbox',checked:all||sel.includes(id),disabled:!editable||all,onchange:e=>{const st=new Set(sel||[]);e.target.checked?st.add(id):st.delete(id);onChange([...st]);}}),h('span',{},S.ent[id].name),h('small',{},(COUNTRIES[S.ent[id].country]||{}).name||'')))),h('p',{class:'note'},'Enforced by the database: records of other companies never reach this person.'));return box;}
-SET.access=()=>{const el=h('div',{class:'stack'});const later=lazyRefresh(el,()=>refresh());const F={pick:null,pickName:'',role:'accountant',entity:'',entities:(S.entity&&S.entity!=='all'&&Object.keys(S.ent||{}).length>1?[S.entity]:null),partner:'',employee:'',perms:JSON.parse(JSON.stringify(ACCESS_PRESETS.accountant))};const open={};
+SET.access=()=>{const el=h('div',{class:'stack'});const later=lazyRefresh(el,()=>refresh());const F={pick:null,pickName:'',role:'accountant',entity:'',entities:(S.entity&&S.entity!=='all'&&Object.keys(S.ent||{}).length>1?[S.entity]:null),partner:'',employee:'',perms:JSON.parse(JSON.stringify(ACCESS_PRESETS.accountant))};const open={};S._accF=F;
   const q=h('input',{type:'search',placeholder:'Search people by name',style:'flex:1;min-width:14rem'});const res=h('div',{class:'row'});const form=h('div',{class:'stack'});const list=h('div',{class:'stack'});const msg=h('p',{class:'note'});const review=h('div',{class:'stack'});
   let tmo;q.oninput=()=>{clearTimeout(tmo);tmo=setTimeout(async()=>{res.textContent='';if(!user||!user.search){res.append(h('p',{class:'note'},'People search isn’t available in this view.'));return;}
     try{const hits=await user.search(q.value.trim());(hits||[]).slice(0,8).forEach(p=>res.append(h('button',{class:'btn sm'+(F.pick===p.id?' primary':''),type:'button',onclick:ev=>{F.pick=p.id;F.pickName=p.name||'Someone';S.names[p.id]=F.pickName;[...res.children].forEach(c=>c.classList.remove('primary'));ev.currentTarget.classList.add('primary');}},p.name||'Unnamed person')));
@@ -5507,7 +5510,7 @@ SET.access=()=>{const el=h('div',{class:'stack'});const later=lazyRefresh(el,()=
     review.append(h('div',{class:'cardhead'},h('div',{},h('h3',{},'Access review'),h('p',{class:'note'},'What an auditor asks for: who can do what, conflicts of duties, and every change to access.')),exp),
       h('div',{class:'stack',style:'gap:.4rem'},F2.map(f=>h('div',{class:'row',style:'align-items:flex-start;flex-wrap:nowrap'},pill(f.sev==='pass'?'Pass':f.sev==='medium'?'Medium':'Low',f.sev==='pass'?'ok':f.sev==='medium'?'warn':'acc'),h('div',{},h('div',{},f.title),f.detail?h('div',{class:'mini mut'},f.detail):null)))),
       h('h3',{},'Change log'),log.length?h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},h('th',{},'When'),h('th',{},'By'),h('th',{},'Person'),h('th',{},'What'))),h('tbody',{},log.slice(0,50).map(x=>h('tr',{},h('td',{class:'mini',style:'white-space:nowrap'},fmtTime(x.at)),h('td',{},x.by_name||who(x.by)),h('td',{},x.target_name||'—'),h('td',{},x.what,x.after&&x.after.role?h('span',{class:'mini mut'},` → ${ROLES[x.after.role]||x.after.role}`):null)))))):emptyNote('No changes logged yet.'));}
-  el.append(h('div',{class:'card'},h('h3',{},'Give someone a login'),h('p',{class:'note'},'Everyone signs in with their own Orzio account; ask them to create one first. Choose the person, their role, then tick exactly what they may view, edit, approve and delete in each area.'),h('div',{class:'row'},q),res,form),
+  el.append(h('div',{class:'card'},h('h3',{},'Give access'),h('p',{class:'note'},'Choose a person with an Orzio login (or create one above). Choose the person, their role, then tick exactly what they may view, edit, approve and delete in each area.'),h('div',{class:'row'},q),res,form),
     h('div',{class:'card'},h('h3',{},'Who has access'),h('p',{class:'note'},'Owners and Editors with no role here have full rights. You can’t change your own rights.'),list),h('div',{class:'card'},review),
     h('div',{class:'card'},h('h3',{},'How the rights work'),h('ul',{class:'bul mini'},ACTS.map(([k,l])=>h('li',{},h('b',{style:'font-weight:500'},l+': '),ACT_HELP[k]+'.')),
       h('li',{},'Posted entries are never deleted. “Delete, reject or reverse” lets someone reject pending items and reverse posted entries; both stay in the audit trail.'),
@@ -11709,6 +11712,35 @@ async function reapplyHeld(filter){const p=wfParams('bank_statement');const maxA
     const res=await reapplyHeld(m=>m.statement_id===s.id);
     if(U) U.log.append(h('div',{class:'step'},`Done: ${res.changed} updated, ${res.posted} posted, ${res.left} still need you.`));revToast(`Re-run: ${res.posted} posted, ${res.left} still need you.`);}
   catch(e){if(U) U.log.append(h('div',{class:'step err'},e.message));}finally{if(btn) btn.disabled=false;}};}
+
+// ===== Logins and access: create a sign-in for an employee or anyone, with a temporary password to hand over =====
+function newLoginCard(){const F=S._accF;const box=h('div',{class:'card stack newlogin'});const msg=h('p',{class:'note',role:'status'});const out=h('div',{class:'stack'});
+  const emps=(S.raw.employees||[]).filter(e=>e.active!==false&&(S.entity==='all'||entOf(e)===S.entity));
+  const who=h('select',{'aria-label':'Employee'},h('option',{value:''},'Someone who is not an employee'),emps.map(e=>h('option',{value:e.id},e.name)));
+  const name=h('input',{type:'text','aria-label':'Full name',placeholder:'Full name'});const email=h('input',{type:'email','aria-label':'Email',placeholder:'name@company.com'});
+  who.onchange=()=>{const e=emps.find(x=>x.id===who.value);if(e){name.value=e.name||'';if(e.email) email.value=e.email;}};
+  const mode=h('select',{'aria-label':'Temporary password'},h('option',{value:'auto'},'Created by the system'),h('option',{value:'own'},'I will set it'));const pw=h('input',{type:'text','aria-label':'Temporary password',placeholder:'At least 8 characters',hidden:true,autocomplete:'off'});
+  mode.onchange=()=>{pw.hidden=mode.value!=='own';};
+  const go=h('button',{class:'btn primary',type:'button',disabled:!(S.isOwner||S.canEdit)},'Create login');
+  go.onclick=async()=>{msg.textContent='';out.textContent='';if(!name.value.trim()){msg.textContent='Enter the full name.';return;}if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.value.trim())){msg.textContent='Enter a valid email address.';return;}
+    if(mode.value==='own'&&pw.value.length<8){msg.textContent='The temporary password needs at least 8 characters.';return;}
+    go.disabled=true;go.textContent='Creating…';
+    try{const p=await plat();const r=await p.api('users',{action:'create',org:window.__orzioOrg||'',email:email.value.trim(),name:name.value.trim(),password:mode.value==='own'?pw.value:''});
+      if(F){F.pick=r.id;F.pickName=r.name||name.value.trim();S.names[r.id]=F.pickName;if(who.value){F.employee=who.value;}}
+      const addr=location.host;
+      if(r.existed){out.append(h('div',{class:'banner info'},`${r.name||name.value} already has an Orzio login. They are selected below: choose their role and rights, then press Give access.`));}
+      else{const text=`Your login for ${S.settings.company||'our company'} on Orzio\n\nSign in at: https://${addr}\nEmail: ${r.email}\nTemporary password: ${r.password}\n\nYou will be asked to choose your own password the first time you sign in.`;
+        const copy=h('button',{class:'btn sm',type:'button'},'Copy details');copy.onclick=async()=>{try{await navigator.clipboard.writeText(text);copy.textContent='Copied';}catch(e){copy.textContent='Select and copy the text';}};
+        const mail=h('a',{class:'btn ghost sm',href:`mailto:${encodeURIComponent(r.email)}?subject=${encodeURIComponent('Your Orzio login')}&body=${encodeURIComponent(text)}`},'Email the details');
+        out.append(h('div',{class:'logincred'},h('div',{class:'lch'},h('b',{},`Login created for ${r.name}`),h('span',{class:'mini mut'},'Share these details with them. The password is shown only now.')),
+          h('dl',{},h('dt',{},'Sign in at'),h('dd',{},`https://${addr}`),h('dt',{},'Email'),h('dd',{},r.email),h('dt',{},'Temporary password'),h('dd',{class:'code'},r.password)),h('div',{class:'row'},copy,mail),
+          h('p',{class:'mini mut'},`${r.name} is selected below. Choose the role and tick their rights, then press Give access.`)));}
+      name.value='';email.value='';pw.value='';who.value='';
+      const form=document.querySelector('#main > section:not([hidden]) .card select');setTimeout(()=>{const t=box.nextElementSibling;if(t) t.scrollIntoView({behavior:'smooth',block:'start'});},400);}
+    catch(e){msg.textContent=e.message||'The login could not be created.';}finally{go.disabled=false;go.textContent='Create login';}};
+  box.append(h('div',{class:'cardhead'},h('div',{},h('h3',{},'Create a login'),h('p',{class:'note'},'For an employee or anyone else. The system creates the sign-in with a temporary password that you share with them; they choose their own the first time they sign in. Then give them their rights below.'))),
+    h('div',{class:'formgrid'},h('label',{class:'field'},'Employee (optional)',who),h('label',{class:'field'},'Full name',name),h('label',{class:'field'},'Email',email),h('label',{class:'field'},'Temporary password',mode,pw)),h('div',{class:'row'},go),msg,out);return box;}
+{const _a=SET.access;SET.access=(...a)=>{const r=_a(...a);const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);try{if(!r.el.querySelector('.newlogin')&&(S.isOwner||S.canEdit)){const c=newLoginCard();r.el.prepend(c);}}catch(e){console.warn(e);}return y;};return r;};}
 
 
 // test hook (local development only)

@@ -41,7 +41,10 @@
   // a workspace's own address (<name>.orzio.ai or its custom domain) opens that workspace
   const HOST = (/^(localhost|127\.)/.test(location.hostname) && new URLSearchParams(location.search).get('__host')) || location.hostname;
   const PLATFORM_HOST = /^(localhost|127\.|.*\.vercel\.app$|(www\.)?orzio\.(ai|com)$)/.test(HOST);
-  const hostOrgP = PLATFORM_HOST ? Promise.resolve(null) : Promise.race([fetch('/api/domain?host=' + encodeURIComponent(HOST)).then((r) => (r.ok ? r.json() : null)).catch(() => null), new Promise((r) => setTimeout(() => r(null), 2500))]);
+  // remembered from the last visit so the company's sign-in page paints at once; refreshed in the background
+  const HB_KEY = 'orzio-hostbrand:' + HOST; let hbCache = null; try { hbCache = JSON.parse(localStorage.getItem(HB_KEY) || 'null'); } catch (e) {}
+  const hostFetch = PLATFORM_HOST ? Promise.resolve(null) : fetch('/api/domain?host=' + encodeURIComponent(HOST)).then((r) => (r.ok ? r.json() : null)).then((d) => { try { if (d && d.org_id) localStorage.setItem(HB_KEY, JSON.stringify(d)); else localStorage.removeItem(HB_KEY); } catch (e) {} return d; }).catch(() => null);
+  const hostOrgP = PLATFORM_HOST ? Promise.resolve(null) : (hbCache && hbCache.org_id ? Promise.resolve(hbCache) : Promise.race([hostFetch, new Promise((r) => setTimeout(() => r(null), 8000))]));
   hostOrgP.then((d) => { if (!d || !d.org_id) return; window.__hostOrg = d; document.title = d.name + ' · Sign in'; });
 
   // ---------- shared screen styles (sign-in, company setup) ----------
@@ -159,14 +162,15 @@
   }
 
   // ---------- set a new password (after the reset email link) ----------
-  function resetScreen() {
-    const wrap = screen(`<h1>Set a new password</h1><p>Choose a password of at least 8 characters.</p>
+  function resetScreen(first) {
+    const wrap = screen(first ? `<h1>Choose your password</h1><p>You signed in with a temporary password. Choose your own, at least 8 characters, to continue.</p>` + `<form id="sb-f"><label for="sb-p">New password</label><input id="sb-p" type="password" autocomplete="new-password" minlength="8" required>
+<button type="submit" id="sb-go">Save and continue</button></form><div class="msg" id="sb-m" role="status"></div>` : `<h1>Set a new password</h1><p>Choose a password of at least 8 characters.</p>
 <form id="sb-f"><label for="sb-p">New password</label><input id="sb-p" type="password" autocomplete="new-password" minlength="8" required>
 <button type="submit" id="sb-go">Save password</button></form><div class="msg" id="sb-m" role="status"></div>`);
     const $ = (id) => wrap.querySelector('#' + id);
     $('sb-f').onsubmit = async (e) => {
       e.preventDefault();
-      const r = await sb.auth.updateUser({ password: $('sb-p').value });
+      const r = await sb.auth.updateUser(first ? { password: $('sb-p').value, data: { must_change: false } } : { password: $('sb-p').value });
       if (r.error) { $('sb-m').textContent = r.error.message; return; }
       location.replace(location.origin + location.pathname);
     };
@@ -226,6 +230,7 @@ ${info.can_create_org && info.mode !== 'single' ? '<button class="sw" type="butt
     session = data.session; setCookie(session);
     if (!session) { await whenDom(); const hb = await hostOrgP; if (hb && hb.org_id) window.__hostOrg = hb; authScreen(); await new Promise(() => {}); }
     if (/[?&]reset\b/.test(location.search)) { await whenDom(); resetScreen(); await new Promise(() => {}); }
+    if (session.user && session.user.user_metadata && session.user.user_metadata.must_change) { await whenDom(); resetScreen(true); await new Promise(() => {}); }
     const uid = session.user.id;
     const [i, o, p] = await Promise.all([
       sb.rpc('app_info'),

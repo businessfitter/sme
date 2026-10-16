@@ -5,7 +5,7 @@ const ROUTES = {
   connector: () => require('./_routes/connector'), contact: () => require('./_routes/contact'), domain: () => require('./_routes/domain'),
   donor: () => require('./_routes/donor'), fx: () => require('./_routes/fx'), email: () => require('./_routes/email'), quote: () => require('./_routes/quote'),
   rfq: () => require('./_routes/rfq'), share: () => require('./_routes/share'), sign: () => require('./_routes/sign'),
-  store: () => require('./_routes/store'), worldcheck: () => require('./_routes/worldcheck'),
+  store: () => require('./_routes/store'), users: () => require('./_routes/users'), worldcheck: () => require('./_routes/worldcheck'),
 };
 module.exports = async (req, res) => {
   const name = String((req.query && req.query.route) || '');
