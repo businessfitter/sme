@@ -26,7 +26,21 @@ function dnsFor(domain, vercelDomain) {
   return recs;
 }
 // the sign-in page brand for a workspace address: one company -> that company; several -> the workspace (its logo, else the first company logo)
-async function brandOf(org, base) {
+const BASE = () => (process.env.ORZIO_BASE_DOMAIN || 'orzio.ai').toLowerCase();
+const slugOf = (n) => String(n || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/\b(llc|l\.l\.c|ltd|limited|fze|fzco|fz|est|group|holdings?|the|co|inc|plc)\b/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+async function bySlug(slug) {
+  if (!/^[a-z0-9-]{2,40}$/.test(slug) || /^(www|app|api|admin)$/.test(slug)) return null;
+  const db = admin(); const pat = '%' + slug.split('-').filter(Boolean).join('%') + '%';
+  const { data: os } = await db.from('orgs').select('id,name,status').ilike('name', pat).limit(50);
+  const o = (os || []).find((x) => x.status !== 'cancelled' && slugOf(x.name) === slug);
+  if (o) return { data: { org_id: o.id, name: o.name }, ent: null };
+  const { data: es } = await db.from('docs').select('org_id,path,data').like('path', 'setup/main/entities/%').ilike('data->>name', pat).limit(50);
+  const e = (es || []).find((x) => slugOf(x.data && x.data.name) === slug && !/^(deleted|closed|archived)$/.test(String((x.data || {}).status || '')));
+  if (e) return { data: { org_id: e.org_id, name: e.data.name }, ent: e.data };
+  return null;
+}
+async function brandOf(org, base, ent) {
+  if (ent) { const l = ent.brand && ent.brand.logo; const id = l && typeof l === 'object' ? l.id : null; return { name: ent.name || base.name, color: (ent.brand && ent.brand.color) || null, logo: id && /^[A-Za-z0-9_-]{6,64}$/.test(id) ? id : null, count: 1 }; }
   const out = { name: base.name, color: base.color, logo: null, count: 0 };
   try {
     const db = admin();
@@ -55,9 +69,12 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       const host = String((req.query && req.query.host) || '').toLowerCase();
       if (!DOMAIN.test(host)) return res.status(404).json({});
-      const { data } = await admin().rpc('domain_lookup', { p_host: host });
-      if (!data || !data.org_id) return res.status(404).json({});
-      const b = await brandOf(data.org_id, data);
+      let { data } = await admin().rpc('domain_lookup', { p_host: host });
+      let ent = null;
+      // <name>.orzio.ai that was never registered: find the workspace or company with that name
+      if ((!data || !data.org_id) && host.endsWith('.' + BASE())) { const f = await bySlug(host.slice(0, -(BASE().length + 1))); if (f) { data = f.data; ent = f.ent; } }
+      if (!data || !data.org_id) return res.status(404).json({ error: 'No workspace uses this address yet.' });
+      const b = await brandOf(data.org_id, data, ent);
       if (req.query.logo) {
         if (!b.logo) return res.status(404).send('No logo');
         const { data: su } = await admin().storage.from('assets').createSignedUrl(data.org_id + '/' + b.logo, 3600);
