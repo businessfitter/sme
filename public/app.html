@@ -1403,6 +1403,8 @@ body.extmode .extco+#tb-co{display:none!important}
 .extform{padding:1rem;border-radius:10px;background:var(--bg-soft,rgba(0,0,0,.025))}
 table.lines select.linesvc{display:block;width:100%;margin-bottom:.3rem;font-size:.85rem}
 .qpay{display:flex;flex-direction:column;gap:.35rem;min-width:12rem}.qpay label{display:flex;flex-direction:column;gap:.15rem}
+.wsaddr-cur a{font-weight:600;font-size:1.05rem;color:var(--blue,#2550C9)}
+.wsaddr-link{display:inline-block;margin-top:.4rem;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:.15rem .6rem}
 
 </style>
 
@@ -4123,7 +4125,7 @@ async function invoicePdf(inv,B,co,paid,balance,pay){await loadScript(JSPDF_URL,
   cl.forEach((t,k)=>d.text(d.splitTextToSize(String(t),220)[0],W-M,(modern?60:62)+k*(fs+3),{align:'right'}));
   y=Math.max(modern?110:84+cl.length*(fs+3),logo?80:0)+14;d.setTextColor(20,24,31);
   d.setFont(F,'bold');d.text(cn?'Credit to':'Bill to',M,y);d.text('Details',W/2+20,y);d.setFont(F,'normal');
-  const L=[inv.partner,...partyAddrLines(inv),inv.trn?'TRN '+inv.trn:''].filter(Boolean),R=[['Number',inv.number],['Date',fmtDate(inv.date)],cn?['Against',inv.reverses_number||'']:[inv.doc_type==='quote'?'Valid until':'Due',fmtDate(inv.due)],['Currency',cur]];
+  const L=[inv.partner,...partyAddrLines(inv),inv.trn?'TRN '+inv.trn:''].filter(Boolean),R=[['Number',inv.number],['Date',fmtDate(inv.date)],cn?['Against',inv.reverses_number||'']:[inv.doc_type==='quote'?'Valid until':'Due',fmtDate(inv.due)],['Currency',cur],...(!cn&&inv.doc_type!=='quote'&&inv.date&&inv.due?[['Payment terms',termsText(inv)]]:[])];
   L.forEach((t,k)=>d.text(String(t),M,y+14+k*(fs+3)));R.forEach(([a,b],k)=>{d.setTextColor(100,108,120);d.text(a,W/2+20,y+14+k*(fs+3));d.setTextColor(20,24,31);d.text(String(b||''),W-M,y+14+k*(fs+3),{align:'right'});});
   y+=14+Math.max(L.length,R.length)*(fs+3)+16;
   const cols=[[M,'Description','left'],[W-M-250,'Qty','right'],[W-M-170,'Unit price','right'],[W-M-95,'VAT %','right'],[W-M,'Net','right']];
@@ -4131,7 +4133,7 @@ async function invoicePdf(inv,B,co,paid,balance,pay){await loadScript(JSPDF_URL,
   (inv.lines||[]).forEach(l=>{const net=r2((+l.qty||0)*(+l.price||0));const desc=d.splitTextToSize(String(l.desc||''),W-2*M-270);if(y+desc.length*(fs+2)>H-150){d.addPage();y=M+10;head();}
     d.text(desc,M,y);d.text(String(+l.qty||0),cols[1][0],y,{align:'right'});d.text(n2(l.price),cols[2][0],y,{align:'right'});d.text(String(+l.vat||0),cols[3][0],y,{align:'right'});d.text(n2(net),W-M,y,{align:'right'});
     y+=desc.length*(fs+2)+6;d.setDrawColor(230,233,237);d.line(M-6,y-4,W-M+6,y-4);});
-  if(y>H-210){d.addPage();y=M+10;}y+=6;const tot=[['Net',n2(inv.net)],['VAT',n2(inv.vat)],[`Total ${cur}`,n2(inv.total)]];if(!cn&&paid>0.004){tot.push(['Paid',n2(paid)]);tot.push([`Balance due ${cur}`,n2(balance)]);}
+  if(y>H-210){d.addPage();y=M+10;}y+=6;const tot=[['Net',n2(inv.net)],['VAT',n2(inv.vat)],[`Total ${cur}`,n2(inv.total)]];
   tot.forEach(([a,b],k)=>{const last=k===tot.length-1;d.setFont(F,last?'bold':'normal');d.text(a,W-M-150,y);d.text(b,W-M,y,{align:'right'});y+=fs+6;});d.setFont(F,'normal');
   // payment block
   const py=Math.max(y+14,H-190);if(!cn&&(B.bank||B.iban||pay)){d.setFont(F,'bold');d.text('How to pay',M,py);d.setFont(F,'normal');
@@ -4150,7 +4152,7 @@ function printInvoiceHtml(i){const B=brandFor(i.entity),co=companyCard(S.ent[i.e
     h('p',{},h('b',{},(cn?'Credit to: ':'Bill to: ')+i.partner),...partyAddrLines(i).flatMap(x=>[h('br'),x]),i.trn?h('span',{},h('br'),'TRN '+i.trn):'',h('br'),`${i.number} · ${fmtDate(i.date)}${cn?'':' · due '+fmtDate(i.due)} · ${i.currency}`),
     h('table',{style:'width:100%;border-collapse:collapse'},h('thead',{},h('tr',{style:`background:${c};color:#fff`},['Description','Qty','Unit price','VAT %','Net'].map((t,k)=>h('th',{style:`padding:4px;text-align:${k?'right':'left'}`},t)))),
       h('tbody',{},(i.lines||[]).map(l=>h('tr',{},h('td',{style:'padding:4px'},l.desc||''),h('td',{style:'text-align:right'},String(l.qty)),h('td',{style:'text-align:right'},money2(+l.price||0)),h('td',{style:'text-align:right'},String(l.vat||0)),h('td',{style:'text-align:right'},money2(r2((+l.qty||0)*(+l.price||0)))))))),
-    h('p',{style:'text-align:right'},`Net ${money2(Math.abs(i.net))} · VAT ${money2(Math.abs(i.vat))} · `,h('b',{},`Total ${i.currency} ${money2(Math.abs(i.total))}`),!cn&&bal<Math.abs(i.total)-0.01?h('div',{},`Balance due ${money2(bal)}`):null),
+    h('p',{style:'text-align:right'},`Net ${money2(Math.abs(i.net))} · VAT ${money2(Math.abs(i.vat))} · `,h('b',{},`Total ${i.currency} ${money2(Math.abs(i.total))}`),!cn&&i.date&&i.due?h('div',{},`Payment terms: ${termsText(i)}`):null),
     !cn&&(B.bank||B.iban)?h('p',{},['Bank: '+(B.bank||''),B.iban?'IBAN '+B.iban:'',B.swift?'SWIFT '+B.swift:'','Reference '+i.number].filter(Boolean).join(' · ')):null,payLink(i,B)?h('p',{},'Pay online: '+payLink(i,B)):null,h('p',{style:'font-size:.85em;color:#444'},digitalLine(i)),h('p',{style:'font-size:.8em;color:#666'},B.footer||'')));
   const old=$('#printzone');if(old) old.remove();document.body.append(box);document.body.classList.add('printing');
   try{window.print();}catch(e){alertNote('Printing is blocked in this view. Download the PDF and print it instead.');}setTimeout(()=>{document.body.classList.remove('printing');box.remove();},800);}
@@ -9903,13 +9905,13 @@ async function saveEntOf(eid,patch){await db.doc('setup/main/entities/'+eid).upd
 const logoBox=(logo,initials,color)=>{const b=h('span',{class:'logobox',style:`--cc:${color||'#1F4FD1'}`});if(logo&&logo.url) b.append(h('img',{src:logo.url,alt:''}));else b.textContent=initials||'?';return b;};
 // a picker for any company or branch in the workspace
 function coPicker(sel,onPick,withBranches){const s=h('select',{'aria-label':'Company or branch',onchange:e=>onPick(e.target.value)});Object.entries(S.ent||{}).sort((a,b)=>(a[1].name||'')<(b[1].name||'')?-1:1).forEach(([id,e])=>{s.append(h('option',{value:id},e.name||id));if(withBranches) (e.branches||[]).filter(b=>b.active!==false).forEach(b=>s.append(h('option',{value:`${id}|${b.id}`},`   ${e.name} › ${b.name}`)));});s.value=sel||'';if(s.selectedIndex<0&&s.options.length) s.selectedIndex=0;return s;}
-const WS_SECTIONS=[['profile','Company profile'],['admins','Company admins'],['logo','Workspace logo'],['password','Password']];
+const WS_SECTIONS=[['profile','Company profile'],['admins','Company admins'],['logo','Workspace logo'],['address','Workspace address'],['password','Password']];
 BUILD.wsset=()=>{const el=h('section',{class:'launch ws'});const head=h('div',{});const nav=h('div',{class:'seg wsseg',role:'tablist'});const body=h('div',{class:'launch-body stack'});el.append(head,body);let admins=null;
   function refresh(){const sec=S.wsSec||(wsIsAdmin()?'profile':'password');head.textContent='';head.append(wsHeader('Workspace settings',`${wsName()}. Company profiles, who administers each company, the workspace logo and your password.`,[h('button',{class:'lh-btn',type:'button',onclick:()=>showTab('wshome')},'Back to companies')]));
     nav.textContent='';WS_SECTIONS.filter(([k])=>wsIsAdmin()||k==='password').forEach(([k,l])=>nav.append(h('button',{type:'button',role:'tab','aria-selected':String(sec===k),onclick:()=>{S.wsSec=k;refresh();}},l)));
     body.textContent='';body.append(nav);
     if(sec==='admins'){if(!admins){admins=wsAdminsBuild();admins.box=admins.el.querySelector('.launch-body');admins.box.classList.remove('launch-body');admins.box.style.padding='0';}admins.refresh();body.append(admins.box);return;}
-    if(sec==='logo') return body.append(logoSec());if(sec==='password') return body.append(pwSec());body.append(profileSec());}
+    if(sec==='logo') return body.append(logoSec());if(sec==='address') return body.append(addrSec());if(sec==='password') return body.append(pwSec());body.append(profileSec());}
   // company profile: pick a company or branch, edit its particulars, change the year end, delete
   function profileSec(){const box=h('div',{class:'stack'});if(!Object.keys(S.ent||{}).length){box.append(h('div',{class:'card'},emptyNote('No companies yet.'),h('div',{class:'row'},h('button',{class:'btn primary',type:'button',onclick:newCompany},'Create a company'))));return box;}
     const cur=S.wsCo&&(S.ent[S.wsCo.split('|')[0]])?S.wsCo:(S.entity&&S.ent[S.entity]?S.entity:Object.keys(S.ent)[0]);S.wsCo=cur;const [eid,bid]=cur.split('|');const e=S.ent[eid]||{};const msg=h('p',{class:'note',role:'status'});
@@ -10906,6 +10908,32 @@ function invEditBtn(inv,redraw){if(!mayEditDoc(inv)||inv.status==='cancelled'||i
         return h('div',{class:'row payedit',style:'align-items:flex-end;gap:.5rem;flex-wrap:wrap'},fld('Paid on',xIn(P,'date','date')),fld('Amount',xIn(P,'amt','number')),h('button',{class:'btn sm',type:'button',onclick:async ev=>{ev.target.disabled=true;try{await editPayment(inv,p,P.date,+P.amt);redraw&&redraw();}catch(x){pe.textContent=x.message;ev.target.disabled=false;}}},'Save payment'),
           h('input',{type:'text',placeholder:'Reason to remove','aria-label':'Reason for removing the payment',style:'width:11rem',oninput:e=>P.reason=e.target.value}),h('button',{class:'btn sm danger',type:'button',onclick:async ev=>{if(!P.reason.trim()){pe.textContent='Give a reason.';return;}ev.target.disabled=true;try{await removePayment(inv,p,P.reason.trim());redraw&&redraw();}catch(x){pe.textContent=x.message;ev.target.disabled=false;}}},'Remove payment'),pe);})):null,
       h('p',{class:'mini mut'},'Every change is kept in the entry’s history for audit.'),er));};box.append(b);return box;}
+
+// payment terms in words, from the invoice and due dates
+function termsText(inv){const d=Math.round((Date.parse(inv.due)-Date.parse(inv.date))/864e5);return d<=0?'Due on receipt':`${d} days (due ${fmtDate(inv.due)})`;}
+
+
+// ================= Workspace address: <name>.orzio.ai for every workspace =================
+const ORZIO_BASE='orzio.ai';
+const wsSlug=n=>String(n||'').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g,'').replace(/\b(llc|l\.l\.c|ltd|limited|fze|fzco|fz|est|group|holdings?|the|co|inc|plc)\b/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||'workspace';
+const WSADDR={list:null};
+async function wsAddrCall(b){const p=await plat();return p.api('domain',{org:window.__orzioOrg||'',...b});}
+async function wsAddrLoad(){try{const r=await wsAddrCall({action:'list'});WSADDR.list=(r.domains||[]);}catch(e){WSADDR.list=WSADDR.list||[];WSADDR.err=e.message;}return WSADDR.list;}
+const wsAddr=()=>((WSADDR.list||[]).find(d=>d.detail&&d.detail.kind==='subdomain')||{}).domain||null;
+// every workspace gets its address: the owner's first visit picks it from the workspace name
+async function wsAddrEnsure(){if(!S.isOwner||WSADDR.busy) return;WSADDR.busy=true;try{await wsAddrLoad();if(wsAddr()||WSADDR.err) return;const base=wsSlug(wsName());for(let k=0;k<6;k++){const slug=k?`${base}-${k+1}`:base;try{await wsAddrCall({action:'subdomain',slug});await wsAddrLoad();break;}catch(e){if(!/taken|reserved/i.test(e.message||'')) break;}}}finally{WSADDR.busy=false;try{const v=VIEWS.wshome;if(v&&S.tab==='wshome') v.refresh();}catch(e){}}}
+setTimeout(function wsA(){if(!S.signedIn||!window.__orzioOrg){setTimeout(wsA,1500);return;}wsAddrEnsure();},2500);
+function addrSec(){const box=h('div',{class:'card stack wsaddr',style:'max-width:44rem'});const msg=h('p',{class:'note',role:'status'});
+  const draw=()=>{box.textContent='';const cur=wsAddr();const F={slug:cur?cur.replace('.'+ORZIO_BASE,''):wsSlug(wsName())};
+    box.append(h('h3',{},'Workspace address'),h('p',{class:'note'},'Your workspace’s own web address. People open it to sign in straight into this workspace, with its name on the sign-in page.'),
+      cur?h('p',{class:'wsaddr-cur'},h('a',{href:'https://'+cur,target:'_blank',rel:'noopener'},'https://'+cur)):h('p',{class:'mini mut'},WSADDR.list===null?'Loading…':'No address yet.'));
+    if(S.isOwner){const inp=h('input',{type:'text',value:F.slug,'aria-label':'Workspace address name',style:'width:14rem',oninput:e=>F.slug=e.target.value});
+      const save=h('button',{class:'btn primary sm',type:'button'},cur?'Change address':'Set address');save.onclick=async()=>{save.disabled=true;msg.textContent='Saving…';try{const r=await wsAddrCall({action:'subdomain',slug:F.slug});await wsAddrLoad();msg.textContent=`Your workspace address is now https://${r.domain}. Share it with your team.`;draw();}catch(e){msg.textContent=e.message;save.disabled=false;}};
+      box.append(h('div',{class:'row',style:'align-items:center;gap:.4rem'},h('span',{class:'mini'},'https://'),inp,h('span',{class:'mini'},'.'+ORZIO_BASE),save),h('p',{class:'mini mut'},'Letters, numbers and hyphens. Changing it stops the old address working.'));}
+    else box.append(h('p',{class:'mini mut'},'Only the workspace owner can change it.'));box.append(msg);};
+  draw();if(WSADDR.list===null) wsAddrLoad().then(draw);return box;}
+// show the address on the workspace home
+{const _wh=BUILD.wshome;BUILD.wshome=()=>{const r=_wh();const rf=r.refresh;r.refresh=function(...a){const x=rf.apply(this,a);try{const cur=wsAddr();const hero=r.el.querySelector('.lh-copy');if(hero&&cur&&!hero.querySelector('.wsaddr-link')) hero.append(h('a',{class:'wsaddr-link mini',href:'https://'+cur,target:'_blank',rel:'noopener'},cur));}catch(e){}return x;};return r;};}
 
 
 // test hook (local development only)

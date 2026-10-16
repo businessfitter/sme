@@ -38,6 +38,11 @@
     document.cookie = t ? `sb-token=${t}; Path=/; Max-Age=3600; SameSite=Lax; Secure` : 'sb-token=; Path=/; Max-Age=0; SameSite=Lax; Secure';
   };
   sb.auth.onAuthStateChange((_e, s) => { session = s; setCookie(s); });
+  // a workspace's own address (<name>.orzio.ai or its custom domain) opens that workspace
+  const HOST = (/^(localhost|127\.)/.test(location.hostname) && new URLSearchParams(location.search).get('__host')) || location.hostname;
+  const PLATFORM_HOST = /^(localhost|127\.|.*\.vercel\.app$|(www\.)?orzio\.(ai|com)$)/.test(HOST);
+  const hostOrgP = PLATFORM_HOST ? Promise.resolve(null) : Promise.race([fetch('/api/domain?host=' + encodeURIComponent(HOST)).then((r) => (r.ok ? r.json() : null)).catch(() => null), new Promise((r) => setTimeout(() => r(null), 2500))]);
+  hostOrgP.then((d) => { if (!d || !d.org_id) return; window.__hostOrg = d; document.title = d.name + ' · Orzio'; const paint = () => { const s = document.getElementById('sb-s'); if (s && !s.dataset.host) { s.dataset.host = '1'; s.textContent = 'Sign in to ' + d.name + '.'; } }; paint(); setTimeout(paint, 400); setTimeout(paint, 1500); });
 
   // ---------- shared screen styles (sign-in, company setup) ----------
   const SCREEN_CSS = `
@@ -190,6 +195,12 @@ ${info.can_create_org && info.mode !== 'single' ? '<button class="sw" type="butt
     ]);
     info = i.data || {}; profile = p.data || null;
     orgs = (o.data || []).filter((x) => !x.invited); invites = (o.data || []).filter((x) => x.invited);
+    const ho = await hostOrgP;
+    if (ho && ho.org_id) {
+      if (orgs.some((x) => x.id === ho.org_id)) store.set('sme-org', ho.org_id);
+      else if (invites.some((x) => x.id === ho.org_id)) { await whenDom(); inviteScreen(); await new Promise(() => {}); }
+      else { await whenDom(); const w = screen(`<h1>No access to ${esc(ho.name || 'this workspace')}</h1><p>You are signed in as ${esc((profile && profile.email) || '')}, but this workspace hasn't given you access. Ask its owner to add you, or sign in with another account.</p><button class="b" id="sx-noacc">Sign out</button>`); const bt = document.getElementById('sx-noacc'); if (bt) bt.onclick = async () => { await sb.auth.signOut(); setCookie(null); location.reload(); }; await new Promise(() => {}); }
+    }
     if (!orgs.length) { await whenDom(); invites.length ? inviteScreen() : companyScreen(); await new Promise(() => {}); }
     const qs = new URLSearchParams(location.search);
     if (qs.get('workspace')) { store.set('sme-org', qs.get('workspace')); qs.delete('workspace'); history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs : '') + location.hash); }
@@ -480,7 +491,7 @@ ${info.can_create_org && info.mode !== 'single' ? '<button type="button" class="
     document.body.append(pan);
     pan.querySelectorAll('[data-yes]').forEach((b) => b.onclick = () => answer(b.dataset.yes, true));
     pan.querySelectorAll('[data-no]').forEach((b) => b.onclick = () => answer(b.dataset.no, false));
-    pan.querySelectorAll('button.co').forEach((b) => b.onclick = () => { if (b.dataset.id === ORG) return; store.set('sme-org', b.dataset.id); location.reload(); });
+    pan.querySelectorAll('button.co').forEach((b) => b.onclick = () => { if (b.dataset.id === ORG) return; store.set('sme-org', b.dataset.id); if (window.__hostOrg && !PLATFORM_HOST) { location.href = 'https://orzio.ai/app?workspace=' + encodeURIComponent(b.dataset.id); return; } location.reload(); });
     const nw = pan.querySelector('#sx-new'); if (nw) nw.onclick = () => { pan.remove(); companyScreen({ another: true }); };
     const rn = pan.querySelector('#sx-ren'); if (rn) rn.onclick = async () => {
       const n = prompt('Workspace name', org.name); if (!n || n.trim() === org.name) return;

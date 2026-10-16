@@ -41,10 +41,25 @@ module.exports = async (req, res) => {
     const { data: m } = await sb.from('members').select('role,status').eq('org_id', org).eq('user_id', user.id).maybeSingle();
     if (!m || m.status !== 'active' || m.role !== 'owner') return res.status(403).json({ error: 'Only the workspace owner can manage its domain.' });
     const action = String(b.action || 'list');
+    // the workspace's own address on the Orzio domain: <name>.orzio.ai (served by the *.orzio.ai wildcard, no DNS work for the customer)
+    if (action === 'subdomain') {
+      const base = (process.env.ORZIO_BASE_DOMAIN || 'orzio.ai').toLowerCase();
+      const slug = String(b.slug || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)) return res.status(400).json({ error: 'Use 3 to 40 letters, numbers or hyphens.' });
+      if (/^(www|app|api|admin|mail|smtp|ftp|site|help|support|status|docs|blog|cdn|static|assets|auth|login|signup|billing|dev|staging|test|demo|orzio|vercel)$/.test(slug)) return res.status(400).json({ error: 'That name is reserved. Choose another.' });
+      const domain = slug + '.' + base;
+      const { data: taken } = await sb.from('org_domains').select('org_id').eq('domain', domain).maybeSingle();
+      const { data: owner } = await admin().from('org_domains').select('org_id').eq('domain', domain).maybeSingle();
+      if ((taken && taken.org_id !== org) || (owner && owner.org_id !== org)) return res.status(409).json({ error: `${domain} is already taken. Choose another name.` });
+      const { data: mine } = await admin().from('org_domains').select('domain,detail').eq('org_id', org);
+      for (const d of (mine || [])) if (d.detail && d.detail.kind === 'subdomain' && d.domain !== domain) await admin().from('org_domains').delete().eq('domain', d.domain);
+      await admin().from('org_domains').upsert({ domain, org_id: org, status: 'verified', detail: { kind: 'subdomain' }, created_by: user.id, verified_at: new Date().toISOString() });
+      return res.status(200).json({ domain, status: 'verified' });
+    }
     if (action === 'list') { const { data } = await sb.from('org_domains').select('*').eq('org_id', org); return res.status(200).json({ domains: data || [], enabled: !!(process.env.VERCEL_TOKEN && process.env.VERCEL_PROJECT_ID) }); }
     const domain = String(b.domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
     if (!DOMAIN.test(domain)) return res.status(400).json({ error: 'Enter a domain like app.yourcompany.com.' });
-    if (/(^|\.)(vercel\.app|orzio\.ai|orzio\.com|localhost)$/.test(domain)) return res.status(400).json({ error: 'Use a domain your organisation owns.' });
+    if (/(^|\.)(vercel\.app|orzio\.ai|orzio\.com|localhost)$/.test(domain) && action === 'add') return res.status(400).json({ error: 'Use a domain your organisation owns.' });
     const { data: cur } = await sb.from('org_domains').select('*').eq('domain', domain).maybeSingle();
     if (cur && cur.org_id !== org) return res.status(409).json({ error: 'That domain is already used by another workspace.' });
     if (action === 'add') {
