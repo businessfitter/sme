@@ -1402,6 +1402,7 @@ body.extmode .extco+#tb-co{display:none!important}
 .extview iframe,.extview img{flex:1;width:100%;background:#fff;border:0;border-radius:0 0 10px 10px;object-fit:contain}
 .extform{padding:1rem;border-radius:10px;background:var(--bg-soft,rgba(0,0,0,.025))}
 table.lines select.linesvc{display:block;width:100%;margin-bottom:.3rem;font-size:.85rem}
+.qpay{display:flex;flex-direction:column;gap:.35rem;min-width:12rem}.qpay label{display:flex;flex-direction:column;gap:.15rem}
 
 </style>
 
@@ -10565,14 +10566,17 @@ function docTypeCell(cls,l,onChange){const T=docKinds(cls);const box=h('div',{cl
 // ================= Getting paid: quick "Mark as paid", bank-matched status, Approvals in the top bar, agents with or without approval =================
 // how an invoice was settled
 function paidVia(inv){const ms=(S.moves||[]).filter(m=>m.state==='posted'&&(m.settles||[]).some(x=>x.invoice_id===inv.id));if(!ms.length) return null;return ms.some(m=>m.source==='bank_statement')?'bank':'manual';}
-async function quickPaid(inv){const isC=inv.kind==='customer';const due=invDue(inv,true);if(!(due>0.01)) return;const bank=S.accounts['1010']?'1010':cashCodes()[0];if(!bank) throw new Error('Add a bank or cash account first.');
-  return submitMove({journal:'BNK1',date:today(),ref:`${isC?'Receipt':'Payment'} ${inv.number} ${inv.partner}`,partner:inv.partner,lines:isC?[{account:bank,label:inv.number,debit:due,credit:0},{account:'1100',label:inv.number,debit:0,credit:due}]:[{account:'2000',label:inv.number,debit:due,credit:0},{account:bank,label:inv.number,debit:0,credit:due}],settles:[{invoice_id:inv.id,amount:due}],source:'payment'},{reason:isC?'Marked as paid':'Marked as paid to the supplier'});}
+async function quickPaid(inv,opt){opt=opt||{};const isC=inv.kind==='customer';const bal=invDue(inv,true);if(!(bal>0.01)) return;const due=r2(opt.amount>0?Math.min(+opt.amount,bal):bal);const bank=opt.bank||(S.accounts['1010']?'1010':cashCodes()[0]);if(!bank) throw new Error('Add a bank or cash account first.');const pdate=opt.date||today();
+  return submitMove({journal:'BNK1',date:pdate,ref:`${isC?'Receipt':'Payment'} ${inv.number} ${inv.partner}`,partner:inv.partner,lines:isC?[{account:bank,label:inv.number,debit:due,credit:0},{account:'1100',label:inv.number,debit:0,credit:due}]:[{account:'2000',label:inv.number,debit:due,credit:0},{account:bank,label:inv.number,debit:0,credit:due}],settles:[{invoice_id:inv.id,amount:due}],source:'payment'},{reason:isC?'Marked as paid':'Marked as paid to the supplier'});}
 // the action cell on the invoices and bills lists
 function invQuick(inv,redraw){const td=h('td',{class:'invq',onclick:e=>e.stopPropagation()});const mv=(S.moves||[]).find(m=>m.id===inv.move_id);const due=invDue(inv,true);
   if(inv.status==='cancelled') return td;
   if(due<=0.01){const v=paidVia(inv);td.append(h('span',{class:'mini mut'},v==='bank'?'Matched from the bank':v?'Marked as paid':''));return td;}
   if(mv&&mv.state==='posted'&&S.canWrite&&inv.currency===S.baseCur){const b=h('button',{class:'btn sm',type:'button','aria-label':`Mark ${inv.number} as paid`},'Mark as paid');
-    b.onclick=async()=>{b.disabled=true;b.textContent='Recording…';try{const r=await quickPaid(inv);b.textContent=r&&r.state==='to_approve'?'Sent for approval':'Paid';setTimeout(redraw,600);}catch(e){b.textContent='Mark as paid';b.disabled=false;alert(e.message);}};td.append(b);}
+    b.onclick=()=>{td.textContent='';const P={date:today(),amount:invDue(inv,true),bank:S.accounts['1010']?'1010':(cashCodes()[0]||'')};const er=h('span',{class:'err mini'});
+      const bk=h('select',{'aria-label':'Paid into',onchange:e=>P.bank=e.target.value},cashCodes().map(c=>h('option',{value:c},`${c} ${aname(c)}`)));bk.value=P.bank;
+      const ok=h('button',{class:'btn primary sm',type:'button'},'Confirm');ok.onclick=async()=>{er.textContent='';if(!P.date){er.textContent='Enter the date paid.';return;}if(!(+P.amount>0)){er.textContent='Enter the amount.';return;}ok.disabled=true;ok.textContent='Recording…';try{const r=await quickPaid(inv,{date:P.date,amount:+P.amount,bank:P.bank});ok.textContent=r&&r.state==='to_approve'?'Sent for approval':'Paid';setTimeout(redraw,600);}catch(e){er.textContent=e.message;ok.disabled=false;ok.textContent='Confirm';}};
+      td.append(h('div',{class:'qpay'},h('label',{class:'mini'},'Date paid',h('input',{type:'date',value:P.date,'aria-label':'Date paid',onchange:e=>P.date=e.target.value})),h('label',{class:'mini'},'Amount',h('input',{type:'number',step:'0.01',value:P.amount,'aria-label':'Amount paid',style:'width:7rem',oninput:e=>P.amount=e.target.value})),h('label',{class:'mini'},'Into',bk),h('div',{class:'row',style:'gap:.3rem'},ok,h('button',{class:'btn ghost sm',type:'button',onclick:()=>redraw()},'Cancel')),er));setTimeout(()=>{const i=td.querySelector('input[type=date]');if(i) i.focus();},0);};td.append(b);}
   return td;}
 // Approvals: customers and suppliers waiting for Compliance join the list
 {const _ri=reviewItems;reviewItems=function(){const out=_ri();try{const e=S.entity;if(!e||e==='all') return out;(S.raw.partners||[]).filter(p=>p.entity===e&&p.status==='pending').forEach(p=>out.push({kind:'party',mod:'compl',c:'#0E7C66',ic:p.kind==='customer'?'CU':'SU',t:`${p.kind==='customer'?'Customer':'Supplier'}: ${p.name}`,d:`${String(p.registered_by||'').startsWith('agent:')?'Registered by the '+PK[p.kind].agentName:'Registered by '+who(p.registered_by)} · waiting for Compliance`,agent:String(p.registered_by||'').startsWith('agent:'),go:'pqueue',approve:mayApproveParty()&&p.registered_by!==S.me?async()=>decideParty(p,true):null}));}catch(x){}return out;};}
