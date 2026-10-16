@@ -12,6 +12,8 @@ const MAX_TOKENS = 8192;            // per reply
 const MAX_REQUEST_CHARS = 2_500_000; // about 2.5 MB of conversation and images per call
 const MAX_IMAGES = 20;
 
+// tolerate a key pasted with spaces, line breaks or quotes around it
+const aiKey = () => String(process.env.ANTHROPIC_API_KEY || '').trim().replace(/^['"]|['"]$/g, '').trim();
 function clean(body) {
   const msgs = Array.isArray(body.messages) ? body.messages.slice(-200) : [];
   const messages = msgs
@@ -74,7 +76,7 @@ module.exports = async (req, res) => {
     for (let attempt = 0; attempt < 3; attempt++) {
       r = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01' },
         body: JSON.stringify(payload),
       });
       j = await r.json().catch(() => ({}));
@@ -98,7 +100,7 @@ module.exports = async (req, res) => {
 function aiReason(status, why) {
   const w = why.toLowerCase();
   if (/credit balance|billing|purchase credits/.test(w)) return 'The AI service has run out of credit. The platform administrator needs to top up the Anthropic account (Plans & Billing).';
-  if (status === 401 || /api key|authentication|x-api-key/.test(w)) return 'The AI key on the server is not valid. The platform administrator needs to check ANTHROPIC_API_KEY in Vercel.';
+  if (status === 401 || /api key|authentication|x-api-key/.test(w)) return 'The AI key on the server is not valid (Anthropic says: ' + (why || 'invalid key').slice(0, 120) + '). Check ANTHROPIC_API_KEY in Vercel → Settings → Environment Variables is set for Production, then redeploy.';
   if (status === 403) return 'The AI key on the server is not allowed to do this. The platform administrator needs to check the Anthropic account.';
   if (status === 404 || /model/.test(w) && /not.?found|does not exist|invalid/.test(w)) return 'The AI model set on the server is not available. The platform administrator needs to check the ANTHROPIC_MODEL settings in Vercel.';
   if (status === 429) return 'The AI service is busy. Try again in a moment.';
@@ -122,7 +124,7 @@ async function packRun(req, res, who) {
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01' },
       body: JSON.stringify(payload),
     });
     const j = await r.json().catch(() => ({}));
