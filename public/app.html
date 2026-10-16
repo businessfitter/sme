@@ -10946,6 +10946,8 @@ function addrSec(){const box=h('div',{class:'card stack wsaddr',style:'max-width
   draw();if(WSADDR.list===null) wsAddrLoad().then(draw);return box;}
 // show the address on the workspace home
 {const _wh=BUILD.wshome;BUILD.wshome=()=>{const r=_wh();const rf=r.refresh;r.refresh=function(...a){const x=rf.apply(this,a);try{const cur=wsAddr();const hero=r.el.querySelector('.lh-copy');if(hero&&cur&&!hero.querySelector('.wsaddr-link')) hero.append(h('a',{class:'wsaddr-link mini',href:'https://'+cur,target:'_blank',rel:'noopener'},cur));}catch(e){}return x;};return r;};}
+// own custom domains are not offered: workspaces use <name>.orzio.ai only
+try{for(const k of Object.keys(MS_SECTIONS)){const g=MS_SECTIONS[k]&&MS_SECTIONS[k].group;if(Array.isArray(g)){let i;while((i=g.indexOf('domain'))>=0) g.splice(i,1);}}}catch(e){}
 
 
 // ================= HR: Employees, with the position taken from the organogram =================
