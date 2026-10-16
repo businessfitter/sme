@@ -1500,6 +1500,16 @@ table.revtab td.revtype{position:relative}
 .logincred{border:1px solid #ABEFC6;background:#F6FEF9;border-radius:12px;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.6rem}
 .logincred .lch{display:flex;flex-direction:column;gap:.15rem}
 .logincred dl{display:grid;grid-template-columns:max-content 1fr;gap:.3rem 1rem;margin:0}.logincred dt{color:var(--ink2,#5B6472);font-size:.85rem}.logincred dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+/* logins and access: modules on the left, their screens on the right */
+.accgrid{display:grid;grid-template-columns:16rem minmax(0,1fr);gap:1rem;align-items:start;border:1px solid var(--line,#E4E7EE);border-radius:12px;padding:.75rem;background:var(--panel,#fff)}
+@media (max-width:860px){.accgrid{grid-template-columns:1fr}}
+.accmods{display:flex;flex-direction:column;gap:2px;max-height:30rem;overflow:auto}
+.accmod{display:grid;grid-template-columns:.7rem 1fr auto;gap:.55rem;align-items:center;text-align:left;padding:.5rem .6rem;border:0;border-radius:8px;background:none;font:inherit;font-size:.9rem;color:inherit;cursor:pointer}
+.accmod:hover{background:var(--bg2,#F2F4F7)}.accmod.on{background:var(--acc-bg,#EFF4FF)}.accmod.on .accmn{font-weight:600}
+.accdot{width:.6rem;height:.6rem;border-radius:50%;border:1.5px solid var(--line2,#98A2B3)}.accdot.all{background:#12B76A;border-color:#12B76A}.accdot.some{background:linear-gradient(90deg,#12B76A 50%,transparent 50%);border-color:#12B76A}
+.acchead{display:flex;flex-direction:column;gap:.1rem;margin-bottom:.5rem}
+table.acct th.c{text-align:center;vertical-align:bottom}table.acct th.c div{font-size:.72rem;margin-bottom:.25rem}table.acct td.c{text-align:center}
+table.acct tr.off td:first-child{color:var(--ink2,#98A2B3)}
 
 </style>
 
@@ -5494,14 +5504,14 @@ SET.access=()=>{const el=h('div',{class:'stack'});const later=lazyRefresh(el,()=
       try{await db.doc('setup/main/access/'+F.pick).set(doc);await logAccess(F.pick,F.pickName,before?'Changed access':'Granted access',before&&{role:before.role,perms:before.perms||null},{role:doc.role,perms:doc.perms});
         msg.textContent=isStaff?`Saved. ${F.pickName} can now sign in at ${location.host}; the app limits them to the ticked rights.`:`Saved. ${F.pickName} can now sign in at ${location.host}. Publish their dashboard from Requests and queries, Dashboards.`;F.pick=null;res.textContent='';q.value='';}catch(e){msg.textContent=e&&/plan allows/i.test(e.message||'')?e.message:'Only the company owner can assign access.';}};
     form.append(h('div',{class:'formgrid'},h('label',{class:'field'},'Role',role),isStaff?null:h('label',{class:'field'},'Company',ent),isP?h('label',{class:'field'},F.role==='customer'?'Customer':'Supplier',h('input',{type:'text',value:F.partner,list:'dl-acc-partners',oninput:e=>F.partner=e.target.value})):null,(F.role==='employee'||isStaff)?h('label',{class:'field'},F.role==='employee'?'Employee record':'Linked employee record (for check-in; optional)',emp):null,isStaff?h('label',{class:'field'},'Access ends on (optional)',h('input',{type:'date',value:F.expires||'',min:today(),onchange:e=>F.expires=e.target.value})):null,isStaff?h('label',{class:'field'},`Approval limit in ${S.baseCur} (optional)`,h('input',{type:'number',min:0,value:F.limit||'',oninput:e=>F.limit=+e.target.value||0})):null),
-      h('datalist',{id:'dl-acc-partners'},partners.map(p=>h('option',{value:p}))),isStaff?companyPicker(F.entities,v=>{F.entities=v;drawForm();},S.canEdit):null,isStaff?h('p',{class:'note'},ROLE_NOTE[F.role]||'','  Adjust any box below; combinations such as view and delete, or edit and delete, are allowed.'):null,isStaff?permMatrix(F.perms,S.canEdit,()=>{}):null,h('div',{class:'row'},add),msg);}
+      h('datalist',{id:'dl-acc-partners'},partners.map(p=>h('option',{value:p}))),isStaff?companyPicker(F.entities,v=>{F.entities=v;drawForm();},S.canEdit):null,isStaff?h('p',{class:'note'},ROLE_NOTE[F.role]||'','  Adjust any box below; combinations such as view and delete, or edit and delete, are allowed.'):null,isStaff?accessEditor(F):null,h('div',{class:'row'},add),msg);}
   function userCard(uid,x){const isStaff=STAFF.concat(['custom']).includes(x.role);const card=h('div',{class:'qcard'});const P=JSON.parse(JSON.stringify(x.perms||ACCESS_PRESETS[x.role]||{}));const m=h('p',{class:'note'});
     const sum=isStaff?ACCESS_MODULES.filter(([k])=>P[k]&&P[k].view).length:0;const conf=isStaff?sodConflicts(P):[];
     card.append(h('div',{class:'qhead'},h('div',{style:'min-width:0'},h('div',{class:'qdesc'},x.name||who(uid)),h('div',{class:'qmeta'},`${ROLES[x.role]||ROLESEL[x.role]||x.role} · ${companiesLabel(x)} · granted by ${who(x.granted_by)}, ${fmtTime(x.granted_at)}`)),
       h('div',{class:'row'},isStaff?pill(`${sum} of ${ACCESS_MODULES.length} areas`,'acc'):pill(x.partner||'Own dashboard','agent'),conf.length?pill('Segregation conflict','warn'):null,isStaff?h('button',{class:'btn ghost sm',type:'button',onclick:()=>{open[uid]=!open[uid];refresh();}},open[uid]?'Close':'Rights'):null,
         S.canEdit&&S.canDelete?h('button',{class:'btn ghost sm danger',type:'button',onclick:async()=>{try{await db.doc('setup/main/access/'+uid).delete();await logAccess(uid,x.name,'Removed access',{role:x.role,perms:x.perms||null},null);}catch(e){}}},'Remove'):null)));
     if(open[uid]&&isStaff){let ents=Array.isArray(x.entities)&&x.entities.length?x.entities.slice():null;const pickBox=h('div');const drawPick=()=>{pickBox.textContent='';pickBox.append(companyPicker(ents,v=>{ents=v;drawPick();},S.canEdit&&uid!==S.me));};drawPick();card.append(pickBox);const save=h('button',{class:'btn primary sm',type:'button',disabled:!S.canEdit||uid===S.me},'Save rights');save.onclick=async()=>{save.disabled=true;try{if(ents&&!ents.length){m.textContent='Tick at least one company, or choose all companies.';save.disabled=false;return;}await db.doc('setup/main/access/'+uid).update({perms:P,entities:ents,entity:ents?ents[0]:null,role:x.role==='custom'||JSON.stringify(P)===JSON.stringify(ACCESS_PRESETS[x.role])?x.role:'custom',changed_by:S.me,changed_at:nowISO()});await logAccess(uid,x.name,'Changed rights',{perms:x.perms||ACCESS_PRESETS[x.role],entities:x.entities||null},{perms:P,entities:ents});m.textContent='Saved and logged.';}catch(e){m.textContent='Only owners and admins can change rights.';save.disabled=false;}};
-      card.append(permMatrix(P,S.canEdit&&uid!==S.me,()=>{}),h('div',{class:'row'},save),m);}
+      card.append(accessEditor({perms:P,entities:ents}),h('div',{class:'row'},save),m);}
     return card;}
   function drawReview(){review.textContent='';const log=(S.raw.access_log||[]).slice().sort((a,b)=>(b.at||'')<(a.at||'')?-1:1);const F2=accessFindings();
     const exp=h('button',{class:'btn',type:'button'},'Download access review (Excel)');exp.onclick=()=>{const rows=[['Person','Role','Entity','Area','View','Create and edit','Approve','Delete, reject or reverse','Granted by','Granted at']];
@@ -11762,6 +11772,36 @@ BUILD.logins=()=>{const el=h('section',{class:'stack'});const body=h('div',{clas
   const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);try{draw();}catch(e){}return y;};draw();return r;};}
 // module settings no longer carry Logins and access
 try{for(const k of Object.keys(MS_SECTIONS)){const g=MS_SECTIONS[k]&&MS_SECTIONS[k].group;if(Array.isArray(g)){let i;while((i=g.indexOf('access'))>=0) g.splice(i,1);}}}catch(e){}
+
+// ===== Logins and access: rights by the company's own modules, with the screens of each module in the next column =====
+const ACC_SKIP_APPS=['settings','extview','lounge','documents'];
+function accEntities(F){const ids=Object.keys(S.ent||{}).filter(k=>k!=='all');if(F&&Array.isArray(F.entities)&&F.entities.length) return F.entities.filter(x=>ids.includes(x));if(S.entity&&S.entity!=='all'&&F&&F.entities===undefined) return [S.entity];return ids;}
+function accApps(F){const ents=accEntities(F).map(id=>S.ent[id]).filter(Boolean);const seen=new Set();const out=[];
+  APPS.forEach(a=>{if(a.hidden||ACC_SKIP_APPS.includes(a.k)||seen.has(a.k)) return;const on=ents.some(e=>{try{return !entAppsOff(e).includes(a.k);}catch(x){return true;}});if(!on) return;
+    const tabs=a.tabs.filter(t=>BUILD[t]&&t!=='mdocs'&&!/^set/.test(t)&&modOfTab(t));if(!tabs.length) return;seen.add(a.k);out.push({k:a.k,name:a.name,tabs});});return out;}
+const tabName=t=>(TABS.find(x=>x[0]===t)||[t,t])[1];
+function accTabPerm(F,t){const P=F.perms||(F.perms={});const tp=(P._tabs||{})[t];if(tp) return tp;const m=modOfTab(t);const a=P[m]||{};return {view:!!a.view,edit:!!a.edit,approve:!!a.approve,delete:!!a.delete};}
+// area rights follow the screens: an area allows an action if any of its screens does
+function accRecalc(F){const P=F.perms||(F.perms={});const T=P._tabs||{};const areas={};Object.entries(T).forEach(([t,v])=>{const m=modOfTab(t);if(!m) return;const a=areas[m]||(areas[m]={view:false,edit:false,approve:false,delete:false});ACTS.forEach(([k])=>{if(v[k]) a[k]=true;});});
+  Object.entries(areas).forEach(([m,a])=>{P[m]={...(P[m]||{}),...a};});}
+function accessEditor(F){const box=h('div',{class:'acced'});const apps=accApps(F);const P=F.perms||(F.perms={});P._tabs=P._tabs||{};
+  if(!apps.length){box.append(emptyNote('No modules are switched on for the chosen companies.'));return box;}
+  let cur=S._accApp&&apps.some(a=>a.k===S._accApp)?S._accApp:apps[0].k;
+  const left=h('div',{class:'accmods',role:'tablist','aria-label':'Modules'});const right=h('div',{class:'acctabs'});
+  const appState=a=>{const v=a.tabs.map(t=>accTabPerm(F,t));return v.every(x=>!x.view)?'none':v.every(x=>x.view)?'all':'some';};
+  function drawLeft(){left.textContent='';apps.forEach(a=>{const st=appState(a);const n=a.tabs.filter(t=>accTabPerm(F,t).view).length;
+    left.append(h('button',{type:'button',role:'tab','aria-selected':String(cur===a.k),class:'accmod'+(cur===a.k?' on':''),onclick:()=>{cur=S._accApp=a.k;drawLeft();drawRight();}},
+      h('span',{class:'accdot '+st,'aria-hidden':'true'}),h('span',{class:'accmn'},a.name),h('span',{class:'mini mut'},st==='none'?'No access':`${n} of ${a.tabs.length}`)));});}
+  function setTab(t,k,v){const tp={...accTabPerm(F,t)};tp[k]=v;if(k==='view'&&!v){tp.edit=tp.approve=tp.delete=false;}if(k!=='view'&&v) tp.view=true;P._tabs[t]=tp;accRecalc(F);}
+  function drawRight(){right.textContent='';const a=apps.find(x=>x.k===cur);if(!a) return;
+    const allBox=k=>{const c=h('input',{type:'checkbox','aria-label':`${ACTS.find(x=>x[0]===k)[1]} on every ${a.name} screen`});const v=a.tabs.map(t=>accTabPerm(F,t)[k]);c.checked=v.every(Boolean);c.indeterminate=!c.checked&&v.some(Boolean);c.disabled=!S.canEdit;c.onchange=()=>{a.tabs.forEach(t=>setTab(t,k,c.checked));drawRight();drawLeft();};return c;};
+    const tb=h('tbody');a.tabs.forEach(t=>{const tp=accTabPerm(F,t);tb.append(h('tr',{class:tp.view?'':'off'},h('td',{},tabName(t)),ACTS.map(([k])=>h('td',{class:'c'},h('input',{type:'checkbox',checked:!!tp[k],disabled:!S.canEdit,'aria-label':`${ACTS.find(x=>x[0]===k)[1]}: ${tabName(t)}`,onchange:e=>{setTab(t,k,e.target.checked);drawRight();drawLeft();}})))));});
+    right.append(h('div',{class:'acchead'},h('b',{},a.name),h('span',{class:'mini mut'},'Tick what this person may do on each screen.')),
+      h('div',{class:'tablewrap'},h('table',{class:'lines perm acct'},h('thead',{},h('tr',{},h('th',{},'Screen'),ACTS.map(([k,l])=>h('th',{class:'c',title:ACT_HELP[k]},h('div',{},l),allBox(k))))),tb)));}
+  drawLeft();drawRight();box.append(h('div',{class:'accgrid'},left,right),h('p',{class:'mini mut'},'Only the modules switched on for the chosen companies are listed. Screens not ticked are hidden from this person.'));return box;}
+// enforce screen-level rights for the signed-in person
+{const _ra=roleAllows;roleAllows=t=>{const ok=_ra(t);if(!ok) return ok;try{const tp=((myPerms()||{})._tabs||{})[t];if(tp&&!tp.view) return false;}catch(e){}return ok;};}
+{const _ap=applyTabPerms;applyTabPerms=function(id){const r=_ap.apply(this,arguments);try{const tp=((myPerms()||{})._tabs||{})[id];if(tp){S.canWrite=S.canWrite&&!!tp.edit;S.canApprove=S.canApprove&&!!tp.approve;S.canDelete=S.canDelete&&!!tp.delete;}}catch(e){}return r;};}
 
 
 // test hook (local development only)
