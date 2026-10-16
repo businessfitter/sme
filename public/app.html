@@ -1417,6 +1417,18 @@ table.lines select.linesvc{display:block;width:100%;margin-bottom:.3rem;font-siz
 .orgcompact .orgcard{min-width:7.2rem;max-width:9.5rem;padding:.4rem .5rem;border-radius:9px;gap:.05rem;box-shadow:none}
 .orgcompact .orgcard b{font-size:.76rem}.orgcompact .orgcard .orgwho{font-size:.72rem}.orgcompact .orgcard .mini{font-size:.66rem}
 .orgcompact .orgkey{font-size:.58rem}
+/* bank statement: chosen file waiting for Submit */
+.bkstage{display:flex;justify-content:space-between;align-items:center;gap:.75rem;border:1px solid var(--line,#E4E7EE);border-radius:10px;padding:.6rem .8rem;margin-top:.6rem;background:var(--panel,#fff)}
+.bkstage[hidden]{display:none}.bkstage .bkfile{display:flex;flex-direction:column;gap:.1rem;min-width:0}.bkstage .bkfile b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* period filter */
+tr.perhide{display:none}
+.perbar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem;padding:.55rem .7rem;margin:.25rem 0 .75rem;border:1px solid var(--line,#E4E7EE);border-radius:10px;background:var(--bg2,#F7F8FA)}
+.perbar[hidden]{display:none}
+.perbar .perlbl{font-size:.82rem;font-weight:500;color:var(--ink2,#5B6472)}
+.perbar select,.perbar input[type=date]{height:2.1rem;padding:0 .55rem;border:1px solid var(--line,#E4E7EE);border-radius:8px;background:var(--panel,#fff);font:inherit;font-size:.86rem;color:inherit}
+.perbar .perrange{display:inline-flex;gap:.5rem;align-items:center}.perbar .perrange label{display:inline-flex;gap:.35rem;align-items:center;font-size:.82rem;color:var(--ink2,#5B6472)}
+.perbar .percount{margin-left:auto}
+@media (max-width:640px){.perbar .perrange{flex-wrap:wrap}.perbar .percount{margin-left:0;width:100%}}
 
 </style>
 
@@ -2040,9 +2052,15 @@ BUILD.bank=()=>{
     ctl=new AbortController();S.bankRun=true;stopB.hidden=false;fileIn.disabled=true;exBtn.disabled=true;result.textContent='';
     try{let code=acctPick.value;if(code==='__new'){code=await createBankAccount(bn);syncAcct();acctPick.value=code;}
       await processStatement(file,code,bn,log,result,ctl.signal);}catch(e){log.append(h('div',{class:'step err'},e.message||'Something went wrong.'));}finally{S.bankRun=null;stopB.hidden=true;fileIn.disabled=false;exBtn.disabled=false;fileIn.value='';}};
-  fileIn.onchange=()=>{const f=fileIn.files&&fileIn.files[0];if(f) go(f);};
+  let staged=null;const chosen=h('div',{class:'bkstage',hidden:true});const subB=h('button',{class:'btn',type:'button',id:'bk-submit',disabled:true},'Submit for review');
+  const stage=f=>{staged=f||null;chosen.textContent='';chosen.hidden=!staged;subB.disabled=!staged;
+    if(staged){chosen.append(h('div',{class:'bkfile'},h('b',{},staged.name||'statement'),h('span',{class:'mini mut'},(staged.size>=1048576?(staged.size/1048576).toFixed(1)+' MB':Math.max(1,Math.round(staged.size/1024))+' KB'))),h('button',{class:'btn ghost sm',type:'button',onclick:()=>{fileIn.value='';stage(null);}},'Remove'));
+      if(!S.bankRun){log.textContent='';log.append(h('div',{class:'step'},'Ready. Check the bank and ledger account, then press Submit for review.'));}}};
+  subB.onclick=()=>{if(!staged||S.bankRun) return;if(!bankName()){log.textContent='';log.append(h('div',{class:'step err'},'Choose the bank first, or type its name under “Other bank”.'));return;}const f=staged;stage(null);go(f);};
+  drop.after(chosen);exBtn.parentNode.prepend(subB);
+  fileIn.onchange=()=>{const f=fileIn.files&&fileIn.files[0];if(f) stage(f);};
   drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over');});drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
-  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f) go(f);});
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f) stage(f);});
   exBtn.onclick=()=>go(exampleStatement(acctPick.value==='__new'?'1010':acctPick.value));
   function refresh(){if(allGuard(el,'upload statements and approve entries')) return;const nd=needData();
     const ent=S.ent[S.entity]||{};const banks=(ent.banks&&ent.banks.length?ent.banks:((COUNTRIES[ent.country]||{}).banks||[]));const bv=bankSel.value;bankSel.textContent='';
@@ -2565,6 +2583,7 @@ async function submitMove(mv,{reason,forceReview}={}){
   if(mv.amount>lim) why.push(`${money(mv.amount)} is above the approval limit of ${money(lim)}`);
   if(agentMade&&policy().agents_need_review) why.push('your approval policy sends every agent entry to a person');
   if(agentMade&&(S.settings||{}).segregation) why.push('segregation of duties is on');
+  if(mv._preapproved&&S.canApprove){why.length=0;mv.audit.push({at:nowISO(),by:S.me,action:'Approved with the payroll run'});}delete mv._preapproved;
   if(why.length){mv.state='to_approve';mv.name=null;mv.audit.push({at:nowISO(),by:'engine',action:'Held for approval: '+why.join('; ')+'.'});}
   else{mv.state='posted';mv.name=nextName(mv.journal,mv.date);mv.approved_by=agentMade?mv.created_by:S.me;mv.approved_at=nowISO();mv.audit.push({at:nowISO(),by:agentMade?'engine':S.me,action:agentMade?`Posted within the ${money(lim)} limit`:'Posted'});}
   if(mv.state==='posted'){const z=await sealOf(mv);if(z) mv.seal=z;}
@@ -3062,7 +3081,7 @@ BUILD.payroll=()=>{const el=h('section',{class:'stack'});
     if(!draft.month) draft.month=nextOpenMonth();const M=draft.month;const done=S.payruns.find(p=>p.month===M&&p.status!=='cancelled');
     const mSel=h('select',{'aria-label':'Month',onchange:e=>{draft.month=e.target.value;draft.adj={};refresh();}});monthOptions(mSel,M);mSel.value=M;
     const card=h('div',{class:'card'});body.append(card);
-    card.append(h('div',{class:'cardhead'},h('div',{},h('h3',{},'Payroll for '+mLabel(M,true)),h('p',{class:'note'},done?'Posted. Payslips, bank file and salary transfer are below.':'Review each employee, add bonuses or deductions, then post. Social security and tax follow the Statutory rules tab.')),h('label',{class:'sel'},'Month',mSel)));
+    card.append(h('div',{class:'cardhead'},h('div',{},h('h3',{},'Payroll for '+mLabel(M,true)),h('p',{class:'note'},done?(done.status==='pending'?'Waiting for approval. The entries post once it is approved.':'Posted. Payslips, bank file and salary transfer are below.'):(payLastRejected(M)?'Sent back: '+(payLastRejected(M).reject_reason||'')+'. Fix it and submit again. ':'')+'Review each employee, add bonuses or deductions, then submit for approval. Social security and tax follow the Statutory rules tab.')),h('label',{class:'sel'},'Month',mSel)));
     if(done){drawDone(card,done);}
     else{{const ap=(S.raw.att_payroll||[]).find(x=>x.id===S.entity+'-'+M);if(ap&&draft._ap!==ap.sent_at){draft._ap=ap.sent_at;Object.entries(ap.adj||{}).forEach(([k,v])=>{draft.adj[k]={...(draft.adj[k]||{}),...v};});}}const slips=emps.map(e=>calcSlip(e,M,draft.adj[e.id],R)).filter(Boolean);if(!slips.length){card.append(emptyNote('No employees are on payroll for this month. Add them under Employees.'));return;}
       const T=k=>r2(slips.reduce((s,x)=>s+(+x[k]||0),0));
@@ -3070,25 +3089,25 @@ BUILD.payroll=()=>{const el=h('section',{class:'stack'});
         h('tbody',{},slips.map(s=>{const e=emps.find(x=>x.id===s.id);const a=draft.adj[s.id]||(draft.adj[s.id]={});const inp=k=>h('input',{type:'number',step:'0.01',min:'0',value:a[k]||'',style:'width:6.5rem',class:'num','aria-label':k+' for '+s.name,onchange:ev=>{a[k]=+ev.target.value||0;refresh();}});
           return h('tr',{},h('td',{},s.name,h('div',{class:'mini mut'},[s.emp_no,e.position,s.scheme?(R.schemes.find(x=>x.id===s.scheme)||{}).name:null,s.prorated?'Part month':null].filter(Boolean).join(' · '))),h('td',{class:'num'},money2(fixedPay(e))),h('td',{},inp('add')),h('td',{},inp('ded')),h('td',{class:'num'},money2(s.gross)),h('td',{class:'num'},s.ee?money2(s.ee):'—'),h('td',{class:'num'},s.tax?money2(s.tax):'—'),h('td',{class:'num'},s.reimb?money2(s.reimb):'—'),h('td',{class:'num'},s.recov?money2(-s.recov):'—'),h('td',{class:'num'},h('b',{},money2(s.net))),h('td',{class:'num mut'},money2(s.gross+s.er)));})),
         h('tfoot',{},h('tr',{class:'total'},h('td',{},'Total'),h('td',{}),h('td',{}),h('td',{}),h('td',{class:'num'},money2(T('gross'))),h('td',{class:'num'},money2(T('ee'))),h('td',{class:'num'},money2(T('tax'))),h('td',{class:'num'},money2(T('reimb'))),h('td',{class:'num'},money2(-T('recov'))),h('td',{class:'num'},money2(T('net'))),h('td',{class:'num'},money2(T('gross')+T('er'))))));
-      const out=h('div',{class:'stack',style:'gap:.5rem'});const chk=h('button',{class:'btn agent',type:'button',hidden:!sample},'Check with the payroll agent');const post=h('button',{class:'btn primary',type:'button',disabled:!S.canWrite},'Post payroll');
+      const out=h('div',{class:'stack',style:'gap:.5rem'});const chk=h('button',{class:'btn agent',type:'button',hidden:!sample},'Check with the payroll agent');const post=h('button',{class:'btn primary',type:'button',disabled:!S.canWrite},'Submit for approval');
       chk.onclick=async()=>{const prev=S.payruns.filter(p=>p.month<M&&p.status!=='cancelled').sort((a,b)=>a.month<b.month?1:-1)[0];chk.disabled=true;out.textContent='';const ans=h('div',{class:'answer'},'Payroll agent is checking…');out.append(ans);
         const brief=x=>(x||[]).map(l=>({name:l.name,gross:l.gross,social_security:l.ee,tax:l.tax,claims:l.reimb,advance_recovery:l.recov,net:l.net,part_month:l.prorated}));
         try{await sample(`You are the Payroll agent of an AI-run finance department for ${S.settings.company}, a ${(COUNTRIES[S.settings.country]||{}).name} service SME (${S.baseCur}). Compare this month's payroll with the previous run and flag what a payroll manager should check: joiners, leavers, pay changes, part months, social security that looks wrong for the employee's nationality, unusual bonuses, deductions or claims. Under 160 words, "-" bullets. ${langLine()}\nStatutory rules: ${JSON.stringify(R)}\nThis run (${M}): ${JSON.stringify(brief(slips))}\nPrevious run (${prev?prev.month:'none'}): ${JSON.stringify(brief(prev&&prev.lines))}`,{onText:({text})=>{ans.textContent=text;}});}catch(e){ans.textContent=sampleErr(e);}finally{chk.disabled=false;}};
-      post.onclick=async()=>{post.disabled=true;out.textContent='';try{await postPayrun(M,slips);out.append(h('div',{class:'banner ok'},`Payroll for ${mLabel(M,true)} is saved. Publish payslips and record the transfer below.`));draft.adj={};}catch(e){out.append(h('p',{class:'err'},e.message));post.disabled=false;}};
+      post.onclick=async()=>{post.disabled=true;out.textContent='';try{if(S.payruns.some(p=>p.month===M&&p.status!=='cancelled')) throw new Error('Payroll for this month is already submitted.');await db.collection('payruns').add({entity:S.entity,month:M,lines:slips,gross:T('gross'),net:T('net'),ee:T('ee'),er:T('er'),tax:T('tax'),recov:T('recov'),reimb:T('reimb'),total:T('net'),status:'pending',created_by:S.me,created_at:nowISO()});out.append(h('div',{class:'banner ok'},`Payroll for ${mLabel(M,true)} is sent for approval. The entries post once it is approved.`));draft.adj={};}catch(e){out.append(h('p',{class:'err'},e.message));post.disabled=false;}};
       card.append(h('div',{class:'tablewrap'},t),h('div',{class:'row'},chk,post),out,h('p',{class:'note'},'Posting debits gross pay and employer contributions, credits net pay, social security, tax withheld and advance recoveries, clears approved claims paid with this payroll, and trues up end of service.'));}
     const past=S.payruns.filter(p=>p.status!=='cancelled').sort((a,b)=>a.month<b.month?1:-1);
     body.append(h('div',{class:'card'},h('h3',{},'Past payroll runs'),past.length?h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},h('th',{},'Month'),h('th',{class:'num'},'Employees'),h('th',{class:'num'},'Gross'),h('th',{class:'num'},'Net'),h('th',{},'Entry'),h('th',{},'Payslips'))),
       h('tbody',{},past.map(p=>{const mv=S.moves.find(m=>m.id===p.move_id);return h('tr',{class:'click',onclick:()=>{draft.month=p.month;refresh();}},h('td',{},mLabel(p.month,true)),h('td',{class:'num'},String((p.lines||[]).length)),h('td',{class:'num'},money2(p.gross!=null?p.gross:p.total)),h('td',{class:'num'},money2(p.net!=null?p.net:p.total)),h('td',{},mv?stateTag(mv):'—',' ',mv&&mv.name?h('span',{class:'code mini'},mv.name):null),h('td',{},p.published_at?pill('Published','ok'):pill('Not published')));})))):emptyNote('No payroll posted yet.')));}
-  async function postPayrun(M,slips){if(S.payruns.some(p=>p.month===M&&p.status!=='cancelled')) throw new Error('Payroll for this month is already posted.');await payrollAccounts();
+  async function postPayrun(M,slips,pid){if(S.payruns.some(p=>p.month===M&&p.status!=='cancelled'&&p.id!==pid)) throw new Error('Payroll for this month is already posted.');await payrollAccounts();
     const T=k=>r2(slips.reduce((s,x)=>s+(+x[k]||0),0));const g=T('gross'),er=T('er'),ee=T('ee'),tax=T('tax'),recov=T('recov'),reimb=T('reimb');const net=r2(g+reimb-ee-tax-recov);const L=`Payroll ${mLabel(M,true)}`;
     const lines=[{account:'6000',label:`${L}, gross pay`,debit:g,credit:0},{account:'6020',label:`${L}, employer contributions`,debit:er,credit:0},{account:'2360',label:`${L}, approved claims paid`,debit:reimb,credit:0},
       {account:'2370',label:`${L}, social security payable`,debit:0,credit:r2(ee+er)},{account:'2380',label:`${L}, tax withheld`,debit:0,credit:tax},{account:'1350',label:`${L}, advances recovered`,debit:0,credit:recov},{account:'2350',label:`${L}, net pay`,debit:0,credit:net}];
-    const res=await submitMove({journal:'MISC',date:lastDay(M),ref:L,lines,payroll_month:M,source:'agent',created_by:'agent:payroll',requested_by:S.me,reasoning:`${slips.length} employees. Gross ${money(g)}, employee contributions ${money(ee)}, employer contributions ${money(er)}, tax ${money(tax)}, claims ${money(reimb)}, advance recoveries ${money(recov)}.`},{reason:'Payroll run'});
+    const res=await submitMove({journal:'MISC',date:lastDay(M),ref:L,lines,payroll_month:M,source:pid?'manual':'agent',created_by:pid?S.me:'agent:payroll',_preapproved:!!pid,requested_by:S.me,reasoning:`${slips.length} employees. Gross ${money(g)}, employee contributions ${money(ee)}, employer contributions ${money(er)}, tax ${money(tax)}, claims ${money(reimb)}, advance recoveries ${money(recov)}.`},{reason:'Payroll run'});
     let eo=null;if(['AE','SA'].includes(S.settings.country)){const need=r2(activeEmps().reduce((s,e)=>s+(gratuity(e,lastDay(M))||0),0));const book=balanceOf(['2400'],lastDay(M));const diff=r2(need-book);
-      if(diff>=1){await ensureAccount('2400','Employee end-of-service benefits','liability_non_current');eo=await submitMove({journal:'MISC',date:lastDay(M),ref:`End-of-service provision ${mLabel(M,true)}`,lines:diff>0?[{account:'6000',label:'End-of-service provision',debit:diff,credit:0},{account:'2400',label:'End-of-service provision',debit:0,credit:diff}]:[{account:'2400',label:'End-of-service release',debit:-diff,credit:0},{account:'6000',label:'End-of-service release',debit:0,credit:-diff}],payroll_month:M,source:'agent',created_by:'agent:payroll',requested_by:S.me,reasoning:`Required ${money(need)} under labour law, booked ${money(book)}.`},{reason:'End-of-service true-up'});}}
-    await db.collection('payruns').add({entity:S.entity,month:M,lines:slips,gross:g,net,ee,er,tax,recov,reimb,total:net,move_id:res.id,eosb_move_id:eo&&eo.id||null,status:'posted',created_by:S.me,created_at:nowISO()});
+      if(diff>=1){await ensureAccount('2400','Employee end-of-service benefits','liability_non_current');eo=await submitMove({journal:'MISC',date:lastDay(M),ref:`End-of-service provision ${mLabel(M,true)}`,lines:diff>0?[{account:'6000',label:'End-of-service provision',debit:diff,credit:0},{account:'2400',label:'End-of-service provision',debit:0,credit:diff}]:[{account:'2400',label:'End-of-service release',debit:-diff,credit:0},{account:'6000',label:'End-of-service release',debit:0,credit:-diff}],payroll_month:M,source:pid?'manual':'agent',created_by:pid?S.me:'agent:payroll',_preapproved:!!pid,requested_by:S.me,reasoning:`Required ${money(need)} under labour law, booked ${money(book)}.`},{reason:'End-of-service true-up'});}}
+    if(pid) await db.doc('payruns/'+pid).update({gross:g,net,ee,er,tax,recov,reimb,total:net,move_id:res.id,eosb_move_id:eo&&eo.id||null,status:'posted',approved_by:S.me,approved_at:nowISO()});else await db.collection('payruns').add({entity:S.entity,month:M,lines:slips,gross:g,net,ee,er,tax,recov,reimb,total:net,move_id:res.id,eosb_move_id:eo&&eo.id||null,status:'posted',created_by:S.me,created_at:nowISO()});
     for(const s of slips) for(const q of s.reqs) {try{await db.doc(`portal/${q.uid}/requests/${q.id}`).update({status:'paid',paid_via:'payroll',paid_month:M,paid_at:nowISO()});}catch(e){console.warn(e);}}}
-  function drawDone(card,p){const msg=h('p',{class:'note'});const lines=p.lines||[];
+  function drawDone(card,p){if(p.status==='pending') return payPending(card,p,()=>postPayrun(p.month,p.lines||[],p.id));const msg=h('p',{class:'note'});const lines=p.lines||[];
     const pub=h('button',{class:'btn primary',type:'button',disabled:!S.canWrite},p.published_at?'Publish payslips again':'Publish payslips to employees');pub.onclick=async()=>{pub.disabled=true;try{const n=await publishPayslips(p);await db.doc('payruns/'+p.id).update({published_at:nowISO(),published_by:S.me});msg.textContent=n?`Published to ${n} employee ${n===1?'login':'logins'}.`:'No employee has a login yet. Give them one in Settings, Logins and access.';}catch(e){msg.textContent='Publishing stopped: '+(e.message||e.code);}finally{pub.disabled=false;}};
     const file=h('button',{class:'btn',type:'button'},'Bank transfer file (Excel)');file.onclick=()=>exportXlsx(`salary-transfer-${p.month}.xlsx`,{Transfers:[['Employee','Employee number','Bank','IBAN','Net pay',S.baseCur,'Month'],...lines.map(l=>[l.name,l.emp_no||'',l.bank||'',l.iban||'',l.net,S.baseCur,p.month])]});
     const reg=h('button',{class:'btn',type:'button'},'Payroll register (Excel)');reg.onclick=()=>exportXlsx(`payroll-${p.month}.xlsx`,{Register:[['Employee','Gross','Employee contributions','Employer contributions','Tax','Claims','Advance recovery','Net'],...lines.map(l=>[l.name,l.gross,l.ee,l.er,l.tax,l.reimb,l.recov,l.net])]});
@@ -11077,6 +11096,86 @@ function empPanel(e,back){const box=h('div',{class:'stack emppanel'});const msg=
     if(!w.querySelector('.orgzoom')){w.prepend(h('div',{class:'orgzoom'},h('button',{class:'btn sm',type:'button',onclick:()=>{fit=true;apply();}},'Fit to screen'),h('button',{class:'btn sm ghost',type:'button',onclick:()=>{fit=false;apply();}},'Actual size')));}
     const apply=()=>{t.style.zoom='1';if(!fit) return;let z=1;for(let i=0;i<4&&w.scrollWidth>w.clientWidth+1;i++){z=Math.max(.4,z*(w.clientWidth-8)/w.scrollWidth);t.style.zoom=String(z);if(z<=.4) break;}};apply();if(!w._ro){w._ro=new ResizeObserver(()=>apply());w._ro.observe(w);}};
   r.refresh=function(...a){const x=rf.apply(this,a);try{r.el.classList.add('orgcompact');setTimeout(ctl,30);}catch(y){}return x;};return r;};}
+
+// ===== Payroll approval: Run monthly payroll from HR, submit for approval, post entries only once approved =====
+function payPending(card,p,approve){const L=p.lines||[];const msg=h('div',{class:'stack',style:'gap:.5rem'});
+  const mine=p.created_by===S.me;const may=S.canApprove&&(!mine||S.isOwner);
+  card.append(h('div',{class:'banner warn payapprove'},h('b',{},'Waiting for approval. '),`Prepared by ${who(p.created_by)} on ${fmtDate(String(p.created_at||'').slice(0,10))}. Nothing is posted to the books until it is approved.`));
+  const T=k=>r2(L.reduce((s,x)=>s+(+x[k]||0),0));
+  card.append(h('div',{class:'kpis'},[['Employees',String(L.length)],['Gross pay',money2(T('gross'))],['Deductions',money2(r2(T('ee')+T('tax')+T('recov')))],['Net pay',money2(T('net'))],['Employer cost',money2(r2(T('gross')+T('er')))]].map(([l,v])=>h('div',{class:'kpi'},h('div',{class:'kl'},l),h('div',{class:'kv'},v)))));
+  card.append(h('div',{class:'tablewrap'},h('table',{class:'payprev'},h('thead',{},h('tr',{},h('th',{},'Employee'),h('th',{class:'num'},'Gross'),h('th',{class:'num'},'Social security'),h('th',{class:'num'},'Tax'),h('th',{class:'num'},'Claims'),h('th',{class:'num'},'Advance'),h('th',{class:'num'},'Net pay'))),
+    h('tbody',{},L.map(s=>h('tr',{},h('td',{},s.name,h('div',{class:'mini mut'},[s.emp_no,s.prorated?'Part month':null].filter(Boolean).join(' · '))),h('td',{class:'num'},money2(s.gross)),h('td',{class:'num'},s.ee?money2(s.ee):'—'),h('td',{class:'num'},s.tax?money2(s.tax):'—'),h('td',{class:'num'},s.reimb?money2(s.reimb):'—'),h('td',{class:'num'},s.recov?money2(-s.recov):'—'),h('td',{class:'num'},money2(s.net))))),
+    h('tfoot',{},h('tr',{class:'total'},h('td',{},'Total'),h('td',{class:'num'},money2(T('gross'))),h('td',{class:'num'},money2(T('ee'))),h('td',{class:'num'},money2(T('tax'))),h('td',{class:'num'},money2(T('reimb'))),h('td',{class:'num'},money2(-T('recov'))),h('td',{class:'num'},money2(T('net'))))))));
+  const ok=h('button',{class:'btn primary',type:'button',disabled:!may},'Approve and post');
+  if(!may) ok.title=mine?'Someone other than the person who prepared it must approve it.':'You do not have approval rights for payroll.';
+  const why=h('input',{type:'text',placeholder:'Reason for sending it back','aria-label':'Reason for rejecting the payroll',style:'min-width:16rem'});
+  const no=h('button',{class:'btn ghost danger',type:'button',disabled:!(S.canApprove||mine)},mine?'Withdraw':'Reject');
+  ok.onclick=async()=>{ok.disabled=no.disabled=true;msg.textContent='';try{await approve();}catch(e){msg.append(h('p',{class:'err'},e.message||String(e)));ok.disabled=no.disabled=false;}};
+  no.onclick=async()=>{const r=why.value.trim();if(!mine&&!r){why.focus();msg.textContent='';msg.append(h('p',{class:'err'},'Give a reason so the preparer knows what to fix.'));return;}
+    ok.disabled=no.disabled=true;try{await db.doc('payruns/'+p.id).update({status:'cancelled',rejected:!mine,withdrawn:mine,reject_reason:r||null,rejected_by:S.me,rejected_at:nowISO()});}catch(e){msg.textContent='';msg.append(h('p',{class:'err'},e.message||String(e)));ok.disabled=no.disabled=false;}};
+  card.append(h('div',{class:'row',style:'align-items:center;flex-wrap:wrap'},ok,mine?null:why,no),msg,
+    h('p',{class:'note'},'Approving posts the payroll entry (gross pay, employer contributions, net pay, social security, tax withheld and advance recoveries) and the end-of-service true-up. Then payslips and the bank file become available.'));}
+function payLastRejected(M){return (S.payruns||[]).filter(p=>p.entity===S.entity&&p.month===M&&p.status==='cancelled'&&p.rejected).sort((a,b)=>String(a.rejected_at)<String(b.rejected_at)?1:-1)[0]||null;}
+// pending payroll runs appear under Approvals in the top bar
+{const _ri=reviewItems;reviewItems=function(){const out=_ri();try{const e=S.entity;if(!e||e==='all') return out;
+  (S.payruns||[]).filter(p=>p.entity===e&&p.status==='pending').forEach(p=>out.push({kind:'payroll',mod:'payroll',c:'#B84A7C',ic:'PY',t:`Payroll ${mLabel(p.month,true)}`,d:`${(p.lines||[]).length} employees · net ${money(p.net)} · prepared by ${who(p.created_by)}`,go:'payroll',approve:null}));}catch(x){}return out;};}
+// HR: Run monthly payroll button on the Employees screen
+{const _b=BUILD.hremp;if(_b) BUILD.hremp=(...a)=>{const r=_b(...a);const add=()=>{try{const host=r.el.querySelector('.pagehead');if(!host) return;
+    const pend=(S.payruns||[]).filter(p=>p.entity===S.entity&&p.status==='pending').length;const lbl=pend?`Payroll waiting for approval (${pend})`:'Run monthly payroll';
+    let b=host.querySelector('.runpay');if(b){if(b.textContent!==lbl) b.textContent=lbl;return;}
+    b=h('button',{class:'btn primary runpay',type:'button',onclick:()=>{S.payTab='run';showTab('payroll');}},lbl);
+    host.append(h('div',{class:'row pageacts'},b));}catch(e){}};
+  const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);add();return y;};add();return r;};}
+
+// ===== Period filter on every screen: presets plus a From/To calendar range, applied to every list with a date column =====
+const PER_PRESETS=[['all','All dates'],['month','This month'],['last_month','Last month'],['quarter','This quarter'],['fy','This financial year'],['year','This calendar year'],['last_year','Last calendar year'],['d30','Last 30 days'],['d90','Last 90 days'],['custom','Custom range']];
+let PERF=(()=>{try{return JSON.parse(sessionStorage.getItem('orzio-per'))||{p:'all'};}catch(e){return {p:'all'};}})();
+function perSave(){try{sessionStorage.setItem('orzio-per',JSON.stringify(PERF));}catch(e){}}
+function perRange(f){f=f||PERF;const t=today();const y=+t.slice(0,4),m=+t.slice(5,7);const pad=n=>String(n).padStart(2,'0');
+  const eom=(yy,mm)=>new Date(Date.UTC(yy,mm,0)).toISOString().slice(0,10);
+  switch(f.p){
+    case 'month':return [`${y}-${pad(m)}-01`,eom(y,m)];
+    case 'last_month':{const yy=m===1?y-1:y,mm=m===1?12:m-1;return [`${yy}-${pad(mm)}-01`,eom(yy,mm)];}
+    case 'quarter':{const q0=Math.floor((m-1)/3)*3+1;return [`${y}-${pad(q0)}-01`,eom(y,q0+2)];}
+    case 'fy':{try{const b=fyBounds();if(b&&b[0]&&b[1]) return [b[0],b[1]];}catch(e){}return [`${y}-01-01`,`${y}-12-31`];}
+    case 'year':return [`${y}-01-01`,`${y}-12-31`];
+    case 'last_year':return [`${y-1}-01-01`,`${y-1}-12-31`];
+    case 'd30':return [addDays(t,-29),t];
+    case 'd90':return [addDays(t,-89),t];
+    case 'custom':return [f.from||'0000-01-01',f.to||'9999-12-31'];
+    default:return null;}}
+function perLabel(){const r=perRange();if(!r) return 'All dates';const p=PER_PRESETS.find(x=>x[0]===PERF.p);return PERF.p==='custom'?`${PERF.from?fmtDate(PERF.from):'Start'} – ${PERF.to?fmtDate(PERF.to):'today'}`:(p?p[1]:'')+` (${fmtDate(r[0])} – ${fmtDate(r[1])})`;}
+// read a date as the app shows it: "16 Oct 2026", 2026-10-16 or 16/10/2026
+function perParse(s){s=String(s||'').trim();let m=/^(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (\d{4})/.exec(s);if(m) return `${m[3]}-${String(MONTHS.indexOf(m[2])+1).padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m) return m[0];m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;return null;}
+const PER_HEAD=/^(date|invoice date|bill date|issue date|issued|posted|posted on|paid on|payment date|entry date|received|requested|submitted|created|joined|from)$/i;
+function perDateCol(t){const hr=t.tHead&&t.tHead.rows[t.tHead.rows.length-1];if(!hr) return -1;const cells=[...hr.cells];let i=cells.findIndex(c=>PER_HEAD.test(c.textContent.trim()));if(i<0) i=cells.findIndex(c=>/\bdate\b/i.test(c.textContent));return i;}
+function perApply(sec){if(!sec) return;const r=perRange();let shown=0,total=0,any=false;
+  sec.querySelectorAll('table').forEach(t=>{if(t.closest('.perbar,.nopertable')) return;const i=perDateCol(t);if(i<0) return;
+    [...t.tBodies].forEach(tb=>{let hideNext=false;[...tb.rows].forEach(tr=>{if(tr.classList.contains('detail')){tr.classList.toggle('perhide',hideNext);return;}
+      const c=tr.cells[i];const d=c&&tr.cells.length>i?perParse(c.textContent):null;if(!d){hideNext=false;tr.classList.remove('perhide');return;}
+      any=true;total++;const hide=!!r&&(d<r[0]||d>r[1]);tr.classList.toggle('perhide',hide);hideNext=hide;if(!hide) shown++;});});
+    t.classList.toggle('perfiltered',!!r);});
+  let bar=sec.querySelector(':scope .perbar');
+  if(!any){if(bar&&!r) bar.hidden=true;else if(bar) perCount(bar,0,0);return;}
+  if(!bar){bar=perBar();const first=[...sec.querySelectorAll('table')].find(t=>perDateCol(t)>=0&&!t.closest('.perbar'));const anchor=first&&(first.closest('.card')||first.closest('.tablewrap')||first);
+    if(!anchor) return;if(anchor.classList&&anchor.classList.contains('card')){const hd=anchor.querySelector(':scope > .cardhead, :scope > h3');(hd||anchor.firstChild)?(hd?hd.after(bar):anchor.prepend(bar)):anchor.append(bar);}else anchor.before(bar);}
+  bar.hidden=false;perCount(bar,shown,total);}
+function perCount(bar,shown,total){const c=bar.querySelector('.percount');if(c) c.textContent=perRange()?`Showing ${shown} of ${total}`:`${total} ${total===1?'item':'items'}`;}
+function perBar(){const sel=h('select',{'aria-label':'Period',class:'perpreset'},PER_PRESETS.map(([k,l])=>h('option',{value:k},l)));sel.value=PERF.p||'all';
+  const from=h('input',{type:'date',class:'perfrom','aria-label':'From date',value:PERF.from||''});const to=h('input',{type:'date',class:'perto','aria-label':'To date',value:PERF.to||''});
+  const rng=h('span',{class:'perrange'},h('label',{},'From',from),h('label',{},'To',to));
+  const sync=()=>{const r=perRange();rng.hidden=false;if(PERF.p!=='custom'&&r){from.value=r[0];to.value=r[1];}if(PERF.p==='all'){from.value='';to.value='';}};
+  sel.onchange=()=>{PERF={p:sel.value,from:PERF.from,to:PERF.to};if(sel.value==='custom'){const r=perRange({p:'month'});PERF.from=PERF.from||r[0];PERF.to=PERF.to||r[1];}perSave();perAll();};
+  const pick=()=>{PERF={p:'custom',from:from.value||'',to:to.value||''};if(PERF.from&&PERF.to&&PERF.from>PERF.to){const x=PERF.from;PERF.from=PERF.to;PERF.to=x;}perSave();perAll();};
+  from.onchange=pick;to.onchange=pick;sync();
+  const clr=h('button',{class:'btn ghost sm perclear',type:'button',onclick:()=>{PERF={p:'all'};perSave();perAll();}},'Clear');
+  const bar=h('div',{class:'perbar',role:'group','aria-label':'Filter by period'},h('span',{class:'perlbl'},'Period'),sel,rng,clr,h('span',{class:'percount mini mut'}));
+  bar._sync=()=>{sel.value=PERF.p||'all';sync();clr.hidden=PERF.p==='all';};bar._sync();return bar;}
+function perAll(){document.querySelectorAll('.perbar').forEach(b=>b._sync&&b._sync());perApply(document.querySelector('#main > section:not([hidden])'));}
+{let tm=null;const run=()=>{tm=null;perApply(document.querySelector('#main > section:not([hidden])'));};
+  const mo=new MutationObserver(ms=>{if(ms.every(m=>[...m.addedNodes,...m.removedNodes].every(n=>n.nodeType!==1||(n.classList&&n.classList.contains('perbar'))))) return;if(!tm) tm=setTimeout(run,120);});
+  const start=()=>{const m=document.getElementById('main');if(m) mo.observe(m,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});else setTimeout(start,300);};start();}
 
 
 // test hook (local development only)
