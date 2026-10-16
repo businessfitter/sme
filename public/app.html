@@ -11352,13 +11352,13 @@ BUILD.mdocs=()=>{const el=h('section',{class:'stack mdocs'});const body=h('div',
 
 // ===== Withholding tax on export receipts (Pakistan: 1% final tax deducted at source on export proceeds) =====
 // the corporate income tax expense account (Pakistan: the 1% final tax on exports is charged to it)
-const CIT_RX=/^(corporate )?(income )?tax expense$|corporate income tax expense|^income tax expense/i;
+const CIT_RX=/income tax wht|wht expense|^(corporate )?(income )?tax expense$|corporate income tax expense|^income tax expense/i;
 function citAccount(){const a=Object.values(S.accounts||{}).find(x=>!x.deprecated&&!x.group&&CIT_RX.test(String(x.name||'').trim()));if(a) return a.id;return !S.accounts['7000']?'7000':'7010';}
 function whtCfg(eid){const e=S.ent[eid||S.entity]||{};const home=e.country||(S.settings||{}).country;const w=e.wht_export||{};const def=home==='PK';
   return {on:w.on!=null?!!w.on:def,rate:w.rate!=null&&w.rate!==''?+w.rate:(def?1:0),account:w.account||citAccount(),home,isDefault:w.on==null};}
 // the deduction that applies to a customer invoice, if any
 function whtFor(inv){const W=whtCfg();if(!W.on||!(W.rate>0)||!inv||inv.kind!=='customer') return null;return custOverseas(inv.partner)?W:null;}
-async function whtEnsure(){const W=whtCfg();try{if(!S.accounts[W.account]) await ensureAccount(W.account,'Corporate income tax expense','expense');if(!S.accounts['6850']) await ensureAccount('6850','Foreign exchange gains and losses','expense');}catch(e){}}
+async function whtEnsure(){const W=whtCfg();try{if(!S.accounts[W.account]) await ensureAccount(W.account,'Income tax WHT expense','expense');if(!S.accounts['6850']) await ensureAccount('6850','Foreign exchange gains and losses','expense');}catch(e){}}
 // bank matching: an overseas customer's payment arrives net of the final tax (and sometimes bank charges or an exchange difference)
 {const _mp=matchPayment;matchPayment=function(amount,desc){const r=_mp(amount,desc);const W=whtCfg();if(!(amount>0)||!W.on||!(W.rate>0)) return r;if(r&&r.conf>=0.9) return r;
   const amt=r2(amount),k=W.rate/100,n=' '+norm(desc)+' ';
@@ -11374,7 +11374,7 @@ async function whtEnsure(){const W=whtCfg();try{if(!S.accounts[W.account]) await
 // Tax module: Withholding tax tab
 function whtTab(body,refresh){const eid=S.entity;const W=whtCfg();const ro=!(S.canEdit||canCoEdit(eid));const msg=h('p',{class:'note',role:'status'});
   const on=h('input',{type:'checkbox',checked:W.on,disabled:ro,'aria-label':'Deduct final tax on export receipts'});const rate=h('input',{type:'number',step:'0.01',min:'0',max:'100',value:W.rate,disabled:ro,style:'width:6rem','aria-label':'Rate %'});
-  let accPick=W.account;const accSel=S.accounts[W.account]?acctSelect(W.account,v=>accPick=v):h('select',{disabled:ro,onchange:e=>accPick=e.target.value},h('option',{value:W.account},`${W.account} Corporate income tax expense (created when first used)`),...Object.values(S.accounts).filter(a=>a.type==='expense'&&!a.group&&!a.deprecated).map(a=>h('option',{value:a.id},`${a.id} ${a.name}`)));if(ro) accSel.disabled=true;accSel.setAttribute('aria-label','Account for the withheld tax');
+  let accPick=W.account;const accSel=S.accounts[W.account]?acctSelect(W.account,v=>accPick=v):h('select',{disabled:ro,onchange:e=>accPick=e.target.value},h('option',{value:W.account},`${W.account} Income tax WHT expense (created when first used)`),...Object.values(S.accounts).filter(a=>a.type==='expense'&&!a.group&&!a.deprecated).map(a=>h('option',{value:a.id},`${a.id} ${a.name}`)));if(ro) accSel.disabled=true;accSel.setAttribute('aria-label','Account for the withheld tax');
   const save=h('button',{class:'btn primary',type:'button',disabled:ro},'Save');
   save.onclick=async()=>{const v=+rate.value;if(!(v>=0&&v<=100)){msg.textContent='Enter a rate between 0 and 100.';return;}save.disabled=true;try{await saveEntOf(eid,{wht_export:{...((S.ent[eid]||{}).wht_export||{}),on:on.checked,rate:v,account:accPick||W.account,set_by:S.me,set_at:nowISO()}});msg.textContent='Saved. The bank agent and Mark as paid use it from now on.';refresh();}catch(e){msg.textContent=e.message;}finally{save.disabled=false;}};
   body.append(h('div',{class:'card stack whtcard'},h('div',{class:'cardhead'},h('div',{},h('h3',{},'Withholding tax on export receipts'),h('p',{class:'note'},W.home==='PK'?'In Pakistan, income tax is deducted at source on export proceeds received from outside Pakistan, and it is a full and final tax. The default is 1%. Change it if your category or a later Finance Act sets a different rate.':'Turn this on if tax is withheld at source when payments from customers abroad reach your bank.'))),
@@ -11391,7 +11391,12 @@ function whtTab(body,refresh){const eid=S.entity;const W=whtCfg();const ro=!(S.c
       h('tbody',{},rows.map(x=>h('tr',{},h('td',{},fmtDate(x.date)),h('td',{},x.partner),h('td',{},x.inv||'—'),h('td',{class:'num'},money2(x.gross)),h('td',{class:'num'},money2(x.wht)),h('td',{class:'num'},money2(x.rec)),h('td',{},x.m.state==='posted'?h('span',{class:'code mini'},x.m.name||''):pill('Waiting for approval','warn'))))),
       h('tfoot',{},h('tr',{class:'total'},h('td',{colspan:3},'Total'),h('td',{class:'num'},money2(T('gross'))),h('td',{class:'num'},money2(T('wht'))),h('td',{class:'num'},money2(T('rec'))),h('td',{}))))):emptyNote(W.on?'Nothing withheld yet. It appears here when an export receipt is matched or marked as paid.':'Turn the deduction on above to start recording it.')));}
 // Pakistan companies get the Corporate income tax expense account in their chart as soon as they open
-{const _sw=switchEntity;switchEntity=function(...a){const r=_sw.apply(this,a);setTimeout(async()=>{try{const W=whtCfg();if(W.home==='PK'&&S.canEdit&&S.entity!=='all'&&!S.accounts[W.account]&&!S._citMade){S._citMade=true;await ensureAccount(W.account,'Corporate income tax expense','expense');}}catch(e){}},1500);return r;};}
+{const _sw=switchEntity;switchEntity=function(...a){const r=_sw.apply(this,a);setTimeout(async()=>{try{const W=whtCfg();if(W.home==='PK'&&S.canEdit&&S.entity!=='all'&&!S.accounts[W.account]&&!S._citMade){S._citMade=true;await ensureAccount(W.account,'Income tax WHT expense','expense');}}catch(e){}},1500);return r;};}
+
+// the bank agent applies the rule itself when it cannot tie a receipt to an invoice
+{const _bp=bankPrompt;bankPrompt=function(...a){let t=_bp.apply(this,a);try{const W=whtCfg();if(W.on&&W.rate>0){const k=W.rate;const cname=(COUNTRIES[W.home]||{}).name||'the country';
+  const over=(S.raw.partners||[]).filter(p=>p.kind==='customer'&&p.entity===S.entity&&p.country&&p.country!==W.home).map(p=>p.name).slice(0,40);
+  t+=`\n\nWithholding tax on export proceeds: money received from customers outside ${cname} arrives after ${k}% income tax is withheld at source (full and final tax). For such a receipt, the invoice (gross) amount = received ÷ ${(1-k/100).toFixed(4)}. Record: debit ${a[2]} with the amount received, debit ${W.account} (Income tax WHT expense) with the tax withheld (gross − received, which is ${k}% of gross), and credit the receivable account with the gross amount. Use "counterparty" for the customer.${over.length?' Customers outside '+cname+': '+over.join(', ')+'.':''}`;}}catch(e){}return t;};}
 
 // ===== Banking review as a table: the agent proposes, people approve one, several or all at once =====
 const revSel=()=>S.revSel||(S.revSel=new Set());
