@@ -1429,6 +1429,46 @@ tr.perhide{display:none}
 .perbar .perrange{display:inline-flex;gap:.5rem;align-items:center}.perbar .perrange label{display:inline-flex;gap:.35rem;align-items:center;font-size:.82rem;color:var(--ink2,#5B6472)}
 .perbar .percount{margin-left:auto}
 @media (max-width:640px){.perbar .perrange{flex-wrap:wrap}.perbar .percount{margin-left:0;width:100%}}
+/* banking: statements table */
+table.stmts td{vertical-align:middle}
+.stfile{display:flex;gap:.65rem;align-items:center;min-width:0}
+.stico{flex:none;width:2.3rem;height:2.6rem;border-radius:6px;border:1px solid var(--line,#E4E7EE);background:var(--bg2,#F7F8FA);display:grid;place-items:center;font-size:.62rem;font-weight:600;letter-spacing:.02em;color:var(--ink2,#5B6472)}
+.stname{font-weight:500;color:inherit;text-decoration:none;overflow-wrap:anywhere}a.stname:hover{text-decoration:underline}
+.sterr{color:var(--bad,#B42318);margin-top:.25rem;max-width:22rem}
+table.stmts td.acts,table.revtab td.acts{white-space:nowrap;text-align:right}
+table.stmts td.acts .row,table.revtab td.acts .row{justify-content:flex-end;gap:.35rem;flex-wrap:nowrap}
+tr.stconfirm td{background:var(--bad-bg,#FEF3F2)}
+.bkup .note{margin-top:-.2rem}
+/* banking: review table */
+.revtop{display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+.revbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.4rem .6rem;border-radius:10px;border:1px solid var(--line,#E4E7EE);background:var(--panel,#fff)}
+.revbar.on{border-color:var(--acc,#2563EB);background:var(--acc-bg,#EFF4FF)}
+.revcount{font-size:.85rem;font-weight:500;min-width:9rem}
+.revsetl{display:inline-flex;gap:.35rem;align-items:center}.revsetl select{max-width:14rem}
+.revmsg{font-size:.85rem;min-height:1.1rem;margin-bottom:.4rem}
+table.revtab th.ck,table.revtab td.ck{width:2.2rem;text-align:center}
+table.revtab td{vertical-align:middle}
+table.revtab .revref{font-weight:500;overflow-wrap:anywhere}
+table.revtab td.revtx{min-width:14rem;max-width:22rem}
+table.revtab td.in{color:var(--ok,#067647)}
+table.revtab td.revacc select{max-width:15rem}
+table.revtab .revwhy{max-width:16rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.2rem}
+table.revtab tr.sel td{background:var(--acc-bg,#EFF4FF)}
+table.revtab tr.unid td:first-child{box-shadow:inset 3px 0 0 var(--bad,#B42318)}
+table.revtab tr.done{opacity:.45}
+table.revtab tr.edited td.revacc select{border-color:var(--acc,#2563EB)}
+td.nowrap{white-space:nowrap}
+/* module documents */
+.mdgrid{display:grid;grid-template-columns:15rem minmax(0,1fr);gap:1rem;align-items:start}
+@media (max-width:860px){.mdgrid{grid-template-columns:1fr}}
+.mdtree{display:flex;flex-direction:column;gap:2px}
+.mdf{display:flex;justify-content:space-between;align-items:center;gap:.5rem;width:100%;text-align:left;padding:.5rem .6rem;border:0;border-radius:8px;background:none;font:inherit;font-size:.9rem;color:inherit;cursor:pointer}
+.mdf:hover{background:var(--bg2,#F2F4F7)}.mdf.on{background:var(--acc-bg,#EFF4FF);color:var(--acc,#1D4ED8);font-weight:500}
+.mdn{font-size:.78rem;color:var(--ink2,#5B6472)}
+.mdtree>.btn{margin-top:.5rem;align-self:flex-start}
+.mdnew{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;margin-top:.4rem}.mdnew input{flex:1;min-width:8rem}
+table.mdtab td{vertical-align:middle}table.mdtab select{max-width:12rem}
+.mdocs .cardhead>.row{flex-wrap:nowrap;align-items:center}.mdocs .cardhead>.row input[type=search]{width:14rem}
 
 </style>
 
@@ -2051,8 +2091,8 @@ BUILD.bank=()=>{
     const bn=bankName();if(!bn){log.append(h('div',{class:'step err'},'Choose the bank first, or type its name under “Other bank”.'));return;}
     ctl=new AbortController();S.bankRun=true;stopB.hidden=false;fileIn.disabled=true;exBtn.disabled=true;result.textContent='';
     try{let code=acctPick.value;if(code==='__new'){code=await createBankAccount(bn);syncAcct();acctPick.value=code;}
-      await processStatement(file,code,bn,log,result,ctl.signal);}catch(e){log.append(h('div',{class:'step err'},e.message||'Something went wrong.'));}finally{S.bankRun=null;stopB.hidden=true;fileIn.disabled=false;exBtn.disabled=false;fileIn.value='';}};
-  let staged=null;const chosen=h('div',{class:'bkstage',hidden:true});const subB=h('button',{class:'btn',type:'button',id:'bk-submit',disabled:true},'Submit for review');
+      await submitStatement(file,code,bn,log,result,ctl.signal,null);}catch(e){log.append(h('div',{class:'step err'},e.message||'Something went wrong.'));}finally{S.bankRun=null;stopB.hidden=true;fileIn.disabled=false;exBtn.disabled=false;fileIn.value='';}};
+  S._bankUI={log,result,stopB,fileIn,exBtn};let staged=null;const chosen=h('div',{class:'bkstage',hidden:true});const subB=h('button',{class:'btn',type:'button',id:'bk-submit',disabled:true},'Submit for review');
   const stage=f=>{staged=f||null;chosen.textContent='';chosen.hidden=!staged;subB.disabled=!staged;
     if(staged){chosen.append(h('div',{class:'bkfile'},h('b',{},staged.name||'statement'),h('span',{class:'mini mut'},(staged.size>=1048576?(staged.size/1048576).toFixed(1)+' MB':Math.max(1,Math.round(staged.size/1024))+' KB'))),h('button',{class:'btn ghost sm',type:'button',onclick:()=>{fileIn.value='';stage(null);}},'Remove'));
       if(!S.bankRun){log.textContent='';log.append(h('div',{class:'step'},'Ready. Check the bank and ledger account, then press Submit for review.'));}}};
@@ -2069,9 +2109,8 @@ BUILD.bank=()=>{
     queue.textContent='';if(nd){queue.append(nd);return;}
     const w=S.moves.filter(m=>m.state==='to_approve').sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);qcount.textContent='';if(w.length) qcount.append(pill(String(w.length),'warn'));
     if(!w.length) queue.append(emptyNote('Nothing is waiting. Entries the agents can’t post on their own will appear here.'));
-    w.forEach(m=>queue.append(reviewCard(m)));
-    hist.textContent='';const st=S.statements.slice().sort((a,b)=>(b.uploaded_at||'')<(a.uploaded_at||'')?-1:1);
-    if(!st.length){hist.append(emptyNote('No statements uploaded yet.'));return;}
+    if(w.length) queue.append(bankReviewTable(w));
+    drawStmts(hist);return;
     const t=h('table',{},h('thead',{},h('tr',{},h('th',{},'File'),h('th',{},'Bank'),h('th',{},'Period'),h('th',{},'Currency'),h('th',{class:'num'},'Lines'),h('th',{class:'num'},'Auto-posted'),h('th',{class:'num'},'For review'),h('th',{class:'num'},'Duplicates'),h('th',{},'Balance check'),h('th',{},'Uploaded'))));
     const tb=h('tbody');st.forEach(s=>{const ls=s.lines||[];tb.append(h('tr',{},h('td',{style:'overflow-wrap:anywhere'},s.file_name||'—'),h('td',{},s.bank||s.bank_name||'—',h('div',{class:'mini mut code'},s.bank_account||'')),h('td',{},s.period_start?`${fmtDate(s.period_start)} – ${fmtDate(s.period_end)}`:'—'),h('td',{},s.currency||'—'),
       h('td',{class:'num'},String(ls.length)),h('td',{class:'num'},String(ls.filter(l=>l.status==='posted').length)),h('td',{class:'num'},String(ls.filter(l=>l.status==='review').length)),h('td',{class:'num'},String(ls.filter(l=>l.status==='duplicate').length)),
@@ -2168,26 +2207,26 @@ async function processStatement(file,bank,bankName,logEl,resEl,signal){const st=
   lines.forEach(l=>{const k=`${bank}|${l.date}|${l.amount.toFixed(2)}|${norm(l.description)}`;counts[k]=(counts[k]||0)+1;l.hash=k+'|'+counts[k];l.dup=seen.has(l.hash);});
   const p=wfParams('bank_statement');const maxAuto=limitBase(+(p.auto_post_max??5000)),minConf=+(p.min_confidence??0.85);
   const s4=st.add('Posting entries the workflow allows');
-  const stRef=db.collection('statements').doc();const now=nowISO();
-  const stDoc={entity:S.entity,file_name:fileName,bank:bankName,bank_account:bank,bank_name:res.bank_name||null,account_hint:res.account_hint||null,currency:scur,period_start:res.period_start||null,period_end:res.period_end||null,opening_balance:op,closing_balance:cl,integrity,integrity_note:integMsg,ledger_opening:ledgerOpen,uploaded_by:S.me,uploaded_at:now,lines:[]};
+  const stRef=S._stmtRef||db.collection('statements').doc();const now=nowISO();
+  const stDoc={entity:S.entity,file_name:fileName,file:S._stmtFile||null,status:'processed',rerun_at:S._stmtOrigAt?now:null,last_error:null,bank:bankName,bank_account:bank,bank_name:res.bank_name||null,account_hint:res.account_hint||null,currency:scur,period_start:res.period_start||null,period_end:res.period_end||null,opening_balance:op,closing_balance:cl,integrity,integrity_note:integMsg,ledger_opening:ledgerOpen,uploaded_by:S.me,uploaded_at:S._stmtOrigAt||now,lines:[]};
   let nAuto=0,nRev=0,nDup=0,i=0;
-  try{await stRef.set(stDoc);
+  try{await stRef.set(stDoc);S._stmtSaved=true;
   for(const l of lines){i++;if(signal.aborted) break;s4.set(`Posting entries the workflow allows… ${i} of ${lines.length}`);
-    if(l.dup){nDup++;stDoc.lines.push({date:l.date,description:l.description,amount:l.amount,balance:l.balance,status:'duplicate'});continue;}
+    if(l.dup){const pm_=S.moves.find(m=>m.statement_hash===l.hash&&m.state!=='cancelled');if(pm_&&pm_.statement_id===stRef.id){stDoc.lines.push({date:l.date,description:l.description,amount:l.amount,balance:l.balance,status:pm_.state==='posted'?'posted':'review',move_id:pm_.id});continue;}nDup++;stDoc.lines.push({date:l.date,description:l.description,amount:l.amount,balance:l.balance,status:'duplicate'});continue;}
     const amtS=Math.abs(l.amount),inflow=l.amount>0;let conf=Math.max(0,Math.min(1,+(l.entry.confidence)||0));let reasoning=String(l.entry.reasoning||'').slice(0,300);
     let el=(Array.isArray(l.entry.lines)?l.entry.lines:[]).map(x=>({account:String(x.account||'').trim(),label:String(x.label||l.description).slice(0,140),debit:r2(x.debit),credit:r2(x.credit)})).filter(x=>x.debit||x.credit);
     const bl=el.find(x=>x.account===bank);const shapeOk=bl&&(inflow?(Math.abs(bl.debit-amtS)<0.01&&!bl.credit):(Math.abs(bl.credit-amtS)<0.01&&!bl.debit))&&validateLines(el).length===0;
     if(!shapeOk){el=[{account:bank,label:l.description,debit:inflow?amtS:0,credit:inflow?0:amtS},{account:'1990',label:l.description,debit:inflow?0:amtS,credit:inflow?amtS:0}];conf=0;reasoning='The agent’s proposed entry did not balance or used an unknown account, so the line was parked in the suspense account for you to classify.'+(reasoning?' Agent note: '+reasoning:'');}
     let settles=null;const pm=!foreign?matchPayment(l.amount,l.description+' '+(l.counterparty||'')):null;
     if(pm){const ctrl=inflow?'1100':'2000';const tot=r2(pm.items.reduce((s,x)=>s+x.amount,0));const lbl=pm.items.map(x=>x.inv.number).join(', ');
-      el=inflow?[{account:bank,label:l.description,debit:amtS,credit:0},...(pm.charge?[{account:'6600',label:'Bank charges deducted by the payer',debit:pm.charge,credit:0}]:[]),{account:ctrl,label:`${lbl} ${pm.items[0].inv.partner}`,debit:0,credit:tot}]
+      el=inflow?[{account:bank,label:l.description,debit:amtS,credit:0},...(pm.charge?[{account:'6600',label:'Bank charges deducted by the payer',debit:pm.charge,credit:0}]:[]),...(pm.wht?[{account:whtCfg().account,label:`Final tax withheld at ${whtCfg().rate}% on ${lbl}`,debit:pm.wht,credit:0}]:[]),{account:ctrl,label:`${lbl} ${pm.items[0].inv.partner}`,debit:0,credit:tot},...(pm.fxgain?[{account:'6850',label:'Exchange difference on export proceeds',debit:0,credit:pm.fxgain}]:[])]
         :[{account:ctrl,label:`${lbl} ${pm.items[0].inv.partner}`,debit:tot,credit:0},...(pm.charge?[{account:'6600',label:'Bank charges on the payment',debit:pm.charge,credit:0}]:[]),{account:bank,label:l.description,debit:0,credit:amtS}];
       conf=pm.conf;reasoning=pm.why;settles=pm.items.map(x=>({invoice_id:x.inv.id,amount:x.amount}));l.counterparty=pm.items[0].inv.partner;}
     else{const rule=findRule((l.counterparty||'')+' '+l.description);const other=el.length===2?el.find(x=>x.account!==bank):null;if(rule&&S.accounts[rule.account]&&other&&other.account!==rule.account){other.account=rule.account;reasoning=`Learned rule: “${rule.match}” goes to ${rule.account} ${aname(rule.account)}. `+reasoning;conf=Math.max(conf,0.9);}}
     if(foreign) el=convertLines(el,scur);
     const amt=moveTotal({lines:el});
     const mv={journal:'BNK1',date:l.date,ref:l.description,partner:l.counterparty,bank:bankName,lines:el,amount:amt,currency:scur,amount_currency:foreign?l.amount:null,source:'bank_statement',statement_id:stRef.id,statement_hash:l.hash,confidence:conf,reasoning,created_by:'agent:bank',created_at:nowISO(),uploaded_by:S.me,audit:[{at:nowISO(),by:'agent:bank',action:'Proposed from '+fileName+(foreign?` (${scur} ${money2(l.amount)} converted at ${fx(scur,S.baseCur).toFixed(4)})`:'')}]};
-    if(settles) mv.settles=settles;const errs=validateMove(mv);const why=[];if(errs.length) why.push(errs.join(' '));if(amt>maxAuto) why.push(`amount is above the auto-post limit of ${money(maxAuto)}`);if(conf<minConf) why.push(`agent confidence ${Math.round(conf*100)}% is below ${Math.round(minConf*100)}%`);if(integrity==='mismatch') why.push('the statement balances don’t agree');if(policy().agents_need_review) why.push('your settings send every agent action for approval');
+    if(settles) mv.settles=settles;if(pm&&pm.wht) mv.wht={rate:whtCfg().rate,amount:pm.wht,invoices:pm.items.map(x=>x.inv.number)};const errs=validateMove(mv);const why=[];if(errs.length) why.push(errs.join(' '));if(amt>maxAuto) why.push(`amount is above the auto-post limit of ${money(maxAuto)}`);if(conf<minConf) why.push(`agent confidence ${Math.round(conf*100)}% is below ${Math.round(minConf*100)}%`);if(integrity==='mismatch') why.push('the statement balances don’t agree');if(policy().agents_need_review) why.push('your settings send every agent action for approval');
     if(!why.length){mv.state='posted';mv.name=nextName('BNK1',l.date);mv.approved_by='agent:bank';mv.approved_at=nowISO();mv.audit.push({at:nowISO(),by:'engine',action:`Auto-posted: ${money(amt)} is within ${money(maxAuto)} and confidence ${Math.round(conf*100)}% meets ${Math.round(minConf*100)}%`});nAuto++;}
     else{mv.state='to_approve';mv.name=null;mv.audit.push({at:nowISO(),by:'engine',action:'Held for review: '+why.join('; ')+'.'});nRev++;}
     const id=await writeMove(mv);stDoc.lines.push({date:l.date,description:l.description,amount:l.amount,balance:l.balance,status:mv.state==='posted'?'posted':'review',move_id:id});}
@@ -3376,9 +3415,9 @@ BUILD.forecast=()=>{const el=h('section',{class:'stack'});
 BUILD.tax=()=>{const el=h('section',{class:'stack'});let sub=S.taxTab||'vat';
   el.append(h('div',{class:'pagehead'},h('div',{},h('h1',{},'Tax'),h('p',{class:'lede'},'VAT returns, corporate tax and zakat, prepared from the books by the tax agent. Rates come from the company profile; confirm them with your tax adviser before filing.'))));
   const seg=h('div',{class:'seg',role:'tablist'});const body=h('div',{class:'stack'});el.append(seg,body);
-  function refresh(){if(allGuard(el,'prepare its tax')) return;seg.textContent='';const tabs=[['vat','VAT return'],['ct','Corporate tax']];if(S.settings.country==='SA') tabs.push(['zakat','Zakat']);
+  function refresh(){if(allGuard(el,'prepare its tax')) return;seg.textContent='';const tabs=[['vat','VAT return'],['ct','Corporate tax'],['wht','Withholding tax']];if(S.settings.country==='SA') tabs.push(['zakat','Zakat']);
     tabs.forEach(([k,l])=>seg.append(h('button',{type:'button',role:'tab','aria-selected':String(sub===k),onclick:()=>{sub=S.taxTab=k;refresh();}},l)));body.textContent='';const nd=needData();if(nd){body.append(nd);return;}
-    if(sub==='vat') vat();else if(sub==='ct') ct();else zakat();}
+    if(sub==='wht') whtTab(body,refresh);else if(sub==='vat') vat();else if(sub==='ct') ct();else zakat();}
   function quarters(){const s=new Set();posted().forEach(m=>{if(m.journal!=='OPEN') s.add(`${m.date.slice(0,4)}-Q${Math.floor((+m.date.slice(5,7)-1)/3)+1}`);});return [...s].sort().reverse();}
   function vat(){const st=S.settings;if(!st.vat_rate){body.append(h('div',{class:'banner info'},'This entity has no VAT rate set. Add one in Settings, Company profile, if the company is registered.'));return;}
     const qs=quarters();const qSel=h('select',{'aria-label':'Quarter',onchange:()=>{S.vatQ=qSel.value;refresh();}},qs.map(q=>h('option',{value:q},q.replace('-',' '))));if(!S.vatQ||!qs.includes(S.vatQ)) S.vatQ=qs[0];qSel.value=S.vatQ;const [y,q]=S.vatQ.split('-Q');
@@ -10600,16 +10639,17 @@ function docTypeCell(cls,l,onChange){const T=docKinds(cls);const box=h('div',{cl
 // how an invoice was settled
 function paidVia(inv){const ms=(S.moves||[]).filter(m=>m.state==='posted'&&(m.settles||[]).some(x=>x.invoice_id===inv.id));if(!ms.length) return null;return ms.some(m=>m.source==='bank_statement')?'bank':'manual';}
 async function quickPaid(inv,opt){opt=opt||{};const isC=inv.kind==='customer';const bal=invDue(inv,true);if(!(bal>0.01)) return;const due=r2(opt.amount>0?Math.min(+opt.amount,bal):bal);const bank=opt.bank||(S.accounts['1010']?'1010':cashCodes()[0]);if(!bank) throw new Error('Add a bank or cash account first.');const pdate=opt.date||today();
-  return submitMove({journal:'BNK1',date:pdate,ref:`${isC?'Receipt':'Payment'} ${inv.number} ${inv.partner}`,partner:inv.partner,lines:isC?[{account:bank,label:inv.number,debit:due,credit:0},{account:'1100',label:inv.number,debit:0,credit:due}]:[{account:'2000',label:inv.number,debit:due,credit:0},{account:bank,label:inv.number,debit:0,credit:due}],settles:[{invoice_id:inv.id,amount:due}],source:'payment'},{reason:isC?'Marked as paid':'Marked as paid to the supplier'});}
+  const wht=isC&&opt.wht>0?r2(Math.min(+opt.wht,due)):0;if(wht&&typeof whtEnsure==='function') await whtEnsure();
+  return submitMove({journal:'BNK1',date:pdate,ref:`${isC?'Receipt':'Payment'} ${inv.number} ${inv.partner}`,partner:inv.partner,wht:wht?{rate:whtCfg().rate,amount:wht,invoices:[inv.number]}:undefined,lines:isC?[{account:bank,label:inv.number,debit:r2(due-wht),credit:0},...(wht?[{account:whtCfg().account,label:`Final tax withheld on ${inv.number}`,debit:wht,credit:0}]:[]),{account:'1100',label:inv.number,debit:0,credit:due}]:[{account:'2000',label:inv.number,debit:due,credit:0},{account:bank,label:inv.number,debit:0,credit:due}],settles:[{invoice_id:inv.id,amount:due}],source:'payment'},{reason:isC?'Marked as paid':'Marked as paid to the supplier'});}
 // the action cell on the invoices and bills lists
 function invQuick(inv,redraw){const td=h('td',{class:'invq',onclick:e=>e.stopPropagation()});const mv=(S.moves||[]).find(m=>m.id===inv.move_id);const due=invDue(inv,true);
   if(inv.status==='cancelled') return td;
   if(due<=0.01){const v=paidVia(inv);td.append(h('span',{class:'mini mut'},v==='bank'?'Matched from the bank':v?'Marked as paid':''));return td;}
   if(mv&&mv.state==='posted'&&S.canWrite&&inv.currency===S.baseCur){const b=h('button',{class:'btn sm',type:'button','aria-label':`Mark ${inv.number} as paid`},'Mark as paid');
-    b.onclick=()=>{td.textContent='';const P={date:today(),amount:invDue(inv,true),bank:S.accounts['1010']?'1010':(cashCodes()[0]||'')};const er=h('span',{class:'err mini'});
+    b.onclick=()=>{td.textContent='';const P={date:today(),amount:invDue(inv,true),bank:S.accounts['1010']?'1010':(cashCodes()[0]||'')};const W_=inv.kind==='customer'&&typeof whtFor==='function'?whtFor(inv):null;if(W_) P.wht=r2(P.amount*W_.rate/100);const er=h('span',{class:'err mini'});
       const bk=h('select',{'aria-label':'Paid into',onchange:e=>P.bank=e.target.value},cashCodes().map(c=>h('option',{value:c},`${c} ${aname(c)}`)));bk.value=P.bank;
-      const ok=h('button',{class:'btn primary sm',type:'button'},'Confirm');ok.onclick=async()=>{er.textContent='';if(!P.date){er.textContent='Enter the date paid.';return;}if(!(+P.amount>0)){er.textContent='Enter the amount.';return;}ok.disabled=true;ok.textContent='Recording…';try{const r=await quickPaid(inv,{date:P.date,amount:+P.amount,bank:P.bank});ok.textContent=r&&r.state==='to_approve'?'Sent for approval':'Paid';setTimeout(redraw,600);}catch(e){er.textContent=e.message;ok.disabled=false;ok.textContent='Confirm';}};
-      td.append(h('div',{class:'qpay'},h('label',{class:'mini'},'Date paid',h('input',{type:'date',value:P.date,'aria-label':'Date paid',onchange:e=>P.date=e.target.value})),h('label',{class:'mini'},'Amount',h('input',{type:'number',step:'0.01',value:P.amount,'aria-label':'Amount paid',style:'width:7rem',oninput:e=>P.amount=e.target.value})),h('label',{class:'mini'},'Into',bk),h('div',{class:'row',style:'gap:.3rem'},ok,h('button',{class:'btn ghost sm',type:'button',onclick:()=>redraw()},'Cancel')),er));setTimeout(()=>{const i=td.querySelector('input[type=date]');if(i) i.focus();},0);};td.append(b);}
+      const ok=h('button',{class:'btn primary sm',type:'button'},'Confirm');ok.onclick=async()=>{er.textContent='';if(!P.date){er.textContent='Enter the date paid.';return;}if(!(+P.amount>0)){er.textContent='Enter the amount.';return;}ok.disabled=true;ok.textContent='Recording…';try{const r=await quickPaid(inv,{date:P.date,amount:+P.amount,bank:P.bank,wht:+P.wht||0});ok.textContent=r&&r.state==='to_approve'?'Sent for approval':'Paid';setTimeout(redraw,600);}catch(e){er.textContent=e.message;ok.disabled=false;ok.textContent='Confirm';}};
+      td.append(h('div',{class:'qpay'},h('label',{class:'mini'},'Date paid',h('input',{type:'date',value:P.date,'aria-label':'Date paid',onchange:e=>P.date=e.target.value})),h('label',{class:'mini'},'Amount',h('input',{type:'number',step:'0.01',value:P.amount,'aria-label':'Amount paid',style:'width:7rem',oninput:e=>P.amount=e.target.value})),W_?h('label',{class:'mini',title:`${W_.rate}% income tax withheld at source on export proceeds (full and final). The bank receives the amount less this.`},'Final tax withheld',h('input',{type:'number',step:'0.01',value:P.wht,'aria-label':'Final tax withheld',style:'width:6.5rem',oninput:e=>P.wht=e.target.value})):null,h('label',{class:'mini'},'Into',bk),h('div',{class:'row',style:'gap:.3rem'},ok,h('button',{class:'btn ghost sm',type:'button',onclick:()=>redraw()},'Cancel')),er));setTimeout(()=>{const i=td.querySelector('input[type=date]');if(i) i.focus();},0);};td.append(b);}
   return td;}
 // Approvals: customers and suppliers waiting for Compliance join the list
 {const _ri=reviewItems;reviewItems=function(){const out=_ri();try{const e=S.entity;if(!e||e==='all') return out;(S.raw.partners||[]).filter(p=>p.entity===e&&p.status==='pending').forEach(p=>out.push({kind:'party',mod:'compl',c:'#0E7C66',ic:p.kind==='customer'?'CU':'SU',t:`${p.kind==='customer'?'Customer':'Supplier'}: ${p.name}`,d:`${String(p.registered_by||'').startsWith('agent:')?'Registered by the '+PK[p.kind].agentName:'Registered by '+who(p.registered_by)} · waiting for Compliance`,agent:String(p.registered_by||'').startsWith('agent:'),go:'pqueue',approve:mayApproveParty()&&p.registered_by!==S.me?async()=>decideParty(p,true):null}));}catch(x){}return out;};}
@@ -11197,6 +11237,195 @@ async function bankAgentRead(src,fileName,bank,bankName,{signal,onPart}={}){
   out.forEach(r=>{if(r&&Array.isArray(r.lines)) res.lines.push(...r.lines);});
   const ds=res.lines.map(l=>String(l.date||'')).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort();if(ds.length){res.period_start=res.period_start||ds[0];res.period_end=res.period_end||ds[ds.length-1];}
   return res;}
+
+// ===== Banking: every submitted statement is saved with its file; re-run the agent or clear it =====
+const stmtMoves=s=>S.moves.filter(m=>m.statement_id===s.id);
+function stmtStats(s){const ls=s.lines||[];const live=stmtMoves(s).filter(m=>m.state!=='cancelled');
+  const unid=live.filter(m=>m.state==='to_approve'&&((m.lines||[]).some(x=>x.account==='1990')||(+m.confidence||0)<0.6)).length;
+  return {n:ls.length,posted:live.filter(m=>m.state==='posted').length,review:live.filter(m=>m.state==='to_approve').length,unid,dup:ls.filter(l=>l.status==='duplicate').length};}
+function stmtStatus(s){if(S.bankRunId===s.id) return ['The agent is reading it','acc'];if(s.status==='submitted') return ['Submitted','acc'];if(s.status==='failed') return ['Agent could not read it','bad'];
+  const k=stmtStats(s);if(!k.n) return ['No transactions found','bad'];if(k.unid) return [`${k.unid} not identified`,'warn'];if(k.review) return [`${k.review} to review`,'warn'];return ['All transactions identified','ok'];}
+async function submitStatement(file,code,bn,log,result,signal,existing){
+  let ref,fileRec=existing?existing.file||null:null;
+  if(existing) ref=db.doc('statements/'+existing.id);
+  else{ref=db.collection('statements').doc();
+    if(file instanceof Blob&&assetsCap){try{const loc=await storeFile(file,{title:`${bn} statement · ${file.name||''}`,folder:'Bank statements',source:'bank_statement'});
+        await db.doc('files/'+loc.id).update({module:'accounting',sub:'Bank statements',record:{kind:'statement',id:ref.id}});Object.assign(loc,{module:'accounting',sub:'Bank statements'});
+        fileRec={file_id:loc.id,asset_id:loc.asset_id,url:loc.url,name:file.name||'statement',mime:file.type||'',size:file.size||0};}
+      catch(e){log.append(h('div',{class:'step err'},'The file could not be saved to Documents ('+(e.message||e)+'). The agent still reads it.'));}}
+    await ref.set({entity:S.entity,file_name:file.name||'statement',bank:bn,bank_account:code,file:fileRec,status:'submitted',uploaded_by:S.me,uploaded_at:nowISO(),lines:[]});}
+  try{if(typeof whtCfg==='function'&&whtCfg().on) await whtEnsure();}catch(e){}
+  S._stmtRef=ref;S._stmtFile=fileRec;S._stmtOrigAt=existing?existing.uploaded_at:null;S._stmtSaved=false;S.bankRunId=ref.id;
+  try{await processStatement(file,code,bn,log,result,signal);}
+  finally{const saved=S._stmtSaved;S._stmtRef=null;S._stmtFile=null;S._stmtOrigAt=null;S.bankRunId=null;
+    if(!saved){const errs=[...log.querySelectorAll('.step.err')].map(x=>x.textContent.trim()).filter(Boolean);
+      try{await ref.update({status:existing&&(existing.lines||[]).length?(existing.status||'processed'):'failed',last_error:errs[errs.length-1]||'The agent stopped before reading the transactions.',last_error_at:nowISO()});}catch(e){}}}}
+async function withdrawHeld(s,why){for(const m of stmtMoves(s).filter(m=>m.state==='to_approve')){await db.doc('moves/'+m.id).update({state:'cancelled',audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:why}]});m.state='cancelled';}}
+async function rerunStatement(s,btn){const U=S._bankUI;if(!U||S.bankRun) return;
+  U.log.textContent='';U.result.textContent='';U.log.scrollIntoView({block:'center',behavior:'smooth'});
+  if(!s.file||!s.file.url){U.log.append(h('div',{class:'step err'},'This statement was uploaded before files were kept, so upload it again.'));return;}
+  const ctl=new AbortController();S.bankRun=true;U.stopB.hidden=false;U.stopB.onclick=()=>ctl.abort();U.fileIn.disabled=true;if(btn) btn.disabled=true;
+  try{const r=await fetch(s.file.url,{credentials:'same-origin'});if(!r.ok) throw new Error('The saved file could not be opened.');const b=await r.blob();
+    const file=new File([b],s.file_name||s.file.name||'statement',{type:s.file.mime||b.type||''});
+    await withdrawHeld(s,'Withdrawn so the bank agent can read the statement again');
+    await submitStatement(file,s.bank_account,s.bank,U.log,U.result,ctl.signal,s);}
+  catch(e){U.log.append(h('div',{class:'step err'},e.message||'Something went wrong.'));}
+  finally{S.bankRun=null;U.stopB.hidden=true;U.fileIn.disabled=false;if(btn) btn.disabled=false;}}
+async function clearStatement(s){await withdrawHeld(s,'Withdrawn: the statement was cleared');
+  if(s.file&&s.file.file_id){try{await db.doc('files/'+s.file.file_id).update({deleted_at:nowISO(),deleted_by:S.me,delete_reason:'Bank statement cleared'});}catch(e){}}
+  await db.doc('statements/'+s.id).delete();S.statements=S.statements.filter(x=>x.id!==s.id);}
+function drawStmts(hist){hist.textContent='';const st=S.statements.slice().sort((a,b)=>(b.uploaded_at||'')<(a.uploaded_at||'')?-1:1);
+  if(!st.length){hist.append(emptyNote('No statements yet. Submitted statements are kept here with their file, so the agent can read them again.'));return;}
+  const t=h('table',{class:'stmts'},h('thead',{},h('tr',{},h('th',{},'Statement'),h('th',{},'Date'),h('th',{},'Period'),h('th',{class:'num'},'Transactions'),h('th',{class:'num'},'Posted'),h('th',{class:'num'},'To review'),h('th',{},'Status'),h('th',{class:'acts'},''))));
+  const tb=h('tbody');
+  st.forEach(s=>{const k=stmtStats(s);const [lbl,kind]=stmtStatus(s);const busy=!!S.bankRun;
+    const fileCell=h('td',{},h('div',{class:'stfile'},h('span',{class:'stico','aria-hidden':'true'},(String(s.file_name||'').split('.').pop()||'').slice(0,4).toUpperCase()),
+      h('div',{},s.file&&s.file.url?h('a',{href:s.file.url,target:'_blank',rel:'noopener',class:'stname'},s.file_name||'Statement'):h('span',{class:'stname'},s.file_name||'Statement'),h('div',{class:'mini mut'},[s.bank||s.bank_name,s.bank_account?aname?`${s.bank_account} ${aname(s.bank_account)}`:s.bank_account:null].filter(Boolean).join(' · ')))));
+    const rr=h('button',{class:'btn sm '+(k.unid||s.status==='failed'||(!k.n&&s.status!=='submitted')?'agent':'ghost'),type:'button',disabled:busy||!S.canWrite||!(s.file&&s.file.url),title:s.file&&s.file.url?'The agent reads the saved file again. Posted entries are kept; entries still waiting are proposed again.':'Uploaded before files were kept'},'Re-run agent');
+    rr.onclick=()=>rerunStatement(s,rr);
+    const clr=h('button',{class:'btn ghost sm danger',type:'button',disabled:busy||!(S.canEdit||S.canDelete)},'Clear');
+    const row=h('tr',{'data-st':s.id},fileCell,h('td',{class:'mini'},fmtDate(String(s.uploaded_at||'').slice(0,10)),h('div',{class:'mut'},who(s.uploaded_by))),
+      h('td',{},s.period_start?`${fmtDate(s.period_start)} – ${fmtDate(s.period_end)}`:'—'),h('td',{class:'num'},String(k.n)),h('td',{class:'num'},String(k.posted)),h('td',{class:'num'},String(k.review)),
+      h('td',{},pill(lbl,kind),s.last_error&&(s.status==='failed'||s.last_error_at>(s.rerun_at||s.uploaded_at||''))?h('div',{class:'mini sterr'},s.last_error):null),h('td',{class:'acts'},h('div',{class:'row'},rr,clr)));
+    tb.append(row);
+    clr.onclick=()=>{if(row.nextSibling&&row.nextSibling.classList&&row.nextSibling.classList.contains('stconfirm')){row.nextSibling.remove();return;}
+      const yes=h('button',{class:'btn danger sm',type:'button'},'Clear statement');const no=h('button',{class:'btn ghost sm',type:'button'},'Keep it');const m=h('span',{class:'mini err'});
+      const cf=h('tr',{class:'detail stconfirm'},h('td',{colspan:8},h('div',{class:'row',style:'align-items:center;flex-wrap:wrap'},h('span',{},`Clear ${s.file_name||'this statement'}? ${k.review?k.review+' entries still waiting for review are withdrawn. ':''}Posted entries stay in the books; reverse them in Journal entries if needed. The file goes to the Documents trash for 30 days.`),yes,no,m)));
+      no.onclick=()=>cf.remove();yes.onclick=async()=>{yes.disabled=true;try{await clearStatement(s);cf.remove();row.remove();if(!tb.rows.length) drawStmts(hist);}catch(e){m.textContent=e.message||'Could not clear it.';yes.disabled=false;}};
+      row.after(cf);};});
+  t.append(tb);hist.append(h('div',{class:'tablewrap'},t));}
+// layout: statements right under the upload, cleaner headings
+{const _b=BUILD.bank;BUILD.bank=(...a)=>{const r=_b(...a);try{const el=r.el;const up=el.querySelector('#bk-file');const upCard=up&&up.closest('.card');
+    if(upCard){const h3=upCard.querySelector('h3');if(h3){h3.textContent='New statement';h3.after(h('p',{class:'note'},'Choose the bank and ledger account, add the file and submit. The file is kept with the statement and in Documents → Bank statements.'));}upCard.classList.add('bkup');}
+    const cards=[...el.querySelectorAll(':scope > .card')];const hc=cards.find(c=>{const x=c.querySelector(':scope > h3');return x&&/Statement history/.test(x.textContent);});
+    if(hc){const x=hc.querySelector(':scope > h3');x.replaceWith(h('div',{class:'cardhead'},h('div',{},h('h3',{},'Statements'),h('p',{class:'note'},'Every submitted statement with its file. Re-run the agent when transactions are not identified, or clear a statement you don’t need.'))));
+      const g=el.querySelector(':scope > .grid2');if(g) g.after(hc);hc.classList.add('bkstmts');}}catch(e){}return r;};}
+
+// ===== A Documents tab in every module, with sub-folders; module documents are filed there automatically =====
+TABS.push(['mdocs','Documents']);Object.assign(ICONS,{mdocs:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'});
+const MDOC_DEFAULT={accounting:['Bank statements','Journal support','Month-end close','Audit'],sales:['Customer invoices','Quotes','Customer contracts','Receipts'],purchasing:['Supplier bills','Purchase orders','Supplier contracts'],
+  hr:['Employee files','Employment contracts','Payslips','Certificates'],payroll:['Payroll registers','Payslips','Bank transfer files'],compl:['Licences','Policies','Regulator letters'],taxm:['Tax returns','Tax certificates'],reports:['Reports','Tax returns'],
+  projects:['Project contracts','Deliverables'],services:['Service agreements','Price lists'],crm:['Proposals','Contracts'],inventory:['Delivery notes','Stock counts'],fire:['Inspection reports','Certificates'],audit:['Audit reports','Working papers'],control:['Audit reports'],
+  erm:['Risk reports'],holdings:['Board papers','Shareholder documents'],practice:['Engagement letters','Client files'],broking:['Policies','Claims'],marketing:['Campaigns','Brand assets'],clinic:['Patient forms','Lab reports'],attendance:['Leave forms'],requests:['Requests']};
+const MDOC_SKIP=['documents','settings','extview','lounge','website'];
+// files kept before modules had their own folders are shown where they belong
+const MDOC_LEGACY={'Bank statements':['accounting','Bank statements'],'Invoices and receipts':['sales','Customer invoices'],'Bills from suppliers':['purchasing','Supplier bills'],'HR and payroll':['hr','Employee files'],'Tax and compliance':['taxm','Tax certificates'],'Legal and licences':['compl','Licences'],'Projects':['projects','Project contracts']};
+function mdocPlace(f){if(f.module) return [f.module,f.sub||'General'];return MDOC_LEGACY[f.folder]||null;}
+try{APPS.forEach(a=>{if(MDOC_SKIP.includes(a.k)||a.hidden||a.tabs.includes('mdocs')) return;const i=a.tabs.findIndex(t=>/^set/.test(t)||t==='coset');if(i>=0) a.tabs.splice(i,0,'mdocs');else a.tabs.push('mdocs');
+  if(Array.isArray(a.groups)&&!a.groups.some(g=>g[1].includes('mdocs'))){const gi=a.groups.findIndex(g=>g[1].some(t=>/^set/.test(t)||t==='coset'));if(gi>=0) a.groups[gi][1].unshift('mdocs');else a.groups.push(['',['mdocs']]);}});}catch(e){}
+{const _ra=roleAllows;roleAllows=t=>t==='mdocs'?true:_ra(t);}
+function mdocApp(){const a=S.app&&APPS.find(x=>x.k===S.app);return a&&!MDOC_SKIP.includes(a.k)?a:(APPS.find(x=>x.k==='accounting')||APPS[0]);}
+function mdocFolders(k){const e=S.ent[S.entity]||{};const own=((e.doc_folders||{})[k])||[];const used=liveFiles().map(f=>mdocPlace(f)).filter(p=>p&&p[0]===k).map(p=>p[1]);
+  return [...new Set([...(MDOC_DEFAULT[k]||[]),...own,...used,'General'])];}
+const fsize=n=>!n?'':n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+BUILD.mdocs=()=>{const el=h('section',{class:'stack mdocs'});const body=h('div',{class:'stack'});const later=lazyRefresh(el,()=>refresh());
+  const head=h('div',{class:'pagehead'});el.append(head,body);
+  function refresh(){if(allGuard(el,'keep documents')) return;if(later()) return;const A=mdocApp();const k=A.k;const D=S.mdocF||(S.mdocF={});const cur=D[k]||'';
+    head.textContent='';head.append(h('div',{},h('h1',{},`${A.name} documents`),h('p',{class:'lede'},`Files for ${A.name.toLowerCase()}, in folders. Documents the agents and screens of this module create or receive are filed here automatically.`)));
+    body.textContent='';const folders=mdocFolders(k);const files=liveFiles().filter(f=>{const p=mdocPlace(f);return p&&p[0]===k;});
+    const q=h('input',{type:'search',placeholder:'Search documents',value:D.q||'','aria-label':'Search documents',oninput:e=>{D.q=e.target.value;drawList();}});
+    const up=h('input',{type:'file',multiple:true,style:'display:none'});const upB=h('label',{class:'btn primary',style:'cursor:pointer'},up,'Upload');upB.hidden=!S.canWrite||!assetsCap;
+    const prog=h('div',{class:'agentlog'});
+    up.onchange=async()=>{const fl=[...(up.files||[])];up.value='';if(!fl.length) return;const st=stepper(prog);const into=cur||'General';
+      for(const f of fl){const s=st.add(`Saving ${f.name} to ${into}`);try{const loc=await storeFile(f,{title:f.name.replace(/\.[^.]+$/,''),folder:'Other',source:'module'});await db.doc('files/'+loc.id).update({module:k,sub:into});loc.module=k;loc.sub=into;s.done(`${f.name} → ${into}`);}catch(e){s.err(`${f.name}: ${e.message||e.code}`);}}refresh();};
+    const nf=h('button',{class:'btn ghost sm',type:'button',disabled:!(S.canEdit||canCoEdit(S.entity))},'New folder');
+    nf.onclick=()=>{const inp=h('input',{type:'text',placeholder:'Folder name','aria-label':'Folder name'});const ok=h('button',{class:'btn primary sm',type:'button'},'Add');const m=h('span',{class:'err mini'});
+      const row=h('div',{class:'mdnew'},inp,ok,h('button',{class:'btn ghost sm',type:'button',onclick:()=>row.remove()},'Cancel'),m);nf.after(row);inp.focus();
+      ok.onclick=async()=>{const n=inp.value.trim().replace(/\s+/g,' ');if(!n){m.textContent='Enter a name.';return;}if(folders.some(x=>x.toLowerCase()===n.toLowerCase())){m.textContent='That folder already exists.';return;}
+        ok.disabled=true;try{const e=S.ent[S.entity]||{};const df={...(e.doc_folders||{})};df[k]=[...(df[k]||[]),n];await saveEntOf(S.entity,{doc_folders:df});D[k]=n;refresh();}catch(x){m.textContent=x.message;ok.disabled=false;}};
+      inp.onkeydown=e=>{if(e.key==='Enter') ok.click();};};
+    const tree=h('nav',{class:'mdtree','aria-label':'Folders'},h('button',{type:'button',class:'mdf'+(cur===''?' on':''),onclick:()=>{D[k]='';refresh();}},h('span',{},'All documents'),h('span',{class:'mdn'},String(files.length))),
+      folders.map(fd=>{const n=files.filter(f=>mdocPlace(f)[1]===fd).length;return h('button',{type:'button',class:'mdf'+(cur===fd?' on':''),onclick:()=>{D[k]=fd;refresh();}},h('span',{},fd),h('span',{class:'mdn'},n?String(n):''));}),nf);
+    const listBox=h('div',{class:'stack'});
+    function drawList(){listBox.textContent='';const qq=norm(D.q||'');const L=files.filter(f=>(!cur||mdocPlace(f)[1]===cur)&&(!qq||norm(`${f.title} ${f.name} ${(f.contact||{}).name||''}`).includes(qq))).sort((a,b)=>(b.created_at||'')<(a.created_at||'')?-1:1);
+      if(!L.length){listBox.append(emptyNote(cur?`Nothing in ${cur} yet. Upload files here, or they arrive as the module creates them.`:'No documents yet.'));return;}
+      const t=h('table',{class:'mdtab'},h('thead',{},h('tr',{},h('th',{},'Name'),h('th',{},'Folder'),h('th',{},'Date'),h('th',{},'Added by'),h('th',{class:'num'},'Size'),h('th',{class:'acts'},''))));const tb=h('tbody');
+      L.forEach(f=>{const ext=(String(f.name||'').split('.').pop()||'').slice(0,4).toUpperCase();const mv=h('select',{'aria-label':'Move to folder',disabled:!S.canWrite},folders.map(x=>h('option',{value:x},x)));mv.value=mdocPlace(f)[1];
+        mv.onchange=async()=>{try{await db.doc('files/'+f.id).update({module:k,sub:mv.value});f.module=k;f.sub=mv.value;refresh();}catch(e){}};
+        const del=h('button',{class:'btn ghost sm danger',type:'button',disabled:!(S.canDelete||S.canEdit)},'Delete');del.onclick=async()=>{del.disabled=true;try{await db.doc('files/'+f.id).update({deleted_at:nowISO(),deleted_by:S.me});f.deleted_at=nowISO();refresh();}catch(e){del.disabled=false;}};
+        tb.append(h('tr',{},h('td',{},h('div',{class:'stfile'},h('span',{class:'stico','aria-hidden':'true'},f.kind==='link'?'LINK':ext),h('div',{},h('a',{class:'stname',href:f.url,target:'_blank',rel:'noopener'},f.title||f.name),h('div',{class:'mini mut'},[f.name!==f.title?f.name:null,f.filed_by,(f.contact||{}).name].filter(Boolean).join(' · '))))),
+          h('td',{},mv),h('td',{class:'nowrap'},fmtDate(String(f.created_at||'').slice(0,10))),h('td',{class:'mini'},who(f.created_by)),h('td',{class:'num mini'},fsize(f.size)),h('td',{class:'acts'},del)));});
+      t.append(tb);listBox.append(h('div',{class:'tablewrap'},t));}
+    drawList();
+    body.append(h('div',{class:'mdgrid'},h('div',{class:'card mdside'},h('h3',{},'Folders'),tree),h('div',{class:'card stack'},h('div',{class:'cardhead'},h('div',{},h('h3',{},cur||'All documents'),h('p',{class:'note'},cur?`Uploads go into ${cur}.`:'Choose a folder to upload into it; otherwise uploads go into General.')),h('div',{class:'row'},q,upB)),prog,listBox)));}
+  return {el,refresh};};
+
+// ===== Withholding tax on export receipts (Pakistan: 1% final tax deducted at source on export proceeds) =====
+function whtCfg(eid){const e=S.ent[eid||S.entity]||{};const home=e.country||(S.settings||{}).country;const w=e.wht_export||{};const def=home==='PK';
+  return {on:w.on!=null?!!w.on:def,rate:w.rate!=null&&w.rate!==''?+w.rate:(def?1:0),account:w.account||'7010',home,isDefault:w.on==null};}
+// the deduction that applies to a customer invoice, if any
+function whtFor(inv){const W=whtCfg();if(!W.on||!(W.rate>0)||!inv||inv.kind!=='customer') return null;return custOverseas(inv.partner)?W:null;}
+async function whtEnsure(){const W=whtCfg();try{if(!S.accounts[W.account]) await ensureAccount(W.account,'Final tax deducted on export proceeds','expense');if(!S.accounts['6850']) await ensureAccount('6850','Foreign exchange gains and losses','expense');}catch(e){}}
+// bank matching: an overseas customer's payment arrives net of the final tax (and sometimes bank charges or an exchange difference)
+{const _mp=matchPayment;matchPayment=function(amount,desc){const r=_mp(amount,desc);const W=whtCfg();if(!(amount>0)||!W.on||!(W.rate>0)) return r;if(r&&r.conf>=0.9) return r;
+  const amt=r2(amount),k=W.rate/100,n=' '+norm(desc)+' ';
+  const open=openInvoices('customer').filter(i=>custOverseas(i.partner)).map(i=>({inv:i,due:invDue(i,true)})).filter(x=>x.due>0.01);if(!open.length) return r;
+  const named=open.filter(x=>partnerHit(x.inv,n));
+  const fit=(list,wide)=>{const L=list.slice(0,12);let best=null;for(let m=1;m<(1<<L.length);m++){let s=0;const c=[];for(let j=0;j<L.length;j++) if(m&(1<<j)){s+=L[j].due;c.push(L[j]);}
+      const wht=r2(s*k),gap=r2(s-wht-amt),tol=Math.max(5,s*(wide?0.03:0.005));if(Math.abs(gap)<=tol&&(!best||Math.abs(gap)<Math.abs(best.gap))) best={c,s:r2(s),wht,gap};}return best;};
+  const parts=[...new Set(named.map(x=>norm(x.inv.partner)))];
+  const b=(parts.length===1?fit(named,true):null)||fit(open,false);if(!b) return r;
+  const nums=b.c.map(x=>x.inv.number).join(', ');
+  return {items:b.c.map(x=>({inv:x.inv,amount:x.due})),charge:b.gap>0?b.gap:0,fxgain:b.gap<0?r2(-b.gap):0,wht:b.wht,conf:parts.length===1?0.92:0.8,
+    why:`Matched to ${nums} for ${b.c[0].inv.partner}: ${money2(b.s)} invoiced, ${W.rate}% final tax withheld at source (${money2(b.wht)})`+(Math.abs(b.gap)>=0.01?`, ${money2(Math.abs(b.gap))} ${b.gap>0?'bank charges or exchange difference':'exchange gain'}`:'')+`, ${money2(amt)} received.`};};}
+// Tax module: Withholding tax tab
+function whtTab(body,refresh){const eid=S.entity;const W=whtCfg();const ro=!(S.canEdit||canCoEdit(eid));const msg=h('p',{class:'note',role:'status'});
+  const on=h('input',{type:'checkbox',checked:W.on,disabled:ro,'aria-label':'Deduct final tax on export receipts'});const rate=h('input',{type:'number',step:'0.01',min:'0',max:'100',value:W.rate,disabled:ro,style:'width:6rem','aria-label':'Rate %'});
+  const save=h('button',{class:'btn primary',type:'button',disabled:ro},'Save');
+  save.onclick=async()=>{const v=+rate.value;if(!(v>=0&&v<=100)){msg.textContent='Enter a rate between 0 and 100.';return;}save.disabled=true;try{await saveEntOf(eid,{wht_export:{...((S.ent[eid]||{}).wht_export||{}),on:on.checked,rate:v,account:W.account,set_by:S.me,set_at:nowISO()}});msg.textContent='Saved. The bank agent and Mark as paid use it from now on.';refresh();}catch(e){msg.textContent=e.message;}finally{save.disabled=false;}};
+  body.append(h('div',{class:'card stack whtcard'},h('div',{class:'cardhead'},h('div',{},h('h3',{},'Withholding tax on export receipts'),h('p',{class:'note'},W.home==='PK'?'In Pakistan, income tax is deducted at source on export proceeds received from outside Pakistan, and it is a full and final tax. The default is 1%. Change it if your category or a later Finance Act sets a different rate.':'Turn this on if tax is withheld at source when payments from customers abroad reach your bank.'))),
+    h('div',{class:'formgrid'},h('label',{class:'sel'},on,h('span',{},h('b',{},'Deduct on invoices to customers outside ',(COUNTRIES[W.home]||{}).name||'the country'),h('span',{class:'mini mut',style:'display:block'},'The bank agent recognises the net receipt, records the tax and marks the invoice paid in full.'))),
+      h('label',{class:'field'},'Rate (%)',rate),h('label',{class:'field'},'Recorded in',h('input',{type:'text',value:`${W.account} ${S.accounts[W.account]?aname(W.account):'Final tax deducted on export proceeds'}`,disabled:true}))),h('div',{class:'row'},save),msg));
+  // register
+  const moves=S.moves.filter(m=>(m.state==='posted'||m.state==='to_approve')&&(m.lines||[]).some(l=>l.account===W.account&&(+l.debit||0)>0));
+  const rows=moves.map(m=>{const w=r2((m.lines||[]).filter(l=>l.account===W.account).reduce((s,l)=>s+(+l.debit||0)-(+l.credit||0),0));const ar=r2((m.lines||[]).filter(l=>l.account==='1100').reduce((s,l)=>s+(+l.credit||0),0));const rec=r2((m.lines||[]).filter(l=>cashCodes().includes(l.account)).reduce((s,l)=>s+(+l.debit||0),0));
+    return {m,date:m.date,partner:m.partner||'',inv:(m.wht&&m.wht.invoices||[]).join(', ')||(m.settles||[]).map(x=>(S.invoices.find(i=>i.id===x.invoice_id)||{}).number).filter(Boolean).join(', '),gross:ar,wht:w,rec};}).sort((a,b)=>a.date<b.date?1:-1);
+  const T=k=>r2(rows.reduce((s,x)=>s+x[k],0));
+  const exp=h('button',{class:'btn ghost sm',type:'button',disabled:!rows.length},'Export (Excel)');exp.onclick=()=>exportXlsx('withholding-tax-register.xlsx',{'Final tax':[['Date','Customer','Invoices','Invoice amount','Tax withheld','Received','Entry'],...rows.map(x=>[x.date,x.partner,x.inv,x.gross,x.wht,x.rec,x.m.name||''])]});
+  body.append(h('div',{class:'card stack'},h('div',{class:'cardhead'},h('div',{},h('h3',{},'Tax withheld on export receipts'),h('p',{class:'note'},'Every receipt where tax was withheld at source. Keep the bank’s deduction certificates for these.')),exp),
+    rows.length?h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},h('th',{},'Date'),h('th',{},'Customer'),h('th',{},'Invoices'),h('th',{class:'num'},'Invoice amount'),h('th',{class:'num'},'Tax withheld'),h('th',{class:'num'},'Received'),h('th',{},'Entry'))),
+      h('tbody',{},rows.map(x=>h('tr',{},h('td',{},fmtDate(x.date)),h('td',{},x.partner),h('td',{},x.inv||'—'),h('td',{class:'num'},money2(x.gross)),h('td',{class:'num'},money2(x.wht)),h('td',{class:'num'},money2(x.rec)),h('td',{},x.m.state==='posted'?h('span',{class:'code mini'},x.m.name||''):pill('Waiting for approval','warn'))))),
+      h('tfoot',{},h('tr',{class:'total'},h('td',{colspan:3},'Total'),h('td',{class:'num'},money2(T('gross'))),h('td',{class:'num'},money2(T('wht'))),h('td',{class:'num'},money2(T('rec'))),h('td',{}))))):emptyNote(W.on?'Nothing withheld yet. It appears here when an export receipt is matched or marked as paid.':'Turn the deduction on above to start recording it.')));}
+
+// ===== Banking review as a table: the agent proposes, people approve one, several or all at once =====
+const revSel=()=>S.revSel||(S.revSel=new Set());
+const isUnid=m=>(m.lines||[]).some(x=>x.account==='1990')||(+m.confidence||0)<0.6;
+function revCounter(m,edits){const L=(m.lines||[]).map((l,i)=>({...l,account:edits[i]??l.account,i}));const cash=L.filter(l=>typeOf(l.account)==='asset_cash');const other=L.filter(l=>typeOf(l.account)!=='asset_cash');return {L,cash,other};}
+function bankReviewTable(w){const box=h('div',{class:'revwrap'});const sel=revSel();const ids=new Set(w.map(m=>m.id));[...sel].forEach(id=>{if(!ids.has(id)) sel.delete(id);});
+  const F=S.revF||(S.revF={only:''});
+  const list=w.filter(m=>F.only==='unid'?isUnid(m):F.only==='bank'?m.source==='bank_statement':true);
+  const msg=h('div',{class:'revmsg',role:'status'});
+  const cnt=h('span',{class:'revcount'});const apB=h('button',{class:'btn primary sm',type:'button'},'Approve selected');const rjB=h('button',{class:'btn ghost sm danger',type:'button'},'Reject selected');
+  const setAcc=acctSelect('',v=>{if(!v) return;let n=0;list.filter(m=>sel.has(m.id)).forEach(m=>{const ed=S.edits[m.id]||(S.edits[m.id]={});const {other}=revCounter(m,ed);if(other.length===1){ed[other[0].i]=v;n++;}});msg.textContent=n?`Account set on ${n} selected ${n===1?'entry':'entries'}. Approve them to post.`:'Choose entries with a single other account first.';draw();},{allowBlank:true});
+  setAcc.classList.add('revsetacc');setAcc.setAttribute('aria-label','Set the account for the selected entries');
+  const filt=h('div',{class:'seg revfilt',role:'tablist'},[['','All',w.length],['unid','Not identified',w.filter(isUnid).length],['bank','From bank statements',w.filter(m=>m.source==='bank_statement').length]].map(([k,l,n])=>h('button',{type:'button',role:'tab','aria-selected':String(F.only===k),onclick:()=>{F.only=k;box.replaceWith(bankReviewTable(w));}},`${l} (${n})`)));
+  const bar=h('div',{class:'revbar'},cnt,h('label',{class:'mini revsetl'},'Set account',setAcc),apB,rjB);
+  const all=h('input',{type:'checkbox','aria-label':'Select all'});
+  const tb=h('tbody');
+  const t=h('table',{class:'revtab'},h('thead',{},h('tr',{},h('th',{class:'ck'},all),h('th',{},'Date'),h('th',{},'Transaction'),h('th',{class:'num'},'Money in'),h('th',{class:'num'},'Money out'),h('th',{},'Account'),h('th',{},'Matched to'),h('th',{},'Agent'),h('th',{class:'acts'},''))),tb);
+  function sync(){const n=list.filter(m=>sel.has(m.id)).length;cnt.textContent=n?`${n} selected`:'Select entries to approve together';apB.disabled=rjB.disabled=!n;setAcc.disabled=!n;bar.classList.toggle('on',!!n);all.checked=n>0&&n===list.length;all.indeterminate=n>0&&n<list.length;}
+  function draw(){tb.textContent='';
+    list.forEach(m=>{const ed=S.edits[m.id]||(S.edits[m.id]={});const {cash,other}=revCounter(m,ed);const inn=r2(cash.reduce((s,l)=>s+(+l.debit||0),0)),out=r2(cash.reduce((s,l)=>s+(+l.credit||0),0));const amt=moveTotal(m);
+      const ck=h('input',{type:'checkbox',checked:sel.has(m.id),'aria-label':'Select '+(m.ref||'entry'),onchange:e=>{e.target.checked?sel.add(m.id):sel.delete(m.id);tr.classList.toggle('sel',e.target.checked);sync();}});
+      const acc=other.length===1?acctSelect(other[0].account,v=>{ed[other[0].i]=v;tr.classList.add('edited');}):h('span',{class:'mini'},other.length?`Split · ${other.length} lines`:'—');
+      const inv=(m.settles||[]).map(x=>(S.invoices.find(i=>i.id===x.invoice_id)||{}).number).filter(Boolean);
+      const match=h('div',{},inv.length?h('span',{class:'code mini'},inv.join(', ')):h('span',{class:'mini mut'},'—'),m.wht?h('div',{},pill(`Final tax ${money2(m.wht.amount)}`,'acc')):null);
+      const ag=h('div',{},isUnid(m)?pill('Not identified','bad'):confPill(m.confidence),m.reasoning?h('div',{class:'mini mut revwhy',title:m.reasoning},m.reasoning):null);
+      const ap=h('button',{class:'btn primary sm',type:'button',title:'Approve and post'},'Approve');const more=h('button',{class:'btn ghost sm',type:'button','aria-expanded':'false'},'Details');
+      const tr=h('tr',{class:(sel.has(m.id)?'sel ':'')+(isUnid(m)?'unid':'')},h('td',{class:'ck'},ck),h('td',{class:'nowrap'},fmtDate(m.date)),
+        h('td',{class:'revtx'},h('div',{class:'revref'},m.ref||'Entry'),h('div',{class:'mini mut'},[m.partner,m.source==='bank_statement'?(S.statements.find(s=>s.id===m.statement_id)||{}).file_name:sourceLabel(m)].filter(Boolean).join(' · '))),
+        h('td',{class:'num in'},inn?money2(inn):''),h('td',{class:'num out'},out?money2(out):(!cash.length?money2(amt):'')),h('td',{class:'revacc'},acc),h('td',{},match),h('td',{class:'revag'},ag),h('td',{class:'acts'},h('div',{class:'row'},ap,more)));
+      ap.onclick=async()=>{ap.disabled=true;try{await approveMove(m,(m.lines||[]).map((l,i)=>({...l,account:ed[i]??l.account})));sel.delete(m.id);tr.classList.add('done');}catch(e){msg.textContent=e.message;ap.disabled=false;}};
+      more.onclick=()=>{const nx=tr.nextSibling;if(nx&&nx.classList.contains('revdet')){nx.remove();more.setAttribute('aria-expanded','false');return;}more.setAttribute('aria-expanded','true');tr.after(h('tr',{class:'detail revdet'},h('td',{colspan:9},reviewCard(m))));};
+      tb.append(tr);});
+    if(!list.length) tb.append(h('tr',{},h('td',{colspan:9},emptyNote(F.only?'Nothing in this view.':'Nothing is waiting.'))));sync();}
+  all.onchange=()=>{list.forEach(m=>all.checked?sel.add(m.id):sel.delete(m.id));draw();};
+  const bulk=async(fn,verb)=>{const pick=list.filter(m=>sel.has(m.id));if(!pick.length) return;apB.disabled=rjB.disabled=true;let ok=0;const bad=[];
+    for(const m of pick){msg.textContent=`${verb} ${ok+bad.length+1} of ${pick.length}…`;try{await fn(m);ok++;sel.delete(m.id);}catch(e){bad.push(`${m.ref||m.id}: ${e.message}`);}}
+    msg.textContent='';msg.append(h('span',{},`${verb==='Approving'?'Approved and posted':'Rejected'} ${ok} ${ok===1?'entry':'entries'}.`),bad.length?h('div',{class:'err mini'},`${bad.length} could not be done: `+bad.slice(0,3).join('; ')):'');sync();};
+  apB.onclick=()=>bulk(m=>approveMove(m,(m.lines||[]).map((l,i)=>({...l,account:(S.edits[m.id]||{})[i]??l.account}))),'Approving');
+  rjB.onclick=()=>bulk(m=>rejectMove(m),'Rejecting');
+  draw();box.append(h('div',{class:'revtop'},filt,bar),msg,h('div',{class:'tablewrap'},t));return box;}
 
 
 // test hook (local development only)
