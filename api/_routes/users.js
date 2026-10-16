@@ -16,6 +16,20 @@ module.exports = async (req, res) => {
     const db = admin();
     const { data: m } = await db.from('members').select('role,status').eq('org_id', org).eq('user_id', user.id).maybeSingle();
     if (!m || m.status !== 'active' || !['owner', 'admin'].includes(m.role)) return res.status(403).json({ error: 'Only the workspace owner or an admin can create logins.' });
+    if (b.action === 'reset') {
+      const uid = String(b.uid || ''); if (!UUID.test(uid)) return res.status(400).json({ error: 'Choose the person.' });
+      if (uid === user.id) return res.status(400).json({ error: 'Change your own password in Workspace settings, Password.' });
+      const { data: tm } = await db.from('members').select('role').eq('org_id', org).eq('user_id', uid).maybeSingle();
+      if (!tm) return res.status(404).json({ error: 'This person is not in this workspace.' });
+      if (tm.role === 'owner') return res.status(403).json({ error: 'The owner’s password can only be changed by the owner.' });
+      let pw = String(b.password || ''); if (pw && pw.length < 8) return res.status(400).json({ error: 'The temporary password needs at least 8 characters.' }); if (!pw) pw = tempPassword();
+      const { data: cur } = await db.auth.admin.getUserById(uid);
+      const meta = { ...((cur && cur.user && cur.user.user_metadata) || {}), must_change: true, reset_by: user.id, reset_at: new Date().toISOString() };
+      const { error } = await db.auth.admin.updateUserById(uid, { password: pw, user_metadata: meta });
+      if (error) return res.status(400).json({ error: error.message || 'The password could not be reset.' });
+      const { data: pr } = await db.from('profiles').select('email,full_name').eq('id', uid).maybeSingle();
+      return res.status(200).json({ id: uid, email: pr && pr.email, name: pr && pr.full_name, password: pw });
+    }
     if ((b.action || 'create') !== 'create') return res.status(400).json({ error: 'Unknown action.' });
     const email = String(b.email || '').trim().toLowerCase(); const name = String(b.name || '').trim().slice(0, 120);
     if (!EMAIL.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
