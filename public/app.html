@@ -13024,6 +13024,16 @@ partyLines=function(kind,partner){const C=ctrlAccts(kind);const p=norm(partner);
   const hook=()=>{if(!db||db._cw) return !!db;const d0=db.doc.bind(db);db.doc=(...a)=>wrapRef(d0(...a));const c0=db.collection.bind(db);db.collection=(...a)=>{const c=c0(...a);if(c&&!c._cw){const cd=c.doc.bind(c);c.doc=(...b)=>wrapRef(cd(...b));c._cw=1;}return c;};db._cw=1;return true;};
   const t=setInterval(()=>{try{if(hook()) clearInterval(t);}catch(e){}},300);})();
 
+// ===== Removing a payment re-opens the invoice: reversed payments no longer settle, a reversal keeps the party, and an invoice never shows a negative balance =====
+settledFor=function(id,withPending){let s=0;for(const m of (withPending?postedOrPending():posted())){if(m.reversed_by||m.reversal_of) continue;for(const x of (m.settles||[])) if(x.invoice_id===id) s+=+x.amount||0;}return r2(s);};
+{const _d=invDue;invDue=function(inv,withPending){const v=_d.call(this,inv,withPending);return v<0?0:v;};}
+// a reversal carries the original's party on every line, so the sub-ledger and statement move back too
+{const _w=writeMove;writeMove=async function(m){try{if(m&&m.reversal_of){const o=S.moves.find(x=>x.id===m.reversal_of);if(o){if(!m.partner&&o.partner) m.partner=o.partner;const P=typeof moveParts==='function'?moveParts(o):null;
+      (m.lines||[]).forEach((l,k)=>{if(l.partner) return;const ol=(o.lines||[])[k];const p=(ol&&ol.partner)||(P&&P[k]&&P[k].length===1&&P[k][0].party)||o.partner;if(p) l.partner=p;});}}}catch(e){}return _w.apply(this,arguments);};}
+// older reversals made without the party take it from the original entry
+{const _mp=moveParts;moveParts=function(m){const P=_mp(m);if(!m.reversal_of) return P;const o=S.moves.find(x=>x.id===m.reversal_of);if(!o) return P;const OP=_mp(o);
+  return P.map((parts,k)=>parts.length===1&&!parts[0].party&&OP[k]?OP[k].map(x=>({party:x.party,d:x.c,c:x.d})):parts);};}
+
 
 // test hook (local development only)
 if(location.hostname==='localhost'){window.__dbg=c=>eval(c);}
