@@ -1551,6 +1551,48 @@ section.mapp{position:fixed;inset:0;z-index:60;display:flex;flex-direction:colum
 .pmctl select,.pmctl input[type=date]{height:2.2rem;padding:0 .55rem;border-radius:8px;border:1px solid var(--line,#D0D5DD);background:var(--panel,#fff);color:var(--ink,#101828);font:inherit;font-size:.86rem}
 .pmd{display:flex;flex-direction:column;gap:.15rem;font-size:.72rem}.pmd span{opacity:.8}
 .fsrange{display:inline-flex;gap:.35rem;align-items:center}.fsrange input{height:2.2rem}
+/* ===== Top bar v3: slim dark bar in the Odoo manner — app grid, company, where you are; quiet round actions on the right ===== */
+html body.tb2 .topbar{--tbg1:#141A2E;--tbg2:#0E1224;--tink:#EEF1FA;--tmut:#A3ABC7;--thov:rgba(255,255,255,.08);--tline:rgba(255,255,255,.12);
+  height:3.25rem!important;min-height:3.25rem!important;padding:0 .9rem!important;gap:.35rem!important;color:var(--tink)!important;
+  background:linear-gradient(180deg,var(--tbg1),var(--tbg2))!important;border-bottom:0!important;box-shadow:0 1px 0 rgba(255,255,255,.04),0 8px 24px -18px rgba(8,10,25,.9)!important;position:sticky;top:0;z-index:40}
+html body.tb2 .topbar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,rgba(45,212,191,.0),rgba(45,212,191,.75) 18%,rgba(129,140,248,.8) 50%,rgba(244,114,182,.7) 82%,rgba(244,114,182,0));pointer-events:none}
+html body.tb2 .topbar .tbrand{color:var(--tink)!important;margin-right:.1rem!important}
+html body.tb2 .topbar .tbrand .mark{filter:brightness(1.15)}
+html body.tb2 .topbar button,html body.tb2 .topbar a{color:var(--tink)}
+html body.tb2 .topbar .tctx::after{background:var(--tline)!important}
+html body.tb2 .topnav{gap:.2rem!important;min-width:0}
+html body.tb2 .topnav>button,html body.tb2 .tctx button{height:2.15rem;border-radius:9px!important;color:var(--tmut)!important;background:transparent!important;border:0!important;transition:background .15s,color .15s}
+html body.tb2 .topnav>button:hover,html body.tb2 .tctx button:hover{background:var(--thov)!important;color:var(--tink)!important}
+html body.tb2 .topnav>button svg,html body.tb2 .tctx svg{stroke:currentColor!important}
+/* the app grid: one square button, like Odoo's home */
+html body.tb2 #tn-mods{width:2.15rem;padding:0!important;place-items:center}html body.tb2 #tn-mods:not([hidden]){display:inline-grid!important}html body.tb2 #tn-mods[hidden]{display:none!important}
+html body.tb2 #tn-mods span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+html body.tb2 #tn-mods[aria-current="page"]{background:rgba(129,140,248,.22)!important;color:#fff!important}
+html body.tb2 #tn-mods svg{width:1.15rem!important;height:1.15rem!important}
+/* the company: a calm pill with its logo */
+html body.tb2 .tbco{height:2.15rem;color:var(--tink)!important;background:rgba(255,255,255,.06)!important;border:1px solid var(--tline)!important;border-radius:999px!important;padding:0 .75rem 0 .3rem!important;gap:.45rem}
+html body.tb2 .tbco:hover{background:rgba(255,255,255,.11)!important}
+html body.tb2 .tbco-lg{border-color:transparent!important;border-radius:50%!important}
+html body.tb2 .tbco-in{border-radius:50%!important}
+html body.tb2 .tbback{color:var(--tmut)!important}
+/* where you are: module in white, screen muted */
+html body.tb2 .tn-app{border-left:1px solid var(--tline)!important;color:var(--tmut)!important;padding-left:.75rem!important;margin-left:.35rem!important;font-size:.9rem}
+html body.tb2 .tn-app b{color:var(--tink)!important;font-weight:600;letter-spacing:-.005em}
+html body.tb2 .tn-app svg{stroke:#7DD3FC!important}
+html body.tb2 .tn-app span::before{color:rgba(255,255,255,.3)!important}
+/* right side */
+html body.tb2 .tright{gap:.2rem!important}
+html body.tb2 .tright .iconbtn,html body.tb2 .tright .tbic,html body.tb2 #tb-review{width:2.15rem!important;height:2.15rem!important;border-radius:999px!important;color:var(--tmut)!important;background:transparent!important}
+html body.tb2 .tright .iconbtn:hover,html body.tb2 .tright .tbic:hover,html body.tb2 #tb-review:hover,html body.tb2 .tright .tbic[aria-current="page"]{background:var(--thov)!important;color:#fff!important}
+html body.tb2 #tb-cur{height:2.05rem;border-radius:999px!important;background:rgba(255,255,255,.06)!important;color:var(--tink)!important;border:1px solid var(--tline)!important;padding:0 1.9rem 0 .8rem!important;font-size:.82rem;margin-right:.35rem;color-scheme:dark}
+html body.tb2 #tb-cur option{color:#101828;background:#fff}
+html body.tb2 .tright .badge,html body.tb2 .tright sup,html body.tb2 .tright .cnt{box-shadow:0 0 0 2px var(--tbg1)}
+html body.tb2 #tbout{color:var(--tmut)!important}
+html body.tb2 #tbout:hover{color:#FDA4AF!important;background:rgba(244,63,94,.12)!important}
+html body.tb2 .topbar .vsep,html body.tb2 .tright .sep{background:var(--tline)!important}
+html body.tb2 #sx-co{color:var(--tink)!important;background:rgba(255,255,255,.06)!important;border:1px solid var(--tline)!important;border-radius:999px!important}
+html body.tb2 .topbar :focus-visible{outline:2px solid #818CF8!important;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){html body.tb2 .topnav>button,html body.tb2 .tctx button{transition:none}}
 
 </style>
 
