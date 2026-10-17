@@ -13033,6 +13033,9 @@ settledFor=function(id,withPending){let s=0;for(const m of (withPending?postedOr
 // older reversals made without the party take it from the original entry
 {const _mp=moveParts;moveParts=function(m){const P=_mp(m);if(!m.reversal_of) return P;const o=S.moves.find(x=>x.id===m.reversal_of);if(!o) return P;const OP=_mp(o);
   return P.map((parts,k)=>parts.length===1&&!parts[0].party&&OP[k]?OP[k].map(x=>({party:x.party,d:x.c,c:x.d})):parts);};}
+// an entry is reversed only once, and only when it is posted
+{const _rv=reverseMove;reverseMove=async function(m){if(!m) return;if(m.reversed_by) throw new Error('This entry has already been reversed.');if(m.reversal_of) throw new Error('This is itself a reversal.');if(m.state!=='posted') throw new Error('Only a posted entry can be reversed. Reject it in Approvals instead.');
+  m.reversed_by='pending';try{return await _rv.apply(this,arguments);}catch(e){delete m.reversed_by;throw e;}};}
 
 // ===== Sales: a Dashboard tab for the overview; Invoices is just the list of invoices =====
 TABS.push(['sdash','Sales dashboard']);
@@ -13047,6 +13050,24 @@ function salesMode(el,mode){const ap=()=>{[...el.children].forEach(c=>{const p=s
   new MutationObserver(ap).observe(el,{childList:true});ap();}
 {const _s=BUILD.sales;BUILD.sales=(...a)=>{const r=_s(...a);try{salesMode(r.el,'list');}catch(e){}return r;};
   BUILD.sdash=(...a)=>{const r=_s(...a);try{salesMode(r.el,'dash');}catch(e){}return r;};}
+
+// ===== Invoice: payments mapped to it, clean. Active payments only (each removable in one step); reversed ones folded into one line =====
+invBankMap=function(inv){const isC=inv.kind==='customer';const all=S.moves.filter(m=>m.state!=='cancelled'&&!m.reversal_of&&(m.settles||[]).some(x=>x.invoice_id===inv.id)).sort((a,b)=>a.date<b.date?-1:1);
+  const act=all.filter(m=>!m.reversed_by),gone=all.filter(m=>m.reversed_by);if(!all.length) return null;
+  const label=m=>{const st=m.statement_id&&S.statements.find(s=>s.id===m.statement_id);return m.source==='allocation'?'Applied from payment on account':m.payment?`${payModeName(m.payment.mode)} ${m.payment.ref||''}`:m.source==='bank_match'||m.bank_match_of?'Bank line matched':st?`Bank: ${m.ref||''}`:m.source==='payment'?'Marked as paid':m.ref||'Payment';};
+  const total=r2(+inv.total_base||0);let left=total;const msg=h('div',{class:'mini err',role:'status'});
+  const tb=h('tbody',{},act.map(m=>{const x=m.settles.find(s=>s.invoice_id===inv.id);const amt=+x.amount||0;if(m.state==='posted') left=r2(left-amt);
+    const rm=S.canWrite?h('button',{class:'btn ghost sm danger',type:'button'},'Remove payment'):null;
+    if(rm) rm.onclick=()=>{const c=h('span',{class:'row',style:'gap:.3rem'},h('span',{class:'mini'},m.source==='bank_statement'?'Unmatch it from the bank line?':'Reverse this payment?'),h('button',{class:'btn sm danger',type:'button',onclick:async e=>{e.target.disabled=true;try{
+          if(m.state==='to_approve') await rejectMove(m);
+          else if(m.source==='bank_statement'&&!m.payment){const settles=(m.settles||[]).filter(s=>s.invoice_id!==inv.id);await db.doc('moves/'+m.id).update({settles,audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:`Unmatched from ${inv.number}`}]});m.settles=settles;}
+          else await reverseMove(m);typeof revToast==='function'&&revToast('Payment removed. The invoice is open again.');}catch(er){msg.textContent=er.message;e.target.disabled=false;}}},'Yes, remove'),h('button',{class:'btn ghost sm',type:'button',onclick:()=>c.replaceWith(rm)},'No'));rm.replaceWith(c);};
+    return h('tr',{},h('td',{class:'nowrap'},fmtDate(m.date)),h('td',{},label(m),h('div',{class:'mut'},m.name||''),m.state==='to_approve'?pill('Waiting for approval','warn'):null,m.wht?h('div',{class:'mut'},`incl. ${money2(m.wht.amount)} tax withheld`):null),h('td',{class:'num'},money2(amt)),h('td',{class:'num'},m.state==='posted'?(left>0.009?money2(left):'—'):''),h('td',{class:'acts'},rm));}));
+  if(!act.length) tb.append(h('tr',{},h('td',{colspan:5,class:'mut'},'No payment counts against this invoice now.')));
+  const due=invDue(inv,true);
+  return h('div',{class:'stack invpays',style:'gap:.35rem'},h('b',{style:'font-weight:500'},isC?'Payments received for this invoice':'Payments made for this bill'),h('div',{class:'tablewrap'},h('table',{class:'mini invmap'},h('thead',{},h('tr',{},h('th',{},'Date'),h('th',{},'Payment'),h('th',{class:'num'},'Applied'),h('th',{class:'num'},'Still to pay'),h('th',{}))),tb)),msg,
+    gone.length?h('div',{class:'mini mut'},`${gone.length} earlier payment${gone.length>1?'s were':' was'} reversed and no longer count${gone.length>1?'':'s'} (${gone.map(m=>m.name||fmtDate(m.date)).join(', ')}).`):null,
+    act.some(m=>m.state==='posted')&&due>0.009?h('div',{class:'banner warn'},`Short paid: ${money2(due)} is still open on this invoice.`):null);};
 
 
 // test hook (local development only)
