@@ -1675,6 +1675,18 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .slsetup{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr));gap:.2rem .8rem;max-height:20rem;overflow:auto}
 .slsetup label{display:flex;gap:.4rem;align-items:center;font-size:.86rem}
 .slper .field{min-width:9rem}
+/* ===== Ledgers and sub-ledgers ===== */
+.lgctl{display:grid;gap:.7rem;padding:.8rem 1rem}
+.lgrow{display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:flex-end}
+.lgf{flex:1;min-width:min(100%,16rem)}.lgsel{width:100%}
+.lgnat{font-size:.76rem;font-weight:600;padding:.25rem .6rem;border-radius:999px;align-self:center}.lgnat.bs{background:color-mix(in srgb,#0F9488 14%,transparent);color:#0F7A70}.lgnat.pl{background:color-mix(in srgb,#2457C5 14%,transparent);color:#2457C5}
+.lghead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.6rem 1.2rem;align-items:flex-end}
+.lgsum{display:flex;flex-wrap:wrap;gap:.4rem 1.1rem;font-size:.86rem;color:var(--muted)}.lgsum b{color:var(--ink)}
+.lgtab td.lgd,.lgtab th:nth-last-child(3){color:var(--ink)}.lgtab td.lgb{font-weight:600}
+.lgtab thead th:nth-last-child(3),.lgtab thead th:nth-last-child(2){background:var(--sunk)}
+.lgop td{font-style:italic;color:var(--muted)}.lgop td.lgb{font-style:normal;color:var(--ink)}
+.lgtab tfoot tr.lgcl td{border-top:1px solid var(--line-2)}
+.lgrowx{cursor:pointer}.lgrowx:hover td{background:var(--sunk)}
 
 </style>
 
@@ -12519,11 +12531,7 @@ function accountPanel(){const adm=typeof wsIsAdmin==='function'&&wsIsAdmin();
     adm?item('Workspace settings','Company admins, the workspace logo and address.','Open',()=>{S.wsSec='profile';showTab('wsset');}):null);}
 
 // ===== Sub-ledgers: every main (control) ledger holds a sub-ledger for each party; entries on a main ledger carry their party =====
-TABS.push(['subled','Sub-ledgers']);
-ICONS.subled='<rect x="3.5" y="4" width="7" height="16" rx="1.5"/><path d="M14 6h6.5M14 10h6.5M14 14h6.5M14 18h6.5M10.5 8H14M10.5 12H14M10.5 16H14"/>';
-(function(){const C=APPS.find(a=>a.k==='accounting');if(C&&!C.tabs.includes('subled')){const i=C.tabs.indexOf('ledgers');C.tabs.splice(i>=0?i+1:C.tabs.length,0,'subled');const g=(C.groups||[]).find(x=>x[1].includes('ledgers'));if(g&&!g[1].includes('subled')) g[1].splice(g[1].indexOf('ledgers')+1,0,'subled');}
-  const rep=ACCESS_MODULES.find(m=>m[0]==='reports');if(rep&&!rep[2].includes('subled')) rep[2].push('subled');})();
-
+// (the Sub-ledgers screen is part of Ledgers now: see ext78)
 const SL_SUGGEST=/receivab|payab|debtor|creditor|director|shareholder|partner.?s? current|related part|employee|staff advance|salar(y|ies) payable|advance|deposit|loan|retention|due (to|from)/i;
 function slDefault(){return Object.values(S.accounts).filter(a=>!a.deprecated&&!a.group&&(a.type==='asset_receivable'||a.type==='liability_payable'||(/^(asset_current|liability_current|liability_non_current|asset_non_current)$/.test(a.type||'')&&SL_SUGGEST.test(a.name||'')))).map(a=>a.id);}
 function slAccounts(){const e=entDoc();return (Array.isArray(e.subledger_accts)?e.subledger_accts:slDefault()).filter(c=>S.accounts[c]);}
@@ -12593,6 +12601,91 @@ BUILD.subled=()=>{const el=h('section',{class:'stack slscreen'});const L=S.slS||
     const save=h('button',{class:'btn primary',type:'button',onclick:async()=>{save.disabled=true;try{await saveEnt({subledger_accts:[...list.querySelectorAll('input:checked')].map(x=>x.value)});L.setup=false;refresh();typeof revToast==='function'&&revToast('Main ledgers saved.');}catch(e){msg.textContent=e.message;save.disabled=false;}}},'Save');
     return h('div',{class:'card stack'},h('h3',{style:'margin:0'},'Main ledgers that keep sub-ledgers'),h('p',{class:'mini mut',style:'margin:0'},'Tick each account that should be broken down by party. Manual entries on these accounts must name the party.'),list,h('div',{class:'row'},save,h('button',{class:'btn ghost',type:'button',onclick:()=>{list.querySelectorAll('input').forEach(x=>x.checked=slDefault().includes(x.value));}},'Use suggested')),msg);}
   return {el,refresh};};
+
+// ===== Accounting → Ledgers: one screen for every ledger and its sub-ledgers, with debit and credit apart, and Excel / PDF =====
+{const t=TABS.find(x=>x[0]==='ledgers');if(t) t[1]='Ledgers and sub-ledgers';}
+const LG_PL=a=>/^(income|expense)/.test((a&&a.type)||'');
+function lgRange(G,a){const t=today();if(LG_PL(a)){if(G.pm==='mtd') return [t.slice(0,8)+'01',t];if(G.pm==='month'){const m=G.m||t.slice(0,7);return [m+'-01',lastDay(m)];}if(G.pm==='range'){const x=G.from||fyStartOf(t),y=G.to||t;return x<=y?[x,y]:[y,x];}return [fyStartOf(G.to&&G.pm==='ytd'?G.to:t),G.pm==='ytd'&&G.to?G.to:t];}
+  if(G.bm==='range'){const x=G.from||fyStartOf(t),y=G.to||t;return x<=y?[x,y]:[y,x];}const d=G.asat||t;return [fyStartOf(d),d];}
+const lgDC=n=>Math.abs(n)<0.005?'0.00':`${money2(Math.abs(n))} ${n>0?'Dr':'Cr'}`;
+// lines for a ledger (and optionally one party): opening and movements. Income and expenses open at the start of the financial year.
+function lgData(code,party,from,to){const a=S.accounts[code];const pl=LG_PL(a);const fy=fyStartOf(from);let op=0;const rows=[];
+  for(const m of posted()){if(m.date>to) continue;(m.lines||[]).forEach((l,i)=>{if(l.account!==code) return;const pt=slParty(m,l);if(party!=null&&party!=='*'&&pt!==party) return;const n=(+l.debit||0)-(+l.credit||0);
+    if(m.date<from){if(!pl||m.date>=fy) op+=n;}else rows.push({m,l,i,party:pt,d:+l.debit||0,c:+l.credit||0});});}
+  rows.sort((x,y)=>x.m.date<y.m.date?-1:x.m.date>y.m.date?1:String(x.m.name||'').localeCompare(String(y.m.name||'')));
+  let bal=r2(op);rows.forEach(r=>{bal=r2(bal+r.d-r.c);r.bal=bal;});const D=r2(rows.reduce((t,r)=>t+r.d,0)),C=r2(rows.reduce((t,r)=>t+r.c,0));return {op:r2(op),rows,D,C,cl:bal};}
+
+BUILD.ledgers=()=>{const el=h('section',{class:'stack lgscreen'});
+  const G=S.lgS||(S.lgS={acct:null,party:'*',bm:'asat',pm:'ytd',asat:null,from:null,to:null,m:null,setup:false});
+  el.append(h('div',{class:'pagehead'},h('div',{},h('h1',{},'Ledgers and sub-ledgers'),h('p',{class:'lede'},'Choose a ledger, then one of its sub-ledgers. Balance sheet ledgers run as at a date or for a range; income and expense ledgers for month to date, year to date, a month or a range.'))));
+  const ctl=h('div',{class:'card lgctl'}),body=h('div',{class:'stack nopertable'});el.append(ctl,body);let exp=null;
+  function refresh(){ctl.textContent='';body.textContent='';exp=null;if(allGuard(el,'see the ledgers')) return;const nd=needData();if(nd){body.append(nd);return;}
+    const accts=Object.values(S.accounts).filter(a=>!a.group&&(!a.deprecated||posted().some(m=>(m.lines||[]).some(l=>l.account===a.id)))).sort((x,y)=>x.id<y.id?-1:1);
+    if(!G.acct||!S.accounts[G.acct]){const used=new Set(posted().flatMap(m=>(m.lines||[]).map(l=>l.account)));G.acct=(slAccounts().find(c=>used.has(c))||(accts.find(a=>used.has(a.id))||accts[0]||{}).id)||null;}
+    const a=S.accounts[G.acct];if(!a){body.append(emptyNote('No accounts yet.'));return;}
+    const ctrl=S.entity!=='all'&&slAccounts().includes(a.id);if(!ctrl&&G.party!=='*') G.party='*';
+    // ledger and sub-ledger
+    const groups={};accts.forEach(x=>{const g=(TYPES[x.type]||['Other','Other'])[1];(groups[g]||(groups[g]=[])).push(x);});
+    const ls=h('select',{'aria-label':'Ledger',class:'lgsel',onchange:e=>{G.acct=e.target.value;G.party='*';refresh();}},Object.entries(groups).map(([g,L])=>h('optgroup',{label:g},L.map(x=>h('option',{value:x.id,selected:x.id===G.acct},`${x.id} ${x.name}${slAccounts().includes(x.id)?' · has sub-ledgers':''}`)))));
+    const parties=ctrl?[...new Set(slLines(a.id,today()>'9999'?'9999-12-31':'9999-12-31').map(x=>x.party))].sort((x,y)=>(x?0:1)-(y?0:1)||x.localeCompare(y)):[];
+    const ps=h('select',{'aria-label':'Sub-ledger',class:'lgsel',disabled:!ctrl,onchange:e=>{G.party=e.target.value;refresh();}},
+      ctrl?[h('option',{value:'*'},'Whole ledger (all entries)'),h('option',{value:'#'},'Summary by sub-ledger'),h('optgroup',{label:'Sub-ledgers'},parties.map(p=>h('option',{value:p},p||'Not assigned to a party')))]:[h('option',{value:'*'},'This ledger has no sub-ledgers')]);ps.value=G.party;
+    // period by nature
+    const pl=LG_PL(a);let pmode,pick;
+    if(pl){pmode=h('select',{'aria-label':'Period',onchange:e=>{G.pm=e.target.value;refresh();}},[['mtd','Month to date'],['ytd','Year to date'],['month','Month'],['range','Range']].map(([k,l])=>h('option',{value:k},l)));pmode.value=G.pm;
+      pick=G.pm==='month'?h('input',{type:'month','aria-label':'Month',value:G.m||today().slice(0,7),onchange:e=>{G.m=e.target.value;refresh();}}):G.pm==='range'?rangeIn():null;}
+    else{pmode=h('select',{'aria-label':'Period',onchange:e=>{G.bm=e.target.value;refresh();}},[['asat','As at'],['range','Range']].map(([k,l])=>h('option',{value:k},l)));pmode.value=G.bm;
+      pick=G.bm==='range'?rangeIn():h('input',{type:'date','aria-label':'As at',value:G.asat||today(),onchange:e=>{G.asat=e.target.value;refresh();}});}
+    function rangeIn(){const [x,y]=lgRange(G,a);return h('span',{class:'exprange'},h('input',{type:'date','aria-label':'From',value:x,onchange:e=>{G.from=e.target.value;refresh();}}),h('span',{class:'mini mut'},'to'),h('input',{type:'date','aria-label':'To',value:y,onchange:e=>{G.to=e.target.value;refresh();}}));}
+    const [from,to]=lgRange(G,a);
+    const xl=h('button',{class:'btn',type:'button',onclick:()=>exp&&exportXlsx(exp.file+'.xlsx',{[exp.sheet]:exp.xlsx()})},'Excel');const pdf=h('button',{class:'btn',type:'button'},'PDF');
+    pdf.onclick=async()=>{if(!exp) return;pdf.disabled=true;try{const p=exp.pdf();await saveFile(exp.file+'.pdf',await pdfTable(exp.title,p.sub,p.head,p.rows,p.num));}catch(e){alertNote(e.message||'The PDF could not be made.');}finally{pdf.disabled=false;}};
+    ctl.append(h('div',{class:'lgrow'},h('label',{class:'field lgf'},'Ledger',ls),h('label',{class:'field lgf'},'Sub-ledger',ps)),
+      h('div',{class:'lgrow'},h('span',{class:'lgnat '+(pl?'pl':'bs')},pl?'Profit and loss':'Balance sheet'),pmode,pick,h('span',{class:'exprl'},pl||G.bm==='range'?`${fmtDate(from)} – ${fmtDate(to)}`:`As at ${fmtDate(to)}`),h('span',{style:'flex:1'}),
+        S.canEdit&&S.entity!=='all'?h('button',{class:'btn ghost',type:'button',onclick:()=>{G.setup=!G.setup;refresh();}},G.setup?'Close':'Main ledgers'):null,xl,pdf));
+    if(G.setup) body.append(slSetup(()=>{G.setup=false;refresh();}));
+    const title=`${a.id} ${a.name}`,per=pl||G.bm==='range'?`${fmtDate(from)} to ${fmtDate(to)}`:`As at ${fmtDate(to)} (from ${fmtDate(from)})`,co=(S.settings||{}).company||'';
+    if(G.party==='#') return summary(a,from,to,title,per,co);
+    const party=G.party==='*'?null:G.party;const D=lgData(a.id,party==null?'*':party,from,to);const showP=ctrl&&party==null;
+    const head=['Date','Entry','Description',...(showP?['Sub-ledger']:[]),'Debit','Credit','Balance'];
+    const tb=h('tbody',{},h('tr',{class:'lgop'},h('td',{colspan:showP?4:3},pl&&from===fyStartOf(from)?'Opening balance (start of the financial year)':'Opening balance'),h('td',{class:'num'}),h('td',{class:'num'}),h('td',{class:'num lgb'},lgDC(D.op))));
+    const msg=h('div',{class:'mini',role:'status'});const assignable=ctrl&&party===''&&S.canEdit;
+    D.rows.forEach(r=>{let as=null;if(assignable){const inp=h('input',{type:'text',list:'lg-party-list','aria-label':'Party for '+(r.m.name||r.m.ref||'entry'),placeholder:'Party'});const b=h('button',{class:'btn sm',type:'button',onclick:async()=>{const v=inp.value.trim();if(!v){inp.focus();return;}b.disabled=true;
+        try{const lines=(r.m.lines||[]).map((l,i)=>i===r.i?{...l,partner:v}:l);const up={lines,audit:[...(r.m.audit||[]),{at:nowISO(),by:S.me,action:`Line ${r.i+1} on ${a.id} put in the sub-ledger of ${v}`}]};await db.doc('moves/'+r.m.id).update(up);Object.assign(r.m,up);typeof revToast==='function'&&revToast(`Moved to ${v}’s sub-ledger.`);refresh();}catch(e){msg.textContent=e.message;b.disabled=false;}}},'Assign');as=h('div',{class:'slassign'},inp,b);}
+      tb.append(h('tr',{class:'lgrowx',tabindex:'0',onclick:e=>{if(e.target.closest('.slassign')) return;miniModal(r.m.name||r.m.ref||'Entry',moveDetail(r.m),{wide:true});}},h('td',{class:'nowrap'},fmtDate(r.m.date)),h('td',{class:'code mini'},r.m.name||''),h('td',{},h('div',{},r.l.label||r.m.ref||'—'),r.l.label&&r.m.ref&&r.l.label!==r.m.ref?h('div',{class:'mini mut'},r.m.ref):null,as),
+        showP?h('td',{},r.party||h('span',{class:'mini slwarn'},'Not assigned')):null,h('td',{class:'num lgd'},r.d?money2(r.d):''),h('td',{class:'num lgc'},r.c?money2(r.c):''),h('td',{class:'num lgb'},lgDC(r.bal))));});
+    if(!D.rows.length) tb.append(h('tr',{},h('td',{colspan:head.length},emptyNote('No entries in this period.'))));
+    const tbl=h('table',{class:'exptab lgtab'},h('thead',{},h('tr',{},head.map((x,i)=>h('th',{class:i>=head.length-3?'num':''},x==='Debit'?'Debit (Dr)':x==='Credit'?'Credit (Cr)':x)))),tb,
+      h('tfoot',{},h('tr',{},h('td',{colspan:showP?4:3},'Total movements'),h('td',{class:'num'},money2(D.D)),h('td',{class:'num'},money2(D.C)),h('td',{})),h('tr',{class:'lgcl'},h('td',{colspan:showP?4:3},`Closing balance ${pl||G.bm==='range'?'at '+fmtDate(to):'as at '+fmtDate(to)}`),h('td',{}),h('td',{}),h('td',{class:'num'},lgDC(D.cl)))));
+    const sub=party==null?(ctrl?'Whole ledger, all sub-ledgers':''):party?`Sub-ledger: ${party} (${slKindOf(party)})`:'Entries not assigned to a party';
+    body.append(h('div',{class:'card stack'},h('div',{class:'lghead'},h('div',{},h('h3',{style:'margin:0'},party?party:title),h('p',{class:'mini mut',style:'margin:.15rem 0 0'},[party?title:sub,per].filter(Boolean).join(' · '))),
+        h('div',{class:'lgsum'},h('span',{},'Debits ',h('b',{},money2(D.D))),h('span',{},'Credits ',h('b',{},money2(D.C))),h('span',{},'Balance ',h('b',{},lgDC(D.cl))))),
+      assignable?h('div',{class:'banner warn'},'Give each line its party; the amounts do not change.'):null,assignable?slPartyList('lg-party-list'):null,msg,h('div',{class:'tablewrap'},tbl)));
+    const nameF=fileSlug(`ledger-${a.id}${party?'-'+party:''}-${to}`);const sx=(party?`${party} · `:'')+title;
+    const xrows=D.rows.map(r=>[r.m.date,r.m.name||'',r.l.label||r.m.ref||'',...(showP?[r.party||'Not assigned']:[]),r.d||'',r.c||'',Math.abs(r.bal),r.bal>0.004?'Dr':r.bal<-0.004?'Cr':'']);
+    exp={file:nameF,sheet:'Ledger',title:sx,xlsx:()=>[[co],[sx],[per+`, ${S.baseCur}`],[],[...head.slice(0,-1),'Balance','Dr/Cr'],['','', 'Opening balance',...(showP?['']:[]),'','',Math.abs(D.op),D.op>0?'Dr':D.op<0?'Cr':''],...xrows,['','','Total movements',...(showP?['']:[]),D.D,D.C,'',''],['','','Closing balance',...(showP?['']:[]),'','',Math.abs(D.cl),D.cl>0?'Dr':D.cl<0?'Cr':'']],
+      pdf:()=>({sub:`${co} · ${per} · ${S.baseCur}`,head:[...head.slice(0,-3),'Debit (Dr)','Credit (Cr)','Balance'],num:[head.length-3,head.length-2,head.length-1],rows:[{g:true,c:['','','Opening balance',...(showP?['']:[]),'','',lgDC(D.op)]},...D.rows.map(r=>[fmtDate(r.m.date),r.m.name||'',r.l.label||r.m.ref||'',...(showP?[r.party||'Not assigned']:[]),r.d?money2(r.d):'',r.c?money2(r.c):'',lgDC(r.bal)]),{b:true,c:['','','Total movements',...(showP?['']:[]),money2(D.D),money2(D.C),'']},{b:true,c:['','','Closing balance',...(showP?['']:[]),'','',lgDC(D.cl)]}]})};}
+  // all sub-ledgers of a main ledger in one table
+  function summary(a,from,to,title,per,co){const list=slSummary(a.id,from,to).filter(p=>Math.abs(p.op)>0.004||p.n||Math.abs(p.cl)>0.004).sort((x,y)=>(x.party?0:1)-(y.party?0:1)||x.party.localeCompare(y.party));
+    const main=r2(balanceOf([a.id],to));const tot=r2(list.reduce((t,p)=>t+p.cl,0));const un=list.find(p=>!p.party);const T=k=>r2(list.reduce((t,p)=>t+p[k],0));
+    const tb=h('tbody',{},list.map(p=>h('tr',{class:'click'+(p.party?'':' slun'),tabindex:'0',onclick:()=>{G.party=p.party;refresh();},onkeydown:e=>{if(e.key==='Enter') e.currentTarget.click();}},h('td',{},p.party||'Not assigned to a party'),h('td',{},p.party?h('span',{class:'expg'},slKindOf(p.party)):pill('Assign','warn')),h('td',{class:'num'},lgDC(p.op)),h('td',{class:'num lgd'},money2(p.d)),h('td',{class:'num lgc'},money2(p.c)),h('td',{class:'num lgb'},lgDC(p.cl)))));
+    if(!list.length) tb.append(h('tr',{},h('td',{colspan:6},emptyNote('No entries on this ledger yet.'))));
+    const agree=Math.abs(main-tot)<0.05;
+    body.append(h('div',{class:'card stack'},h('div',{class:'lghead'},h('div',{},h('h3',{style:'margin:0'},title),h('p',{class:'mini mut',style:'margin:.15rem 0 0'},`Summary by sub-ledger · ${per}`)),h('div',{class:'lgsum'},h('span',{},`${list.filter(p=>p.party).length} sub-ledgers`),h('span',{},'Main ledger ',h('b',{},lgDC(main))))),
+      h('div',{class:'banner '+(agree&&!un?'ok':'warn')},!agree?`Sub-ledgers total ${lgDC(tot)} but the main ledger shows ${lgDC(main)}.`:un?`Sub-ledgers agree with the main ledger, but ${lgDC(un.cl)} sits in entries without a party. Open “Not assigned to a party” to assign them.`:`Sub-ledgers agree with the main ledger: ${lgDC(main)}.`),
+      h('div',{class:'tablewrap'},h('table',{class:'exptab lgtab'},h('thead',{},h('tr',{},h('th',{},'Sub-ledger (party)'),h('th',{},'Type'),h('th',{class:'num'},'Opening'),h('th',{class:'num'},'Debit (Dr)'),h('th',{class:'num'},'Credit (Cr)'),h('th',{class:'num'},'Closing'))),tb,
+        h('tfoot',{},h('tr',{},h('td',{colspan:2},'Total = main ledger'),h('td',{class:'num'},lgDC(T('op'))),h('td',{class:'num'},money2(T('d'))),h('td',{class:'num'},money2(T('c'))),h('td',{class:'num'},lgDC(tot))))))));
+    const head=['Sub-ledger (party)','Type','Opening','Debit','Credit','Closing'];
+    exp={file:fileSlug(`subledgers-${a.id}-${to}`),sheet:'Sub-ledgers',title:`${title}: sub-ledgers`,xlsx:()=>[[co],[`${title}: summary by sub-ledger`],[per+`, ${S.baseCur}`],[],[head[0],head[1],'Opening','Dr/Cr','Debit','Credit','Closing','Dr/Cr'],...list.map(p=>[p.party||'Not assigned',p.party?slKindOf(p.party):'',Math.abs(p.op),p.op>0?'Dr':p.op<0?'Cr':'',p.d,p.c,Math.abs(p.cl),p.cl>0?'Dr':p.cl<0?'Cr':'']),['Total','',Math.abs(T('op')),T('op')>0?'Dr':'Cr',T('d'),T('c'),Math.abs(tot),tot>0?'Dr':'Cr']],
+      pdf:()=>({sub:`${co} · ${per} · ${S.baseCur}`,head:['Sub-ledger (party)','Type','Opening','Debit (Dr)','Credit (Cr)','Closing'],num:[2,3,4,5],rows:[...list.map(p=>[p.party||'Not assigned',p.party?slKindOf(p.party):'',lgDC(p.op),money2(p.d),money2(p.c),lgDC(p.cl)]),{b:true,c:['Total = main ledger','',lgDC(T('op')),money2(T('d')),money2(T('c')),lgDC(tot)]}]})};}
+  return {el,refresh};};
+// which accounts keep sub-ledgers
+function slSetup(done){const cur=new Set(slAccounts());const cand=Object.values(S.accounts).filter(a=>!a.deprecated&&!a.group&&/^(asset|liability|equity)/.test(a.type||'')&&a.type!=='asset_cash').sort((a,b)=>a.id<b.id?-1:1);const msg=h('div',{class:'mini',role:'status'});
+  const list=h('div',{class:'slsetup'},cand.map(a=>h('label',{class:'sel'},h('input',{type:'checkbox',value:a.id,checked:cur.has(a.id)}),h('span',{class:'code mini'},a.id),' ',a.name)));
+  const save=h('button',{class:'btn primary',type:'button',onclick:async()=>{save.disabled=true;try{await saveEnt({subledger_accts:[...list.querySelectorAll('input:checked')].map(x=>x.value)});typeof revToast==='function'&&revToast('Main ledgers saved.');done();}catch(e){msg.textContent=e.message;save.disabled=false;}}},'Save');
+  return h('div',{class:'card stack'},h('h3',{style:'margin:0'},'Main ledgers that keep sub-ledgers'),h('p',{class:'mini mut',style:'margin:0'},'Tick each account broken down by party (customers, suppliers, employees, directors, lenders). Manual entries on these accounts must name the party.'),list,h('div',{class:'row'},save,h('button',{class:'btn ghost',type:'button',onclick:()=>{list.querySelectorAll('input').forEach(x=>x.checked=slDefault().includes(x.value));}},'Use suggested')),msg);}
+// an old link to the separate Sub-ledgers screen opens Ledgers
+BUILD.subled=BUILD.ledgers;
 
 
 // test hook (local development only)
