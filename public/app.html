@@ -1754,6 +1754,7 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .pwok{color:var(--ok)}
 .paidon{display:inline-flex;flex-direction:column;line-height:1.25}
 .paidfrom{color:var(--accent,#2457C5)}
+.invpend{margin-left:.3rem}
 
 </style>
 
@@ -4622,7 +4623,7 @@ function bankExtras(el){const card=h('div',{class:'card'});el.append(card);const
   function draw(){[...seg.children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.k===sub)));body.textContent='';if(S.entity==='all'||needData()) return;if(sub==='rec') drawRec(body);else if(sub==='dep') drawDep(body);else drawCash(body);}
   return {refresh(){if(!later()) draw();}};}
 function matchRate(from,to){let n=0,auto=0,inv=0,sus=0;S.statements.forEach(s=>(s.lines||[]).forEach(l=>{if(l.date<from||l.date>to||l.status==='duplicate') return;n++;const m=S.moves.find(x=>x.id===l.move_id);if(!m) return;if(l.status==='posted') auto++;if((m.settles||[]).length||posted().some(a=>a.alloc_from===m.id)) inv++;if(m.state==='posted'&&(m.lines||[]).some(x=>x.account==='1990')) sus++;}));return {n,auto,inv,sus};}
-function drawRec(body){const R=S.rec||(S.rec={from:addDays(today(),-90),to:today(),sugg:null});const msg=h('p',{class:'note'});
+function drawRec(body){const R=S.rec||(S.rec={from:fyStartOf(today()),to:today(),sugg:null});const msg=h('p',{class:'note'});
   const fr=h('input',{type:'date',value:R.from,onchange:e=>{R.from=e.target.value;R.sugg=null;drawRec(body.parentNode?body:body);}}),to=h('input',{type:'date',value:R.to,onchange:e=>{R.to=e.target.value;R.sugg=null;drawRec(body);}});
   body.textContent='';const mr=matchRate(R.from,R.to);const pc=v=>mr.n?Math.round(v/mr.n*100)+'%':'—';
   body.append(h('p',{class:'note'},'Bank lines parked in suspense (1990) and receipts or payments not yet tied to an invoice. Re-run matching over a date range after you add invoices or bills; each suggestion still needs your click.'),
@@ -11454,7 +11455,7 @@ function payLastRejected(M){return (S.payruns||[]).filter(p=>p.entity===S.entity
 
 // ===== Period filter on every screen: presets plus a From/To calendar range, applied to every list with a date column =====
 const PER_PRESETS=[['all','All dates'],['asat','As at (choose a date)'],['custom','Range (choose dates)'],['month','This month'],['last_month','Last month'],['quarter','This quarter'],['fy','This financial year'],['year','This calendar year'],['last_year','Last calendar year'],['d30','Last 30 days'],['d90','Last 90 days']];
-let PERF=(()=>{try{return JSON.parse(sessionStorage.getItem('orzio-per'))||{p:'all'};}catch(e){return {p:'all'};}})();
+let PERF=(()=>{try{return JSON.parse(sessionStorage.getItem('orzio-per'))||{p:'fy'};}catch(e){return {p:'fy'};}})();
 function perSave(){try{sessionStorage.setItem('orzio-per',JSON.stringify(PERF));}catch(e){}}
 function perRange(f){f=f||PERF;const t=today();const y=+t.slice(0,4),m=+t.slice(5,7);const pad=n=>String(n).padStart(2,'0');
   const eom=(yy,mm)=>new Date(Date.UTC(yy,mm,0)).toISOString().slice(0,10);
@@ -12305,7 +12306,7 @@ const pctTxt=(v,base)=>base?`${v/base>=0?'+':''}${(v/Math.abs(base)*100).toFixed
 const EXP_COL=['#2457C5','#0F9488','#C2410C','#7C3AED','#B8860B','#BE185D','#4D7C0F','#0369A1','#64748B'];
 
 BUILD.expenses=()=>{const el=h('section',{class:'stack expscreen'});
-  const P=S.exP||(S.exP={mode:'month',m:today().slice(0,7),cmp:'prev',view:'register'});
+  const P=S.exP||(S.exP={mode:'ytd',m:today().slice(0,7),cmp:'ly',view:'register'});
   el.append(h('div',{class:'pagehead'},h('div',{},h('h1',{},'Expenses'),h('p',{class:'lede'},'Every expense the company has booked, whether it came from purchases, payroll, banking, claims, assets or a manual journal, with analysis by group, period and variance.'))));
   const ctl=h('div',{class:'card expctl'}),body=h('div',{class:'stack nopertable'});el.append(ctl,body);
   function controls(){ctl.textContent='';
@@ -12485,7 +12486,7 @@ function tbData(from,to){const fy=fyStartOf(to);const o={};const get=k=>o[k]||(o
   Object.values(o).forEach(x=>{x.op=r2(x.op);x.d=r2(x.d);x.c=r2(x.c);x.cl=r2(x.op+x.d-x.c);});return o;}
 
 BUILD.tbal=()=>{const el=h('section',{class:'stack tbscreen'});
-  const P=S.tbP||(S.tbP={mode:'month',m:null,from:null,to:null,view:'acc',zero:false,q:''});const staged=S.tbStage||(S.tbStage={});const sel=new Set();
+  const P=S.tbP||(S.tbP={mode:'asat',m:null,from:null,to:null,view:'acc',zero:false,q:''});const staged=S.tbStage||(S.tbStage={});const sel=new Set();
   el.append(h('div',{class:'pagehead'},h('div',{},h('h1',{},'Trial balance'),h('p',{class:'lede'},'Balances after the month-end close. Choose the line each account sits in on the financial statements: which costs come before gross profit, which are selling and marketing, which are administrative.'))));
   const top=h('div',{class:'card tbctl'}),body=h('div',{class:'stack nopertable'});el.append(top,body);
   const lastClosed=()=>{const lk=(S.settings||{}).lock_date;return lk?lk.slice(0,7):addMonths(today().slice(0,7),-1);};
@@ -12955,7 +12956,7 @@ function bkPart(c){if(c.classList.contains('bkmem')) return 'learn';if(c.classLi
 function bkCash(m){const cash=new Set(cashCodes());const c=(m.lines||[]).filter(l=>cash.has(l.account));const inn=r2(c.reduce((t,l)=>t+(+l.debit||0),0)),out=r2(c.reduce((t,l)=>t+(+l.credit||0),0));return {inn,out,amt:r2(Math.abs(inn-out)),inflow:inn>=out};}
 function bkCounter(m){const cash=new Set(cashCodes());return (m.lines||[]).filter(l=>!cash.has(l.account));}
 function bkMatched(m){return r2((m.settles||[]).reduce((t,x)=>t+(+x.amount||0),0))+r2(S.moves.filter(x=>x.state!=='cancelled'&&x.bank_match_of===m.id).reduce((t,x)=>t+(x.settles||[]).reduce((s,y)=>s+(+y.amount||0),0),0));}
-function bankTxView(redraw){const F=S.bkTx||(S.bkTx={from:addDays(today(),-90),to:today(),dir:'',st:'',q:''});const box=h('div',{class:'stack'});
+function bankTxView(redraw){const F=S.bkTx||(S.bkTx={from:fyStartOf(today()),to:today(),dir:'',st:'',q:''});const box=h('div',{class:'stack'});
   const list=S.moves.filter(m=>m.source==='bank_statement'&&!m.reversal_of&&!m.reversed_by&&m.journal!=='OPEN'&&m.state!=='cancelled'&&m.date>=F.from&&m.date<=F.to&&bkCash(m).amt>0).map(m=>{const c=bkCash(m);const done=bkMatched(m);const ctr=bkCounter(m);
     const st=m.state==='to_approve'?'review':done>=c.amt-0.009&&done>0?'matched':done>0?'part':ctr.some(l=>l.account==='1990')?'suspense':'posted';return {m,c,done,ctr,st};}).sort((a,b)=>a.m.date<b.m.date?1:-1);
   const n=k=>list.filter(x=>x.st===k).length;
@@ -13258,16 +13259,16 @@ function bkIco(kind,label,fn,cls){const b=h('button',{type:'button',class:'icob 
 function bkRowInfo(m){const c=bkCash(m);const ctr=bkCounter(m);const done=bkMatched(m);const inv=[...(m.settles||[]),...S.moves.filter(y=>y.bank_match_of===m.id&&y.state!=='cancelled').flatMap(y=>y.settles||[])].map(s=>(S.invoices.find(i=>i.id===s.invoice_id)||{}).number).filter(Boolean);
   const ctrl=c.inflow?'1100':'2000';const matched=inv.length>0||(ctr.length===1&&ctr[0].account===ctrl&&!!(m.partner||ctr[0].partner));
   const unk=ctr.some(l=>l.account==='1990'||(l.account===ctrl&&!(m.partner||l.partner)))||!ctr.length;const st=m.state==='to_approve'?(matched?'m_wait':unk?'u_wait':'i_wait'):m.state==='posted'?(inv.length?'approved_m':'approved'):'other';return {m,c,ctr,done,inv,matched,st};}
-const BK_ST={m_wait:['Matched · approve','acc'],i_wait:['Ready · approve','acc'],u_wait:['Not identified','warn'],approved_m:['Approved · matched','ok'],approved:['Approved','ok']};
-bankTxView=function(redraw){const F=S.bkL||(S.bkL={from:addDays(today(),-120),to:today(),f:'wait',dir:'',q:''});const sel=S.bkSel||(S.bkSel=new Set());const box=h('div',{class:'stack bklist'});
+var BK_ST={m_wait:['Matched · approve','acc'],i_wait:['Ready · approve','acc'],u_wait:['Not identified','warn'],approved_m:['Approved · matched','ok'],approved:['Approved','ok']};
+bankTxView=function(redraw){const F=S.bkL||(S.bkL={from:fyStartOf(today()),to:today(),f:'wait',dir:'',q:''});const sel=S.bkSel||(S.bkSel=new Set());const box=h('div',{class:'stack bklist'});
   const all=S.moves.filter(m=>m.source==='bank_statement'&&!m.reversal_of&&['to_approve','posted'].includes(m.state)&&m.date>=F.from&&m.date<=F.to).map(bkRowInfo).sort((a,b)=>a.m.date<b.m.date?1:a.m.date>b.m.date?-1:0);
-  const cnt=k=>all.filter(x=>k==='wait'?x.m.state==='to_approve':k==='m_wait'||k==='u_wait'||k==='i_wait'?x.st===k:k==='approved'?x.m.state==='posted':true).length;
+  const cnt=k=>all.filter(x=>k==='wait'?x.m.state==='to_approve':k==='m_wait'?/^m_wait/.test(x.st):k==='u_wait'||k==='i_wait'?x.st===k:k==='approved'?x.m.state==='posted':true).length;
   const chips=h('div',{class:'bkchips'},[['wait','To approve'],['m_wait','Matched'],['i_wait','Ready'],['u_wait','Not identified'],['approved','Approved'],['all','All']].map(([k,l])=>h('button',{type:'button',class:'bkchip'+(F.f===k?' on':'')+(k==='u_wait'&&cnt(k)?' warn':''),onclick:()=>{F.f=k;sel.clear();redraw();}},h('span',{},l),h('b',{},String(cnt(k))))));
   const ctl=h('div',{class:'bkctl'},h('input',{type:'date','aria-label':'From',value:F.from,onchange:e=>{F.from=e.target.value||F.from;redraw();}}),h('span',{class:'mini mut'},'to'),h('input',{type:'date','aria-label':'To',value:F.to,onchange:e=>{F.to=e.target.value||F.to;redraw();}}),
     (()=>{const s=h('select',{'aria-label':'Direction',onchange:e=>{F.dir=e.target.value;redraw();}},[['','In and out'],['in','Money in'],['out','Money out']].map(([k,l])=>h('option',{value:k},l)));s.value=F.dir;return s;})(),
     h('input',{type:'search',placeholder:'Search description, party, invoice','aria-label':'Search',value:F.q,class:'bkq',oninput:e=>{F.q=e.target.value;draw();}}));
   const bulk=h('div',{class:'bkbulk'});const tw=h('div',{class:'tablewrap'});const msg=h('div',{class:'mini err',role:'status'});
-  const list=()=>{const qq=norm(F.q||'');return all.filter(x=>(F.f==='all'||(F.f==='wait'?x.m.state==='to_approve':F.f==='approved'?x.m.state==='posted':x.st===F.f))&&(!F.dir||(F.dir==='in')===x.c.inflow)&&(!qq||norm([x.m.ref,x.m.partner,x.m.name,...x.inv,...x.ctr.map(l=>aname(l.account))].join(' ')).includes(qq)));};
+  const list=()=>{const qq=norm(F.q||'');return all.filter(x=>(F.f==='all'||(F.f==='wait'?x.m.state==='to_approve':F.f==='approved'?x.m.state==='posted':F.f==='m_wait'?/^m_wait/.test(x.st):x.st===F.f))&&(!F.dir||(F.dir==='in')===x.c.inflow)&&(!qq||norm([x.m.ref,x.m.partner,x.m.name,...x.inv,...x.ctr.map(l=>aname(l.account))].join(' ')).includes(qq)));};
   function drawBulk(){const L=list().filter(x=>sel.has(x.m.id)&&x.m.state==='to_approve');bulk.textContent='';bulk.classList.toggle('on',L.length>0);if(!L.length) return;
     const ap=h('button',{class:'btn primary sm',type:'button'},`Approve ${L.length} selected`);const rj=h('button',{class:'btn ghost sm danger',type:'button'},'Reject');
     ap.onclick=async()=>{ap.disabled=rj.disabled=true;let n=0,bad=[];for(const x of L){ap.textContent=`Approving ${n+1} of ${L.length}…`;try{await approveMove(x.m,x.m.lines);n++;}catch(e){bad.push(`${x.m.ref||''}: ${e.message}`);}}sel.clear();typeof revToast==='function'&&revToast(`${n} approved and posted.`);if(bad.length) msg.textContent=bad.slice(0,3).join('; ');redraw();};
@@ -13494,6 +13495,25 @@ async function bankRestoreUnmatched(){if(S._bkUnm||!S.canWrite||S.entity==='all'
   return n;}
 {const _tv=bankTxView;bankTxView=function(redraw){bankRestoreUnmatched().then(n=>{if(n){typeof revToast==='function'&&revToast(`${n} unmatched bank line${n>1?'s are':' is'} back in Not identified.`);redraw();}});return _tv.apply(this,arguments);};}
 {const _iq=invQuick;invQuick=function(inv,redraw){if(!S._bkUnm) bankRestoreUnmatched().then(n=>{if(n) setTimeout(redraw,300);});return _iq(inv,redraw);};}
+
+// ===== Date boxes: wait until the date is finished before the screen refreshes, so ranges don't jump while typing =====
+(function(){const pend=new WeakMap();
+  document.addEventListener('change',e=>{const t=e.target;if(!t||t.type!=='date'||t._dRelease||!t.closest('#main')) return;
+    const v=t.value;if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v)) {e.stopImmediatePropagation();return;}
+    const y=v?+v.slice(0,4):0;if(v&&(y<1990||y>2100)){e.stopImmediatePropagation();return;}  // half-typed year
+    e.stopImmediatePropagation();clearTimeout(pend.get(t));
+    const fire=()=>{clearTimeout(pend.get(t));pend.delete(t);if(!t.isConnected) return;t._dRelease=true;try{t.dispatchEvent(new Event('change',{bubbles:true}));}finally{t._dRelease=false;}};
+    pend.set(t,setTimeout(fire,650));if(!t._dBlur){t._dBlur=true;t.addEventListener('blur',()=>{if(pend.has(t)) fire();});t.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&pend.has(t)) fire();else if(pend.has(t)){clearTimeout(pend.get(t));pend.set(t,setTimeout(fire,650));}});}},true);})();
+
+// ===== Payments waiting for approval (for example a 2nd approver above the limit) are visible on the invoice and in Banking =====
+const invPendingPays=inv=>S.moves.filter(m=>m.state==='to_approve'&&(m.settles||[]).some(x=>x.invoice_id===inv.id));
+const needsSecond=m=>(m.audit||[]).some(a=>/^First approval/.test(a.action||''));
+{const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const P=invPendingPays(inv);if(P.length){const amt=r2(P.reduce((t,m)=>t+(+(m.settles.find(s=>s.invoice_id===inv.id)||{}).amount||0),0));const two=P.some(needsSecond);
+      td.append(h('span',{class:'pill warn invpend',title:two?'Approved once. Above the limit, a second person must approve it in Journal entries → Waiting for approval or in Banking.':'Waiting for approval in Journal entries → Waiting for approval or in Banking.'},`${money2(amt)} ${two?'waiting for 2nd approval':'waiting for approval'}`));}}catch(e){}return td;};}
+{const _po=invPaidOn;invPaidOn=function(inv){const el=_po(inv);try{if(invPendingPays(inv).length&&/—/.test(el.textContent)){const s=h('span',{class:'paidon'},h('span',{class:'mini'},'waiting'),h('span',{class:'mini mut'},'approval'));return s;}}catch(e){}return el;};}
+{const _ri=bkRowInfo;bkRowInfo=function(m){const x=_ri(m);if(x.st==='m_wait'&&needsSecond(m)) x.st='m_wait2';return x;};}
+BK_ST.m_wait2=['Matched · 2nd approval','warn'];
+{const _tv=bankTxView;bankTxView=function(redraw){const el=_tv.apply(this,arguments);return el;};}
 
 
 // test hook (local development only)
