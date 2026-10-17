@@ -1725,6 +1725,32 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .rcrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.6rem;align-items:center;padding:.6rem 0;border-top:1px solid var(--line)}
 .pwover{color:var(--warn)!important}.invover{margin-left:.3rem}
 .bkpurge{border-color:color-mix(in srgb,var(--bad) 35%,var(--line))}.bkpurgestats{display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;font-size:.86rem;color:var(--muted)}.bkpurgestats b{color:var(--ink);margin-right:.2rem}
+/* ===== Banking transactions list ===== */
+.bkcard{gap:.8rem}.bktop{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.7rem;align-items:center}
+.bkchips{display:flex;flex-wrap:wrap;gap:.35rem}
+.bkchip{display:inline-flex;align-items:center;gap:.45rem;font:inherit;font-size:.85rem;padding:.4rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.bkchip b{font-size:.78rem;min-width:1.4rem;text-align:center;padding:.05rem .4rem;border-radius:999px;background:var(--sunk)}
+.bkchip.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}.bkchip.on b{background:color-mix(in srgb,var(--panel) 25%,transparent);color:var(--panel)}
+.bkchip.warn:not(.on) b{background:var(--warn-soft);color:var(--warn)}
+.bkctl{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}.bkctl input,.bkctl select{font-size:.85rem;padding:.35rem .5rem}.bkq{min-width:13rem}
+.bkbulk{display:none;align-items:center;gap:.5rem;padding:.5rem .75rem;border-radius:10px;background:color-mix(in srgb,var(--accent,#2457C5) 8%,var(--panel));border:1px solid color-mix(in srgb,var(--accent,#2457C5) 30%,var(--line));font-size:.88rem}.bkbulk.on{display:flex}
+.bktab{width:100%;border-collapse:separate;border-spacing:0;font-size:.9rem}
+.bktab th{font-size:.75rem;font-weight:500;color:var(--muted);text-align:left;padding:.55rem .6rem;border-bottom:1px solid var(--line);white-space:nowrap}.bktab th.num,.bktab td.num{text-align:right}
+.bktab td{padding:.6rem .6rem;border-bottom:1px solid var(--line);vertical-align:middle}
+.bkrow{cursor:pointer}.bkrow:hover td{background:var(--sunk)}.bkrow.picked td{background:color-mix(in srgb,var(--accent,#2457C5) 7%,var(--panel))}
+.bkrow.wait td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+.bkref{font-weight:500;max-width:26rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bkdesc .mini{max-width:26rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bkin{color:var(--ok);font-weight:600}.bkout{color:var(--bad);font-weight:600}.bkacc{font-size:.86rem;max-width:14rem}
+.bkinv{display:flex;flex-wrap:wrap;gap:.25rem}.bkinvc{font-size:.75rem;padding:.1rem .45rem;border-radius:6px;background:var(--sunk);font-family:var(--mono,ui-monospace,monospace)}
+.bkst{display:inline-flex;align-items:center;gap:.3rem;font-size:.76rem;font-weight:500;padding:.2rem .55rem;border-radius:999px;white-space:nowrap}
+.bkst::before{content:'';width:.45rem;height:.45rem;border-radius:50%;background:currentColor}
+.bkst.acc{background:color-mix(in srgb,var(--accent,#2457C5) 10%,transparent);color:var(--accent,#2457C5)}.bkst.warn{background:var(--warn-soft);color:var(--warn)}.bkst.ok{background:var(--ok-soft);color:var(--ok)}
+.bkacts{display:flex;gap:.3rem;justify-content:flex-end}.bkacts .icob{width:1.95rem;height:1.95rem}.icob.on{color:var(--accent,#2457C5);border-color:color-mix(in srgb,var(--accent,#2457C5) 45%,var(--line))}
+.icob.no:hover{background:var(--bad);color:#fff;border-color:var(--bad)}
+.bkempty{padding:2rem 1rem;text-align:center;color:var(--muted)}
+.bkehead{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--line)}
+.bkeinv{padding:.6rem;border-radius:10px;background:var(--sunk)}
+@media (max-width:760px){.bktab th:nth-child(6),.bktab td:nth-child(6),.bktab th:nth-child(7),.bktab td:nth-child(7){display:none}.bkref{max-width:12rem}}
 
 </style>
 
@@ -13213,6 +13239,87 @@ function bankPurgeCard(){const canDo=S.entity!=='all'&&S.canWrite&&(S.isOwner||[
   card.append(h('div',{class:'row'},go));return card;}
 {const _b=BUILD.bank;BUILD.bank=(...a)=>{const r=_b(...a);const rf=r.refresh;const put=()=>{try{const old=r.el.querySelector(':scope > .bkpurge');const c=bankPurgeCard();if(old) old.replaceWith(c);else r.el.append(c);c.classList.toggle('bkhide',(S.bkTab||'review')!=='stmts');}catch(e){}};
   r.refresh=function(...x){const y=rf.apply(this,x);put();return y;};put();return r;};}
+
+// ===== Banking: nothing from a statement posts by itself. One clean Transactions list: matched / unmatched lines wait for a person; approve, edit, match, reject with icons =====
+// 1) every bank-statement line is held for a person, whatever the agent's confidence
+{const _w=writeMove;writeMove=async function(m){if(m&&m.source==='bank_statement'&&m.state==='posted'&&String(m.approved_by||'').startsWith('agent')){m.state='to_approve';m.name=null;delete m.approved_by;delete m.approved_at;(m.audit=m.audit||[]).push({at:nowISO(),by:'engine',action:'Held for your approval: every bank statement line is approved by a person.'});}return _w.apply(this,arguments);};}
+agentPost=async function(m,lines,why){const audit=[...(m.audit||[]),{at:nowISO(),by:'agent:bank',action:'Proposal updated, waiting for your approval: '+why}];await db.doc('moves/'+m.id).update({lines,audit});Object.assign(m,{lines,audit});};
+// 2) tabs: Transactions first, then Upload and statements
+BK_TABS.splice(0,BK_TABS.length,['tx','Transactions'],['stmts','Upload and statements'],['rec','Reconcile'],['learn','Agent learning']);
+if(!S.bkTab||S.bkTab==='review') S.bkTab='tx';
+bkPart=function(c){if(c.classList.contains('bktabs')||c.classList.contains('pagehead')||c.classList.contains('allguard')) return null;if(c.classList.contains('bktx')) return 'tx';if(c.classList.contains('bkmem')) return 'learn';
+  if(c.classList.contains('bkstmts')||c.classList.contains('bkpurge')||c.classList.contains('grid2')) return 'stmts';const t=(c.textContent||'').trim();if(/^Reconcile/.test(t)) return 'rec';if(/^Waiting for your review/.test(t)) return 'none';return 'stmts';};
+// 3) the list
+const BKI={ok:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',no:'<path d="M6 6l12 12M18 6L6 18"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',link:'<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>'};
+function bkIco(kind,label,fn,cls){const b=h('button',{type:'button',class:'icob '+(cls||''),title:label,'aria-label':label,onclick:e=>{e.stopPropagation();fn(e);}});b.innerHTML=`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BKI[kind]}</svg>`;return b;}
+function bkRowInfo(m){const c=bkCash(m);const ctr=bkCounter(m);const done=bkMatched(m);const inv=[...(m.settles||[]),...S.moves.filter(y=>y.bank_match_of===m.id&&y.state!=='cancelled').flatMap(y=>y.settles||[])].map(s=>(S.invoices.find(i=>i.id===s.invoice_id)||{}).number).filter(Boolean);
+  const ctrl=c.inflow?'1100':'2000';const matched=inv.length>0||(ctr.length===1&&ctr[0].account===ctrl&&!!(m.partner||ctr[0].partner));
+  const unk=ctr.some(l=>l.account==='1990'||(l.account===ctrl&&!(m.partner||l.partner)))||!ctr.length;const st=m.state==='to_approve'?(matched?'m_wait':unk?'u_wait':'i_wait'):m.state==='posted'?(inv.length?'approved_m':'approved'):'other';return {m,c,ctr,done,inv,matched,st};}
+const BK_ST={m_wait:['Matched · approve','acc'],i_wait:['Ready · approve','acc'],u_wait:['Not identified','warn'],approved_m:['Approved · matched','ok'],approved:['Approved','ok']};
+bankTxView=function(redraw){const F=S.bkL||(S.bkL={from:addDays(today(),-120),to:today(),f:'wait',dir:'',q:''});const sel=S.bkSel||(S.bkSel=new Set());const box=h('div',{class:'stack bklist'});
+  const all=S.moves.filter(m=>m.source==='bank_statement'&&!m.reversal_of&&['to_approve','posted'].includes(m.state)&&m.date>=F.from&&m.date<=F.to).map(bkRowInfo).sort((a,b)=>a.m.date<b.m.date?1:a.m.date>b.m.date?-1:0);
+  const cnt=k=>all.filter(x=>k==='wait'?x.m.state==='to_approve':k==='m_wait'||k==='u_wait'||k==='i_wait'?x.st===k:k==='approved'?x.m.state==='posted':true).length;
+  const chips=h('div',{class:'bkchips'},[['wait','To approve'],['m_wait','Matched'],['i_wait','Ready'],['u_wait','Not identified'],['approved','Approved'],['all','All']].map(([k,l])=>h('button',{type:'button',class:'bkchip'+(F.f===k?' on':'')+(k==='u_wait'&&cnt(k)?' warn':''),onclick:()=>{F.f=k;sel.clear();redraw();}},h('span',{},l),h('b',{},String(cnt(k))))));
+  const ctl=h('div',{class:'bkctl'},h('input',{type:'date','aria-label':'From',value:F.from,onchange:e=>{F.from=e.target.value||F.from;redraw();}}),h('span',{class:'mini mut'},'to'),h('input',{type:'date','aria-label':'To',value:F.to,onchange:e=>{F.to=e.target.value||F.to;redraw();}}),
+    (()=>{const s=h('select',{'aria-label':'Direction',onchange:e=>{F.dir=e.target.value;redraw();}},[['','In and out'],['in','Money in'],['out','Money out']].map(([k,l])=>h('option',{value:k},l)));s.value=F.dir;return s;})(),
+    h('input',{type:'search',placeholder:'Search description, party, invoice','aria-label':'Search',value:F.q,class:'bkq',oninput:e=>{F.q=e.target.value;draw();}}));
+  const bulk=h('div',{class:'bkbulk'});const tw=h('div',{class:'tablewrap'});const msg=h('div',{class:'mini err',role:'status'});
+  const list=()=>{const qq=norm(F.q||'');return all.filter(x=>(F.f==='all'||(F.f==='wait'?x.m.state==='to_approve':F.f==='approved'?x.m.state==='posted':x.st===F.f))&&(!F.dir||(F.dir==='in')===x.c.inflow)&&(!qq||norm([x.m.ref,x.m.partner,x.m.name,...x.inv,...x.ctr.map(l=>aname(l.account))].join(' ')).includes(qq)));};
+  function drawBulk(){const L=list().filter(x=>sel.has(x.m.id)&&x.m.state==='to_approve');bulk.textContent='';bulk.classList.toggle('on',L.length>0);if(!L.length) return;
+    const ap=h('button',{class:'btn primary sm',type:'button'},`Approve ${L.length} selected`);const rj=h('button',{class:'btn ghost sm danger',type:'button'},'Reject');
+    ap.onclick=async()=>{ap.disabled=rj.disabled=true;let n=0,bad=[];for(const x of L){ap.textContent=`Approving ${n+1} of ${L.length}…`;try{await approveMove(x.m,x.m.lines);n++;}catch(e){bad.push(`${x.m.ref||''}: ${e.message}`);}}sel.clear();typeof revToast==='function'&&revToast(`${n} approved and posted.`);if(bad.length) msg.textContent=bad.slice(0,3).join('; ');redraw();};
+    rj.onclick=async()=>{ap.disabled=rj.disabled=true;for(const x of L){try{await rejectMove(x.m);}catch(e){}}sel.clear();redraw();};
+    bulk.append(h('span',{},`${L.length} selected`),ap,rj,h('button',{class:'btn ghost sm',type:'button',onclick:()=>{sel.clear();draw();}},'Clear'));}
+  function draw(){tw.textContent='';const L=list();const tb=h('tbody');const waitL=L.filter(x=>x.m.state==='to_approve');
+    const allc=h('input',{type:'checkbox','aria-label':'Select all to approve',checked:waitL.length>0&&waitL.every(x=>sel.has(x.m.id)),onchange:e=>{waitL.forEach(x=>e.target.checked?sel.add(x.m.id):sel.delete(x.m.id));draw();}});
+    L.slice(0,400).forEach(x=>{const m=x.m;const wait=m.state==='to_approve';const [sl,sk]=BK_ST[x.st]||['',''];
+      const ck=wait?h('input',{type:'checkbox','aria-label':'Select '+(m.ref||''),checked:sel.has(m.id),onchange:e=>{e.target.checked?sel.add(m.id):sel.delete(m.id);drawBulk();}}):null;
+      const acts=h('div',{class:'bkacts'});
+      if(wait&&S.canWrite){acts.append(bkIco('ok','Approve',async()=>{try{await approveMove(m,m.lines);typeof revToast==='function'&&revToast('Approved and posted.');redraw();}catch(e){msg.textContent=e.message;}},'ok'));}
+      if(S.canWrite&&(wait||x.done<x.c.amt-0.009)) acts.append(bkIco('link',x.c.inflow?'Match to invoices':'Match to bills',()=>bkEdit(x,redraw,{match:true}),x.matched?'on':''));
+      if(S.canWrite&&wait) acts.append(bkIco('edit','Edit',()=>bkEdit(x,redraw)));
+      if(S.canWrite&&wait) acts.append(bkIco('no','Reject',async()=>{try{await rejectMove(m);redraw();}catch(e){msg.textContent=e.message;}},'no'));
+      const acc=x.ctr.map(l=>`${l.account} ${aname(l.account)||''}`).join(', ');
+      tb.append(h('tr',{class:'bkrow'+(wait?' wait':'')+(sel.has(m.id)?' picked':''),onclick:()=>wait&&S.canWrite?bkEdit(x,redraw):miniModal(m.name||m.ref||'Entry',moveDetail(m),{wide:true})},
+        h('td',{class:'ck',onclick:e=>e.stopPropagation()},ck),h('td',{class:'nowrap'},fmtDate(m.date)),
+        h('td',{class:'bkdesc'},h('div',{class:'bkref'},m.ref||'—'),h('div',{class:'mini mut'},[m.partner,wait&&m.reasoning?('Agent: '+m.reasoning):null].filter(Boolean).join(' · '))),
+        h('td',{class:'num bkin'},x.c.inn?money2(x.c.inn):''),h('td',{class:'num bkout'},x.c.out?money2(x.c.out):''),
+        h('td',{class:'bkacc'},h('span',{},acc),m.tx_type?h('div',{class:'mini mut'},([...TX_IN,...TX_OUT].find(t=>t[0]===m.tx_type)||[,''])[1]):null),
+        h('td',{},x.inv.length?h('div',{class:'bkinv'},x.inv.map(n=>h('span',{class:'bkinvc'},n))):h('span',{class:'mini mut'},'—')),
+        h('td',{},h('span',{class:'bkst '+sk},sl)),h('td',{class:'acts',onclick:e=>e.stopPropagation()},acts)));});
+    if(!L.length) tb.append(h('tr',{},h('td',{colspan:9},h('div',{class:'bkempty'},F.f==='wait'?'Nothing waiting for approval.':'No transactions here. Upload a statement in Upload and statements.'))));
+    tw.append(h('table',{class:'bktab'},h('thead',{},h('tr',{},h('th',{class:'ck'},allc),h('th',{},'Date'),h('th',{},'Transaction'),h('th',{class:'num'},'Money in'),h('th',{class:'num'},'Money out'),h('th',{},'Booked to'),h('th',{},'Invoices'),h('th',{},'Status'),h('th',{}))),tb));drawBulk();}
+  box.append(h('div',{class:'card stack nopertable bkcard'},h('div',{class:'bktop'},chips,ctl),bulk,msg,tw));draw();return box;};
+// 4) edit / match window for one bank line
+function bkEdit(x,redraw,{match}={}){const m=x.m;const wait=m.state==='to_approve';const inflow=x.c.inflow;const ctrl=inflow?'1100':'2000';const kind=inflow?'customer':'supplier';
+  if(!wait){let close;const panel=bkMatchPanel({m,c:x.c,done:x.done,ctr:x.ctr},()=>{close();redraw();},()=>close());close=miniModal(`Match ${m.ref||m.name||'bank line'}`,panel,{wide:true});return;}
+  const cur=x.ctr.length===1?x.ctr[0].account:'';const E={date:m.date,t:m.tx_type||(typeof txGuess==='function'?txGuess(cur,inflow):''),acc:cur,party:m.partner||(x.ctr[0]&&x.ctr[0].partner)||'',rows:Object.fromEntries((m.settles||[]).map(s=>[s.invoice_id,+s.amount||0]))};
+  if(match&&!E.t){E.t=inflow?'receipt':'supplier';}if(match&&(E.t==='receipt'||E.t==='supplier')) E.acc=ctrl;
+  const er=h('div',{class:'err mini',role:'status'});const body=h('div',{class:'stack'});const fld=(l,i)=>h('label',{class:'field'},l,i);
+  const names=()=>E.t==='salary'?(S.employees||[]).map(e=>e.name):[...new Set([...(S.raw.partners||[]).filter(p=>(E.t==='receipt'?p.kind==='customer':E.t==='supplier'||E.t==='adv_supplier'?p.kind==='supplier':true)&&(!p.entity||p.entity===S.entity)).map(p=>p.name),...openInvoices(kind).map(i=>i.partner)])].sort();
+  function draw(){body.textContent='';
+    const tsel=h('select',{'aria-label':'What is this',onchange:async e=>{E.t=e.target.value;try{const a=await txAccount(E.t);if(a) E.acc=a;}catch(z){}E.rows={};draw();}},h('option',{value:''},'Choose'),(inflow?TX_IN:TX_OUT).map(([k,l])=>h('option',{value:k},l)));tsel.value=E.t||'';
+    const asel=acctSelect(E.acc,v=>{E.acc=v;draw();});
+    const pIn=h('select',{'aria-label':'Party',onchange:e=>{E.party=e.target.value;E.rows={};draw();}},h('option',{value:''},'No party'),names().map(n=>h('option',{value:n},n)));pIn.value=E.party;
+    body.append(h('div',{class:'bkehead'},h('div',{},h('b',{},m.ref||'Bank line'),h('div',{class:'mini mut'},`${fmtDate(m.bank_date||m.date)} · ${inflow?'Money in':'Money out'}`)),h('span',{class:'pwamt '+(inflow?'bkin':'bkout')},money2(x.c.amt))),
+      h('div',{class:'row'},fld('Date of entry',h('input',{type:'date',value:E.date,onchange:e=>E.date=e.target.value||E.date})),fld('What is this',tsel)),h('div',{class:'row'},h('label',{class:'field',style:'flex:1'},'Account',asel),fld(E.t==='salary'?'Employee':inflow?'Customer / party':'Supplier / party',pIn)));
+    if((E.acc===ctrl)&&E.party){const L=openInvoices(kind).filter(i=>norm(i.partner)===norm(E.party)).sort((a,b)=>a.date<b.date?-1:1);const left=h('div',{class:'mini'});
+      const sync=()=>{const used=r2(Object.values(E.rows).reduce((t,v)=>t+(+v||0),0));const rest=r2(x.c.amt-used);left.textContent=rest<-0.009?`${money2(-rest)} more than the bank line.`:rest>0.009?`${money2(rest)} stays on ${E.party}’s account.`:'Fully matched.';left.className='mini '+(rest<-0.009?'err':'mut');};
+      if(!Object.keys(E.rows).length){let rest=x.c.amt;L.forEach(i=>{const a=r2(Math.max(0,Math.min(invDue(i,true),rest)));rest=r2(rest-a);if(a>0) E.rows[i.id]=a;});}
+      const box=h('div',{class:'stack bkeinv'},h('div',{class:'mini mut'},L.length?`Open ${inflow?'invoices':'bills'} of ${E.party}`:`No open ${inflow?'invoices':'bills'}: it stays on their account.`));
+      L.forEach(i=>{const due=invDue(i,true);const on=E.rows[i.id]>0;const amt=h('input',{type:'number',step:'0.01',min:'0',class:'num','aria-label':'Amount for '+i.number,value:on?E.rows[i.id]:'',disabled:!on,oninput:e=>{E.rows[i.id]=Math.min(due,r2(e.target.value));sync();}});
+        const ck=h('input',{type:'checkbox',checked:on,'aria-label':'Match '+i.number,onchange:e=>{if(e.target.checked){const used=r2(Object.entries(E.rows).filter(([k])=>k!==i.id).reduce((t,[,v])=>t+(+v||0),0));E.rows[i.id]=r2(Math.max(0,Math.min(due,x.c.amt-used)))||due;amt.disabled=false;amt.value=E.rows[i.id];}else{delete E.rows[i.id];amt.disabled=true;amt.value='';}sync();}});
+        box.append(h('label',{class:'txinvr bkinvr'},ck,h('span',{class:'txinvn'},h('b',{},i.number),h('span',{class:'mini mut'},`${fmtDate(i.date)} · open ${money2(due)}`)),amt));});box.append(left);sync();body.append(box);}}
+  const save=async approve=>{er.textContent='';if(!E.acc){er.textContent='Choose the account.';return;}if((E.acc===ctrl)&&!E.party){er.textContent=`Choose the ${kind}.`;return;}
+    const settles=Object.entries(E.rows).filter(([,v])=>+v>0).map(([k,v])=>({invoice_id:k,amount:r2(v)}));if(r2(settles.reduce((t,s)=>t+s.amount,0))-x.c.amt>0.009){er.textContent='The invoices add up to more than the bank line.';return;}
+    const cash=new Set(cashCodes());const keep=(m.lines||[]).filter(l=>cash.has(l.account));const line={account:E.acc,label:m.ref||'Bank line',debit:inflow?0:x.c.amt,credit:inflow?x.c.amt:0,...(E.party?{partner:E.party}:{})};
+    const up={date:E.date,lines:[...keep,line],partner:E.party||null,tx_type:E.t||null,settles:E.acc===ctrl?settles:[],audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:`Edited: ${aname(E.acc)||E.acc}${E.party?' · '+E.party:''}${settles.length?' · matched to '+settles.map(s=>(S.invoices.find(i=>i.id===s.invoice_id)||{}).number).join(', '):''}`}]};
+    try{await db.doc('moves/'+m.id).update(up);Object.assign(m,up);if(approve) await approveMove(m,m.lines);close();typeof revToast==='function'&&revToast(approve?'Approved and posted.':'Saved. It is waiting for approval.');redraw();}catch(e){er.textContent=e.message;}};
+  const content=h('div',{class:'stack pwin'},body,er,h('div',{class:'row'},h('button',{class:'btn primary',type:'button',onclick:()=>save(true)},'Save and approve'),h('button',{class:'btn',type:'button',onclick:()=>save(false)},'Save'),h('button',{class:'btn ghost',type:'button',onclick:()=>close()},'Cancel')));
+  draw();const close=miniModal(match?'Match bank line':'Edit bank line',content,{wide:true});}
+
+// heading text for the new flow
+{const _b=BUILD.bank;BUILD.bank=(...a)=>{const r=_b(...a);try{const l=r.el.querySelector('.pagehead .lede');if(l) l.textContent='Upload a statement in any format. The bank agent reads every line and proposes the account and the matching invoices; nothing is posted until you approve it.';}catch(e){}return r;};}
 
 
 // test hook (local development only)
