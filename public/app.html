@@ -2045,13 +2045,13 @@ function validateMove(m){const e=validateLines(m.lines);const st=S.settings||{};
 const issued={};
 function nextName(j,date){const p=`${j}/${date.slice(0,4)}/${date.slice(5,7)}/`;const key=S.entity+'|'+p;let n=issued[key]||0;for(const m of S.moves) if(m.name&&m.name.startsWith(p)){const k=parseInt(m.name.slice(p.length),10);if(k>n) n=k;}n++;issued[key]=n;return p+String(n).padStart(4,'0');}
 const wfParams=id=>(S.workflows[id]&&S.workflows[id].params)||{};
-const approvalLimit=()=>personLimit()||approvalLimit0();const approvalLimit0=()=>limitBase(+(wfParams('journal_approval').approval_limit??50000));
+const isAdminUser=()=>!!(S.isOwner||S.role==='admin');const approvalLimit=()=>isAdminUser()?Infinity:(personLimit()||approvalLimit0());const approvalLimit0=()=>limitBase(+(wfParams('journal_approval').approval_limit??50000));
 async function writeMove(m){m.entity=S.entity;if(m.state==='posted'){const z=await sealOf(m);if(z) m.seal=z;}const ref=db.collection('moves').doc();await ref.set(m);return ref.id;}
 async function approveMove(m,lines){const st=S.settings||{};const no=mayApprove(m);if(no) throw new Error(no);
   if(st.segregation&&(m.created_by===S.me||m.requested_by===S.me)) throw new Error('Segregation of duties is on: someone other than the person who created this entry must approve it.');
   const next={...m,lines};const errs=validateMove(next);if(errs.length) throw new Error(errs.join(' '));
   const audit=[...(m.audit||[])];(m.lines||[]).forEach((l,i)=>{const n=lines[i];if(n&&n.account!==l.account) audit.push({at:nowISO(),by:S.me,action:`Changed line ${i+1} account ${l.account} → ${n.account}`});});
-  const p=policy();const prev=m.approvals||[];const big=+p.dual_over>0&&toGroup(moveTotal(m))>+p.dual_over;
+  const p=policy();const prev=m.approvals||[];const big=+p.dual_over>0&&toGroup(moveTotal(m))>+p.dual_over&&!isAdminUser();
   if(big&&prev.some(a=>a.by===S.me)) throw new Error('You gave the first approval. A different person must give the second.');
   if(big&&!prev.length){audit.push({at:nowISO(),by:S.me,action:`First approval. A second person must approve because it is above ${nf0.format(p.dual_over)} ${groupCur()}.`});await db.doc('moves/'+m.id).update({approvals:[{by:S.me,at:nowISO()}],lines,audit});delete S.edits[m.id];return;}
   audit.push({at:nowISO(),by:S.me,action:big?'Second approval; posted':'Approved and posted'});
