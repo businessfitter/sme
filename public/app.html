@@ -13536,6 +13536,12 @@ async function sweepOverpayments(){if(S._ovSweep||!S.canWrite||S.entity==='all')
 {const _po=invPaidOn;invPaidOn=function(inv){const el=_po(inv);try{el.querySelectorAll('.paidfrom').forEach(x=>x.remove());const al=S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&m.alloc_src_inv&&(m.settles||[]).some(s=>s.invoice_id===inv.id));
     if(al.length) el.append(h('span',{class:'mini paidfrom'},`short payment adjusted from ${[...new Set(al.map(m=>m.alloc_src_inv))].join(', ')} overpayment`));}catch(e){}return el;};}
 
+// ===== Approving an entry dated in a locked period posts it on the first open day (the original date is kept); refusals are shown clearly =====
+{const _am=approveMove;approveMove=async function(m,lines){try{const lk=(S.settings||{}).lock_date;if(lk&&m&&m.date&&m.date<=lk&&m.journal!=='OPEN'){const nd=addDays(lk,1);
+      const up={date:nd,document_date:m.document_date||m.date,audit:[...(m.audit||[]),{at:nowISO(),by:'engine',action:`Dated ${fmtDate(m.date)} in a locked period (books locked to ${fmtDate(lk)}), so it posts on ${fmtDate(nd)}, the first open day.`}]};
+      await db.doc('moves/'+m.id).update(up);Object.assign(m,up);}}catch(e){}
+  try{return await _am.apply(this,arguments);}catch(e){typeof revToast==='function'&&revToast('Not approved: '+(e.message||'refused'),'muted');throw e;}};}
+
 
 // test hook (local development only)
 if(location.hostname==='localhost'){window.__dbg=c=>eval(c);}
