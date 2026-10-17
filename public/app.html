@@ -1653,6 +1653,9 @@ html body.tb2 .topbar :focus-visible{outline:2px solid #818CF8!important;outline
 .tbbox.over{border-color:var(--accent,#2457C5);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#2457C5) 22%,transparent);background:color-mix(in srgb,var(--accent,#2457C5) 6%,var(--panel))}
 .tbmove{display:grid;gap:.35rem;padding:.35rem;border:1px solid var(--accent,#2457C5);border-radius:10px}.tbmove .tbchip{cursor:default}
 .tbcol,.tbbox,.tbgrid>*,.tbmap{min-width:0}
+/* slim top bar: no workspace pill, breadcrumb or workspace settings */
+header.topbar #sx-co,header.topbar #tn-app,header.topbar #tn-wsset{display:none!important}
+body.onecompany header.topbar #tn-ws{display:none!important}
 
 </style>
 
@@ -12468,6 +12471,13 @@ function tbMapBoard({D,map,caps,can,staged,refresh,save,undo,msg}){const M=S.tbM
       h('div',{class:'tbcol'},h('div',{class:'tbch'},'Balance sheet'),...lines.filter(c=>c[1]==='bs').map(([k,s,l])=>box(k,s,l))));mark();}
   function mark(){const qq=norm(M.q||'');cols.querySelectorAll('.tbchip').forEach(c=>{const hit=!qq||c.dataset.q.includes(qq);c.classList.toggle('dim',!hit);c.classList.toggle('hit',!!qq&&hit);});}
   card.append(cols);drawBoxes();return card;}
+
+// ===== Top bar, left side: home, company name and the modules icon only. "Companies" shows only for people with more than one company =====
+function coCount(){const es=document.getElementById('ent-sel');if(es) return [...es.options].filter(o=>o.value&&o.value!=='all').length;return Object.keys(S.ent||{}).length;}
+function tbSlim(){const many=coCount()>1;document.body.classList.toggle('onecompany',!many);}
+{const _r=refreshHeader;refreshHeader=function(...a){const r=_r.apply(this,a);try{tbSlim();}catch(e){}return r;};}
+{const _s=showTab;showTab=function(...a){const r=_s.apply(this,a);try{tbSlim();}catch(e){}return r;};}
+setTimeout(()=>{try{tbSlim();}catch(e){}},1500);
 
 
 // test hook (local development only)
