@@ -1593,6 +1593,36 @@ html body.tb2 .topbar .vsep,html body.tb2 .tright .sep{background:var(--tline)!i
 html body.tb2 #sx-co{color:var(--tink)!important;background:rgba(255,255,255,.06)!important;border:1px solid var(--tline)!important;border-radius:999px!important}
 html body.tb2 .topbar :focus-visible{outline:2px solid #818CF8!important;outline-offset:2px}
 @media (prefers-reduced-motion:reduce){html body.tb2 .topnav>button,html body.tb2 .tctx button{transition:none}}
+/* ===== Accounting → Expenses ===== */
+.expctl{display:flex;flex-wrap:wrap;gap:.8rem 1.2rem;align-items:center;justify-content:space-between;padding:.75rem 1rem}
+.expper{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}.expper select,.expper input{min-height:2.2rem}
+.exprange,.expas{display:inline-flex;gap:.4rem;align-items:center}.exprl{font-weight:600;font-size:.88rem;padding:.3rem .7rem;border-radius:999px;background:var(--sunk)}
+.expchips{display:flex;flex-wrap:wrap;gap:.5rem}
+.expchip{display:flex;flex-direction:column;align-items:flex-start;gap:.1rem;padding:.55rem .9rem;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer;min-width:8.5rem;text-align:left}
+.expchip span{font-size:.78rem;color:var(--muted)}.expchip b{font-size:1rem;font-weight:600}.expchip:hover{border-color:var(--line-2)}
+.expchip.on{border-color:var(--accent,#2457C5);box-shadow:inset 0 0 0 1px var(--accent,#2457C5)}
+.exptab{width:100%;border-collapse:collapse;font-size:.9rem}.exptab th{font-size:.76rem;font-weight:500;color:var(--muted);text-align:left;padding:.55rem .6rem;border-bottom:1px solid var(--line);white-space:nowrap}
+.exptab td{padding:.55rem .6rem;border-bottom:1px solid var(--line);vertical-align:top}.exptab th.num,.exptab td.num{text-align:right;white-space:nowrap}.exptab th.c{text-align:center}
+.exptab tfoot td{font-weight:600;border-top:2px solid var(--line-2);border-bottom:0}.exptab td.b{font-weight:600}.exptab td.neg{color:var(--bad)}.exptab td.pos{color:var(--ok)}.exptab td.mut{color:var(--muted)}
+.exprow{cursor:pointer}.exprow:hover td{background:var(--sunk)}.exprow:focus-visible{outline:2px solid var(--accent,#2457C5);outline-offset:-2px}
+.expg{font-size:.8rem;padding:.12rem .5rem;border-radius:6px;background:var(--sunk);white-space:nowrap}
+.expo{font-size:.78rem;padding:.12rem .5rem;border-radius:999px;white-space:nowrap;border:1px solid var(--line);color:var(--muted)}
+.expo.o-purchases{color:#2457C5;border-color:#2457C555}.expo.o-payroll{color:#7C3AED;border-color:#7C3AED55}.expo.o-bank{color:#0F9488;border-color:#0F948855}.expo.o-manual{color:var(--ink);border-color:var(--line-2)}.expo.o-assets{color:#B8860B;border-color:#B8860B55}.expo.o-claims{color:#BE185D;border-color:#BE185D55}
+.expdot{display:inline-block;width:.6rem;height:.6rem;border-radius:3px;margin-right:.5rem;vertical-align:middle}
+.expbarc{width:30%;min-width:6rem}.expbar{display:block;height:.55rem;border-radius:999px;margin-top:.4rem}
+.expchartbox{overflow-x:auto;margin:.6rem 0}.expchart{width:100%;min-width:320px;height:auto;display:block}.expchart .ax{font-size:10px;fill:var(--muted)}
+.expmx td,.expmx th{font-size:.82rem}.expsplit{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.expgrp td{font-weight:600;background:var(--sunk)}.expsub td:first-child{padding-left:2rem}
+.exptog{border:0;background:none;color:var(--muted);cursor:pointer;width:1.4rem;font:inherit;padding:0}
+.expflag{font-size:.7rem;font-weight:600;padding:.05rem .4rem;border-radius:999px;margin-left:.2rem}.expflag.adv{background:var(--bad-soft);color:var(--bad)}.expflag.fav{background:var(--ok-soft);color:var(--ok)}
+.expai{border-left:3px solid var(--accent,#2457C5);padding:.2rem 0 .2rem 1rem}.expai li{margin:.3rem 0}.expai li.k-over b{color:var(--bad)}.expai li.k-under b{color:var(--ok)}
+.expgcard{border:1px solid var(--line);border-radius:12px;padding:.8rem 1rem;display:grid;gap:.6rem}
+.expghead{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}.expghead input[type=text]{font-weight:600;min-width:12rem;flex:1}
+.expln{display:flex;flex-direction:column;gap:.1rem}.expgt{font-weight:600;margin-left:auto}
+.expacclist{display:flex;flex-wrap:wrap;gap:.35rem}.expacc{display:inline-flex;align-items:center;gap:.2rem;padding:.25rem .3rem .25rem .6rem;border-radius:8px;background:var(--sunk);font-size:.84rem}
+.expacc button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0 .3rem}.expacc button:hover{color:var(--bad)}
+.expjv .lines select{min-width:14rem}
+@media (max-width:760px){.expsplit{grid-template-columns:1fr}.expctl{flex-direction:column;align-items:stretch}.expbarc{display:none}}
 
 </style>
 
@@ -12065,6 +12095,235 @@ function fsPerCtl(F,ps,refresh){if(F.kind!=='asat'&&F.kind!=='range') return ps;
   const a=h('input',{type:'date','aria-label':'From',value:d[0]}),b=h('input',{type:'date','aria-label':'To',value:d[1]});const set=()=>{F.period=`${a.value||d[0]}..${b.value||d[1]}`;refresh();};a.onchange=set;b.onchange=set;
   return h('span',{class:'fsrange'},a,h('span',{class:'mini mut'},'to'),b);}
 {const _p=fsPeriods;fsPeriods=function(kind){if(kind==='asat'||kind==='range'){const F=S.fs2;return [F&&F.kind===kind&&fsDates(kind,F.period)?F.period:fsDefaultPeriod(kind)];}return _p(kind);};}
+
+// ===== Accounting → Expenses: every expense from every module, manual expense journals, analysis, variances and expense groups =====
+TABS.push(['expenses','Expenses']);
+ICONS.expenses='<path d="M6 3.5h12v17l-2.4-1.5-2.4 1.5-2.4-1.5-2.4 1.5L6 20.5z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/>';
+(function(){const C=APPS.find(a=>a.k==='accounting');if(C&&!C.tabs.includes('expenses')){const i=C.tabs.indexOf('bank');C.tabs.splice(i>=0?i+1:C.tabs.length,0,'expenses');const g=(C.groups||[]).find(x=>x[1].includes('entries'));if(g&&!g[1].includes('expenses')){const j=g[1].indexOf('bank');g[1].splice(j>=0?j+1:g[1].length,0,'expenses');}}
+  const en=ACCESS_MODULES.find(m=>m[0]==='entries');if(en&&!en[2].includes('expenses')) en[2].push('expenses');})();
+
+const isExpT=t=>isCost(t)||isOpex(t);
+const expAccounts=()=>Object.values(S.accounts).filter(a=>!a.deprecated&&!a.group&&isExpT(a.type||'')).sort((a,b)=>a.id<b.id?-1:1);
+// where an expense came from
+const EXP_ORIG=[['purchases','Purchases'],['payroll','Payroll and HR'],['claims','Claims and receipts'],['bank','Banking'],['assets','Fixed assets'],['schedules','Prepayments and accruals'],['inventory','Inventory'],['tax','Tax'],['manual','Manual journals'],['other','Other modules']];
+function expOrigin(m){const cb=String(m.created_by||''),s=String(m.source||'');
+  if(/^(bill|purchases|po)$/.test(s)||cb==='agent:bills') return 'purchases';
+  if(cb==='agent:payroll'||cb==='agent:hr'||m.journal==='SAL'||m.payrun_id||m.salary_of) return 'payroll';
+  if(/^(claim|mobile|receipt|photo)$/.test(s)) return 'claims';
+  if(/^(bank_statement|reconcile)$/.test(s)||cb==='agent:bank') return 'bank';
+  if(cb==='agent:assets'||/depreciation/i.test(m.ref||'')) return 'assets';
+  if(cb==='agent:schedules') return 'schedules';
+  if(s==='inventory'||cb==='agent:inventory') return 'inventory';
+  if(cb==='agent:tax'||m.wht) return 'tax';
+  if(s==='expense_jv'||s==='manual'||s===''||cb==='agent:gl'||(!cb.startsWith('agent:')&&s==='agent')) return 'manual';
+  return 'other';}
+const expOrigName=k=>(EXP_ORIG.find(x=>x[0]===k)||[k,k])[1];
+// expense groups (kept per company) and the financial-statement line each group goes to
+const EXP_LINES=[['cor','Cost of sales'],['sell','Selling and distribution costs'],['admin','Administrative expenses'],['dep','Depreciation and amortisation'],['fin','Finance costs'],['tax','Income tax expense']];
+const expGroups=()=>(entDoc().exp_groups||[]);
+function expGroupOf(code){const g=expGroups().find(x=>(x.accounts||[]).includes(code));return g||null;}
+const EXP_SUGGEST=[['Staff costs',/salar|wage|payroll|staff|employee|gratuity|end of service|benefit|bonus|commission|visa|recruit|training|medical insurance|pension|social/,'admin'],
+  ['Premises and utilities',/rent|lease|utilit|electric|water|dewa|addc|maintenance|repair|cleaning|security|office/,'admin'],
+  ['IT and communications',/software|subscription|licen|internet|telephone|phone|mobile|hosting|cloud|it |computer|domain/,'admin'],
+  ['Professional fees',/audit|legal|consult|professional|accounting fee|advis|actuar/,'admin'],
+  ['Sales and marketing',/marketing|advert|promotion|sponsor|brand|social media|exhibition|sales commission|distribution|delivery|freight out/,'sell'],
+  ['Travel and transport',/travel|ticket|hotel|transport|fuel|petrol|vehicle|car |taxi|parking|toll|salik/,'admin'],
+  ['Cost of sales',/cost of|cogs|direct|purchase|material|subcontract|freight in|customs/,'cor'],
+  ['Depreciation and amortisation',/depreciat|amortis|amortiz/,'dep'],
+  ['Finance costs',/interest|bank charge|finance cost|loan fee|exchange loss|fx loss/,'fin'],
+  ['Taxes and government fees',/tax|wht|vat|government|license fee|trade licen|fine|penalt/,'admin']];
+function expSuggestGroups(){const out=[];expAccounts().forEach(a=>{const n=' '+norm(a.name||'')+' ';let k=a.type==='expense_depreciation'?'Depreciation and amortisation':a.type==='expense_direct_cost'?'Cost of sales':null;
+    if(!k){const hit=EXP_SUGGEST.find(([,re])=>re.test(n));k=hit?hit[0]:'Other operating expenses';}
+    let g=out.find(x=>x.name===k);if(!g){const s=EXP_SUGGEST.find(x=>x[0]===k);g={id:'g'+Math.random().toString(36).slice(2,8),name:k,line:s?s[2]:'admin',accounts:[]};out.push(g);}g.accounts.push(a.id);});
+  return out.sort((a,b)=>EXP_LINES.findIndex(x=>x[0]===a.line)-EXP_LINES.findIndex(x=>x[0]===b.line)||a.name.localeCompare(b.name));}
+
+// ---- periods: month, quarter, financial year to date, range; compare with the previous period, last year or the budget
+function expRange(P){const t=today();if(P.mode==='range'){const a=P.from||t.slice(0,8)+'01',b=P.to||t;return a<=b?[a,b]:[b,a];}
+  if(P.mode==='quarter'){const m=P.m||t.slice(0,7);const q0=addMonths(m.slice(0,4)+'-01',Math.floor((+m.slice(5,7)-1)/3)*3);return [q0+'-01',lastDay(addMonths(q0,2))];}
+  if(P.mode==='ytd'){const d=P.to||t;return [fyStartOf(d),d];}
+  const m=P.m||t.slice(0,7);return [m+'-01',lastDay(m)];}
+const shiftY=(d,n)=>`${+d.slice(0,4)+n}${d.slice(4)}`.replace(/-02-29$/,'-02-28');
+function expCmpRange(P,r){if(P.cmp==='ly') return [shiftY(r[0],-1),shiftY(r[1],-1)];
+  if(P.mode==='month'){const m=addMonths(r[0].slice(0,7),-1);return [m+'-01',lastDay(m)];}
+  if(P.mode==='quarter'){const m=addMonths(r[0].slice(0,7),-3);return [m+'-01',lastDay(addMonths(m,2))];}
+  const days=Math.round((Date.parse(r[1])-Date.parse(r[0]))/864e5);const b=addDays(r[0],-1);return [addDays(b,-days),b];}
+function expRangeLabel(r){const [a,b]=r;if(a.slice(8)==='01'&&b===lastDay(b.slice(0,7))){if(a.slice(0,7)===b.slice(0,7)) return mLabel(a.slice(0,7),true);return `${mLabel(a.slice(0,7))} – ${mLabel(b.slice(0,7),true)}`;}return `${fmtDate(a)} – ${fmtDate(b)}`;}
+// expense lines: net debit on expense accounts
+function expLines(a,b,{pending}={}){const out=[];for(const m of S.moves){if(!(m.state==='posted'||(pending&&m.state==='to_approve'))||m.journal==='OPEN'||m.date<a||m.date>b) continue;
+    (m.lines||[]).forEach((l,i)=>{const acc=S.accounts[l.account];if(!acc||!isExpT(acc.type||'')) return;const v=r2((+l.debit||0)-(+l.credit||0));if(!v) return;out.push({m,l,i,v,acc,orig:expOrigin(m)});});}
+  return out.sort((x,y)=>x.m.date<y.m.date?1:x.m.date>y.m.date?-1:0);}
+const gKey=code=>{const g=expGroupOf(code);return g?g.id:'_none';};
+const gName=id=>id==='_none'?'Not grouped':((expGroups().find(g=>g.id===id)||{}).name||'Group');
+function sumBy(lines,key){const o={};lines.forEach(x=>{const k=key(x);o[k]=r2((o[k]||0)+x.v);});return o;}
+// budget for an account across a date range (part months pro-rated by days)
+function expBudget(code,a,b){let s=0,any=false;for(let m=a.slice(0,7);m<=b.slice(0,7);m=addMonths(m,1)){let v=null;Object.values(S.budgets||{}).forEach(B=>{const x=(B.lines||{})[code];if(x&&x[m]!=null){v=(v||0)+(+x[m]||0);}});if(v==null) continue;any=true;
+    const md=+lastDay(m).slice(8),d0=m===a.slice(0,7)?+a.slice(8):1,d1=m===b.slice(0,7)?+b.slice(8):md;s+=v*Math.max(0,d1-d0+1)/md;}return any?r2(s):null;}
+const pctTxt=(v,base)=>base?`${v/base>=0?'+':''}${(v/Math.abs(base)*100).toFixed(1)}%`:'—';
+const EXP_COL=['#2457C5','#0F9488','#C2410C','#7C3AED','#B8860B','#BE185D','#4D7C0F','#0369A1','#64748B'];
+
+BUILD.expenses=()=>{const el=h('section',{class:'stack expscreen'});
+  const P=S.exP||(S.exP={mode:'month',m:today().slice(0,7),cmp:'prev',view:'register'});
+  el.append(h('div',{class:'pagehead'},h('div',{},h('h1',{},'Expenses'),h('p',{class:'lede'},'Every expense the company has booked, whether it came from purchases, payroll, banking, claims, assets or a manual journal, with analysis by group, period and variance.'))));
+  const ctl=h('div',{class:'card expctl'}),body=h('div',{class:'stack nopertable'});el.append(ctl,body);
+  function controls(){ctl.textContent='';
+    const seg=h('div',{class:'seg',role:'tablist','aria-label':'Expenses view'},[['register','Register'],['analysis','Analysis'],['variance','Variance'],['groups','Groups']].map(([k,l])=>h('button',{type:'button',role:'tab','aria-selected':String(P.view===k),onclick:()=>{P.view=k;refresh();}},l)));
+    const mode=h('select',{'aria-label':'Period type',onchange:e=>{P.mode=e.target.value;if(P.mode==='ytd') P.cmp=P.cmp==='prev'?'ly':P.cmp;refresh();}},[['month','Month'],['quarter','Quarter'],['ytd','Year to date'],['range','Range']].map(([k,l])=>h('option',{value:k},l)));mode.value=P.mode;
+    const pick=P.mode==='range'?h('span',{class:'exprange'},h('input',{type:'date','aria-label':'From',value:expRange(P)[0],onchange:e=>{P.from=e.target.value;refresh();}}),h('span',{class:'mini mut'},'to'),h('input',{type:'date','aria-label':'To',value:expRange(P)[1],onchange:e=>{P.to=e.target.value;refresh();}}))
+      :P.mode==='ytd'?h('label',{class:'expas'},h('span',{class:'mini mut'},'As at'),h('input',{type:'date','aria-label':'As at',value:P.to||today(),onchange:e=>{P.to=e.target.value;refresh();}}))
+      :h('input',{type:'month','aria-label':P.mode==='quarter'?'A month in the quarter':'Month',value:P.m||today().slice(0,7),onchange:e=>{P.m=e.target.value||today().slice(0,7);refresh();}});
+    const cmp=h('select',{'aria-label':'Compare with',onchange:e=>{P.cmp=e.target.value;refresh();}},[['prev','Previous period'],['ly','Same period last year']].map(([k,l])=>h('option',{value:k},l)));cmp.value=P.cmp;
+    const r=expRange(P);
+    ctl.append(seg,h('div',{class:'expper'},mode,pick,h('span',{class:'mini mut expcmp'},'Compare with'),cmp,h('span',{class:'exprl'},expRangeLabel(r))));}
+  function refresh(){controls();body.textContent='';if(allGuard(el,'see expenses')) return;const nd=needData();if(nd){body.append(nd);return;}
+    if(P.view==='analysis') drawAnalysis();else if(P.view==='variance') drawVariance();else if(P.view==='groups') drawGroups();else drawRegister();}
+
+  // ---------- Register: everything, by origin, with manual expense journals ----------
+  function drawRegister(){const r=expRange(P);const all=expLines(r[0],r[1],{pending:true});const F=S.exRF||(S.exRF={orig:'',grp:'',q:'',st:''});
+    const byO=sumBy(all.filter(x=>x.m.state==='posted'),x=>x.orig);const tot=r2(Object.values(byO).reduce((s,v)=>s+v,0));
+    const chips=h('div',{class:'expchips',role:'group','aria-label':'Where expenses came from'},h('button',{type:'button',class:'expchip'+(F.orig===''?' on':''),onclick:()=>{F.orig='';refresh();}},h('span',{},'All sources'),h('b',{},money(tot))),
+      ...EXP_ORIG.filter(([k])=>byO[k]).map(([k,l])=>h('button',{type:'button',class:'expchip'+(F.orig===k?' on':''),onclick:()=>{F.orig=F.orig===k?'':k;refresh();}},h('span',{},l),h('b',{},money(byO[k])))));
+    const add=h('button',{class:'btn primary',type:'button',hidden:!S.canWrite||S.entity==='all',onclick:()=>{form.hidden=!form.hidden;if(!form.hidden){form.textContent='';form.append(expJV(()=>{form.hidden=true;refresh();}));}}},'Record an expense');
+    const form=h('div',{class:'card',hidden:true});
+    const q=h('input',{type:'search',placeholder:'Search description, account, supplier','aria-label':'Search expenses',value:F.q,oninput:e=>{F.q=e.target.value;draw();}});
+    const gs=h('select',{'aria-label':'Group',onchange:e=>{F.grp=e.target.value;draw();}},h('option',{value:''},'All groups'),...expGroups().map(g=>h('option',{value:g.id},g.name)),h('option',{value:'_none'},'Not grouped'));gs.value=F.grp;
+    const ss=h('select',{'aria-label':'Status',onchange:e=>{F.st=e.target.value;draw();}},[['','Posted and waiting'],['posted','Posted'],['to_approve','Waiting for approval']].map(([k,l])=>h('option',{value:k},l)));ss.value=F.st;
+    const tw=h('div',{class:'tablewrap'});const foot=h('div',{class:'row end mini mut'});
+    function draw(){const qq=norm(F.q||'');const L=all.filter(x=>(!F.orig||x.orig===F.orig)&&(!F.grp||gKey(x.l.account)===F.grp)&&(!F.st||x.m.state===F.st)&&(!qq||norm([x.l.label,x.m.ref,x.acc.name,x.acc.id,x.m.partner,x.m.name].join(' ')).includes(qq)));
+      tw.textContent='';const tb=h('tbody');
+      L.slice(0,500).forEach(x=>{const g=expGroupOf(x.l.account);tb.append(h('tr',{class:'exprow',tabindex:'0',onclick:()=>miniModal(x.m.name||x.m.ref||'Entry',moveDetail(x.m),{wide:true}),onkeydown:e=>{if(e.key==='Enter') e.currentTarget.click();}},
+        h('td',{class:'nowrap'},fmtDate(x.m.date)),h('td',{},h('div',{},x.l.label||x.m.ref||'—'),h('div',{class:'mini mut'},[x.m.name,x.m.partner].filter(Boolean).join(' · '))),
+        h('td',{},h('span',{class:'code mini'},x.acc.id),' ',x.acc.name),h('td',{},g?h('span',{class:'expg'},g.name):h('span',{class:'mini mut'},'Not grouped')),
+        h('td',{},h('span',{class:'expo o-'+x.orig},expOrigName(x.orig))),h('td',{},x.m.state==='posted'?pill('Posted','ok'):pill('Waiting','warn')),h('td',{class:'num'},money2(x.v))));});
+      if(!L.length) tb.append(h('tr',{},h('td',{colspan:7},emptyNote('No expenses in this period'+(F.orig||F.grp||F.q?' for this filter.':'.')))));
+      tw.append(h('table',{class:'exptab'},h('thead',{},h('tr',{},h('th',{},'Posted on'),h('th',{},'Description'),h('th',{},'Account'),h('th',{},'Group'),h('th',{},'Source'),h('th',{},'Status'),h('th',{class:'num'},'Amount'))),tb,
+        L.length?h('tfoot',{},h('tr',{},h('td',{colspan:6},`Total of ${L.length} ${L.length===1?'line':'lines'}`),h('td',{class:'num'},money2(r2(L.reduce((s,x)=>s+x.v,0)))))):null));
+      foot.textContent=L.length>500?`Showing the latest 500 of ${L.length}. Narrow the period or filter to see the rest.`:'';}
+    body.append(chips,h('div',{class:'card stack'},h('div',{class:'row'},q,gs,ss,h('span',{style:'flex:1'}),add),form,tw,foot));draw();}
+
+  // ---------- Analysis: totals, groups, trend, top accounts and suppliers ----------
+  function drawAnalysis(){const r=expRange(P),c=expCmpRange(P,r);const A=expLines(r[0],r[1]),C=expLines(c[0],c[1]);const ta=r2(A.reduce((s,x)=>s+x.v,0)),tc=r2(C.reduce((s,x)=>s+x.v,0));
+    const bud=r2(expAccounts().reduce((s,a)=>s+(expBudget(a.id,r[0],r[1])||0),0));const ga=sumBy(A,x=>gKey(x.l.account)),gc=sumBy(C,x=>gKey(x.l.account));
+    const top=Object.entries(ga).sort((a,b)=>b[1]-a[1]);const pl=rangePL(r[0],r[1]);
+    const kp=(l,v,d,k)=>h('div',{class:'kpi'},h('div',{class:'kl'},l),h('div',{class:'kv'},v),h('div',{class:'kd '+(k||'')},d));
+    body.append(h('div',{class:'kpis'},kp('Total expenses',money(ta),`${expRangeLabel(r)}`),kp(P.cmp==='ly'?'Against last year':'Against previous period',(ta-tc>=0?'+':'')+money(ta-tc),`${pctTxt(ta-tc,tc)} · ${expRangeLabel(c)}`,ta>tc?'bad':'good'),
+      kp('Against budget',bud?((ta-bud>=0?'+':'')+money(ta-bud)):'No budget',bud?pctTxt(ta-bud,bud)+' of '+money(bud):'Set one in Budget',bud?(ta>bud?'bad':'good'):''),
+      kp('Expenses to income',pl.income?`${(ta/pl.income*100).toFixed(1)}%`:'—',pl.income?`Income ${money(pl.income)}`:'No income in the period'),
+      kp('Largest group',top.length?gName(top[0][0]):'—',top.length&&ta?`${money(top[0][1])} · ${(top[0][1]/ta*100).toFixed(0)}%`:'')));
+    // by group with share bar
+    const gt=h('tbody');top.forEach(([g,v],i)=>{const cv=gc[g]||0;gt.append(h('tr',{},h('td',{},h('i',{class:'expdot',style:`background:${EXP_COL[i%EXP_COL.length]}`}),gName(g)),h('td',{class:'expbarc'},h('span',{class:'expbar',style:`width:${ta?Math.max(1,v/ta*100):0}%;background:${EXP_COL[i%EXP_COL.length]}`})),h('td',{class:'num'},ta?(v/ta*100).toFixed(1)+'%':'—'),h('td',{class:'num'},money2(v)),h('td',{class:'num mut'},money2(cv)),h('td',{class:'num '+(v>cv?'neg':'pos')},pctTxt(v-cv,cv))));});
+    if(!top.length) gt.append(h('tr',{},h('td',{colspan:6},emptyNote('No expenses posted in this period.'))));
+    body.append(h('div',{class:'card'},h('h3',{},'By group'),h('div',{class:'tablewrap'},h('table',{class:'exptab'},h('thead',{},h('tr',{},h('th',{},'Group'),h('th',{},'Share'),h('th',{class:'num'},'%'),h('th',{class:'num'},expRangeLabel(r)),h('th',{class:'num'},expRangeLabel(c)),h('th',{class:'num'},'Change'))),gt))));
+    // month by month
+    let m1=r[1].slice(0,7),m0=r[0].slice(0,7);if(m0===m1||P.mode!=='range') m0=addMonths(m1,-11);const months=[];for(let m=m0;m<=m1;m=addMonths(m,1)) months.push(m);
+    const T=expLines(m0+'-01',lastDay(m1));const mg={};T.forEach(x=>{const k=gKey(x.l.account),mo=x.m.date.slice(0,7);(mg[k]||(mg[k]={}))[mo]=r2(((mg[k]||{})[mo]||0)+x.v);});
+    const gOrder=Object.keys(mg).sort((a,b)=>Object.values(mg[b]).reduce((s,v)=>s+v,0)-Object.values(mg[a]).reduce((s,v)=>s+v,0));
+    const mt=months.map(m=>gOrder.reduce((s,g)=>s+((mg[g]||{})[m]||0),0));const mx=Math.max(1,...mt);
+    const W=Math.max(320,months.length*46),H=170;const bw=Math.min(30,W/months.length*.62);let svg=`<svg viewBox="0 0 ${W} ${H+24}" class="expchart" role="img" aria-label="Expenses by month and group">`;
+    months.forEach((m,i)=>{let y=H;const x=i*(W/months.length)+(W/months.length-bw)/2;gOrder.forEach((g,gi)=>{const v=Math.max(0,(mg[g]||{})[m]||0);const hh=v/mx*(H-14);if(hh>0){y-=hh;svg+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${hh.toFixed(1)}" fill="${EXP_COL[gi%EXP_COL.length]}" rx="1.5"><title>${esc(gName(g))} · ${esc(mLabel(m,true))}: ${esc(money(v))}</title></rect>`;}});
+      svg+=`<text x="${(x+bw/2).toFixed(1)}" y="${H+16}" text-anchor="middle" class="ax">${esc(mLabel(m))}</text>`;});svg+='</svg>';
+    const chartBox=h('div',{class:'expchartbox'});chartBox.innerHTML=svg;
+    const legend=h('div',{class:'legend'},gOrder.map((g,i)=>h('span',{},h('i',{class:'sw',style:`background:${EXP_COL[i%EXP_COL.length]}`}),gName(g))));
+    const mtab=h('table',{class:'exptab expmx'},h('thead',{},h('tr',{},h('th',{},'Group'),...months.map(m=>h('th',{class:'num'},mLabel(m,m.endsWith('-01')||m===months[0]))),h('th',{class:'num'},'Total'))),
+      h('tbody',{},gOrder.map(g=>h('tr',{},h('td',{},gName(g)),...months.map(m=>h('td',{class:'num'},(mg[g]||{})[m]?money2(mg[g][m]):'')),h('td',{class:'num b'},money2(r2(Object.values(mg[g]).reduce((s,v)=>s+v,0))))))),
+      h('tfoot',{},h('tr',{},h('td',{},'Total'),...mt.map(v=>h('td',{class:'num'},v?money2(r2(v)):'')),h('td',{class:'num'},money2(r2(mt.reduce((s,v)=>s+v,0)))))));
+    body.append(h('div',{class:'card'},h('h3',{},'Month by month'),legend,chartBox,h('div',{class:'tablewrap'},mtab)));
+    // top accounts and suppliers
+    const acc=Object.entries(sumBy(A,x=>x.l.account)).sort((a,b)=>b[1]-a[1]).slice(0,10);const acs=sumBy(C,x=>x.l.account);
+    const sup=Object.entries(sumBy(A.filter(x=>x.m.partner),x=>x.m.partner)).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    body.append(h('div',{class:'expsplit'},
+      h('div',{class:'card'},h('h3',{},'Largest accounts'),h('div',{class:'tablewrap'},h('table',{class:'exptab'},h('thead',{},h('tr',{},h('th',{},'Account'),h('th',{class:'num'},'Amount'),h('th',{class:'num'},'Change'))),h('tbody',{},acc.length?acc.map(([k,v])=>h('tr',{},h('td',{},h('span',{class:'code mini'},k),' ',(S.accounts[k]||{}).name||''),h('td',{class:'num'},money2(v)),h('td',{class:'num '+(v>(acs[k]||0)?'neg':'pos')},pctTxt(v-(acs[k]||0),acs[k]||0)))):h('tr',{},h('td',{colspan:3},emptyNote('Nothing yet.'))))))),
+      h('div',{class:'card'},h('h3',{},'Largest suppliers and payees'),h('div',{class:'tablewrap'},h('table',{class:'exptab'},h('thead',{},h('tr',{},h('th',{},'Name'),h('th',{class:'num'},'Amount'),h('th',{class:'num'},'Share'))),h('tbody',{},sup.length?sup.map(([k,v])=>h('tr',{},h('td',{},k),h('td',{class:'num'},money2(v)),h('td',{class:'num'},ta?(v/ta*100).toFixed(1)+'%':'—'))):h('tr',{},h('td',{colspan:3},emptyNote('No supplier is named on these expenses.')))))))));}
+
+  // ---------- Variance: actual against budget and against the comparative, by group and account ----------
+  function drawVariance(){const r=expRange(P),c=expCmpRange(P,r);const A=sumBy(expLines(r[0],r[1]),x=>x.l.account),C=sumBy(expLines(c[0],c[1]),x=>x.l.account);const T=S.exVT||(S.exVT={th:10,open:{}});
+    const codes=[...new Set([...Object.keys(A),...Object.keys(C),...expAccounts().filter(a=>expBudget(a.id,r[0],r[1])).map(a=>a.id)])];
+    const rows=codes.map(k=>({k,a:A[k]||0,b:expBudget(k,r[0],r[1]),c:C[k]||0,g:gKey(k)}));const groups={};rows.forEach(x=>(groups[x.g]||(groups[x.g]=[])).push(x));
+    const sum=(L,f)=>r2(L.reduce((s,x)=>s+(f(x)||0),0));const hasB=rows.some(x=>x.b!=null);
+    const flag=(v,base)=>base&&Math.abs(v/base*100)>=T.th&&Math.abs(v)>=1?h('span',{class:'expflag '+(v>0?'adv':'fav')},v>0?'Over':'Under'):null;
+    const cells=(a,b,cc)=>[h('td',{class:'num'},money2(a)),h('td',{class:'num mut'},b==null?'—':money2(b)),h('td',{class:'num '+(b==null?'':a-b>0?'neg':'pos')},b==null?'—':money2(r2(a-b))),h('td',{class:'num'},b==null?'—':pctTxt(a-b,b),' ',b==null?null:flag(a-b,b)),
+      h('td',{class:'num mut'},money2(cc)),h('td',{class:'num '+(a-cc>0?'neg':'pos')},money2(r2(a-cc))),h('td',{class:'num'},pctTxt(a-cc,cc),' ',flag(a-cc,cc))];
+    const tb=h('tbody');Object.entries(groups).sort((x,y)=>sum(y[1],z=>z.a)-sum(x[1],z=>z.a)).forEach(([g,L])=>{const open=!!T.open[g];
+      tb.append(h('tr',{class:'expgrp'},h('td',{},h('button',{type:'button',class:'exptog','aria-expanded':String(open),onclick:()=>{T.open[g]=!open;refresh();}},open?'▾':'▸'),gName(g)),...cells(sum(L,x=>x.a),L.some(x=>x.b!=null)?sum(L,x=>x.b):null,sum(L,x=>x.c))));
+      if(open) L.sort((x,y)=>y.a-x.a).forEach(x=>tb.append(h('tr',{class:'expsub'},h('td',{},h('span',{class:'code mini'},x.k),' ',(S.accounts[x.k]||{}).name||''),...cells(x.a,x.b,x.c))));});
+    if(!rows.length) tb.append(h('tr',{},h('td',{colspan:8},emptyNote('No expenses or budget in this period.'))));
+    const tA=sum(rows,x=>x.a),tB=hasB?sum(rows,x=>x.b):null,tC=sum(rows,x=>x.c);
+    const th=h('select',{'aria-label':'Flag variances above',onchange:e=>{T.th=+e.target.value;refresh();}},[5,10,15,20,25].map(v=>h('option',{value:v},`Flag at ${v}%`)));th.value=String(T.th);
+    const ai=h('button',{class:'btn agent',type:'button'},'Explain the variances');const out=h('div',{class:'stack'});
+    ai.onclick=async()=>{if(!sample){out.textContent='The agent is not available here.';return;}ai.disabled=true;out.textContent='';out.append(h('p',{class:'reason'},'The reporting agent is reading the variances…'));
+      const tbl=Object.entries(groups).map(([g,L])=>`${gName(g)}: actual ${sum(L,x=>x.a)}, budget ${L.some(x=>x.b!=null)?sum(L,x=>x.b):'none'}, comparative ${sum(L,x=>x.c)}; accounts: `+L.filter(x=>x.a||x.c||x.b).map(x=>`${(S.accounts[x.k]||{}).name} a=${r2(x.a)} b=${x.b==null?'-':r2(x.b)} c=${r2(x.c)}`).join('; ')).join('\n');
+      const prompt=`You are the management accountant of ${S.settings.company} (book currency ${S.baseCur}). Explain the expense variances for ${expRangeLabel(r)} against the budget and against ${expRangeLabel(c)}. Be specific, cite amounts, and say what management should look at. Use plain business English. ${typeof langLine==='function'?langLine():''}
+Return ONLY JSON: {"summary":string,"points":[{"group":string,"text":string,"kind":"over|under|info"}],"actions":[string]}
+Data (a = actual, b = budget, c = comparative):
+${tbl}`;
+      try{const x=await sample.json(prompt);out.textContent='';out.append(h('div',{class:'expai'},h('p',{},x.summary||''),h('ul',{},(x.points||[]).map(p=>h('li',{class:'k-'+(p.kind||'info')},h('b',{},p.group?p.group+': ':''),p.text))),(x.actions||[]).length?h('div',{},h('div',{class:'mini mut'},'Suggested actions'),h('ul',{},x.actions.map(a=>h('li',{},a)))):null));}
+      catch(e){out.textContent=typeof sampleErr==='function'?sampleErr(e):e.message;}finally{ai.disabled=false;}};
+    body.append(h('div',{class:'card'},h('div',{class:'row'},h('h3',{style:'margin:0;flex:1'},'Variance analysis'),th,ai),
+      h('p',{class:'mini mut'},`Actual for ${expRangeLabel(r)} against the budget${hasB?'':' (no budget is set for this period: add one in Budget)'} and against ${expRangeLabel(c)}. A positive variance means more was spent.`),out,
+      h('div',{class:'tablewrap'},h('table',{class:'exptab expvar'},h('thead',{},h('tr',{},h('th',{rowspan:2},'Group and account'),h('th',{colspan:4,class:'c'},'Against budget'),h('th',{colspan:3,class:'c'},P.cmp==='ly'?'Against last year':'Against previous period')),
+        h('tr',{},h('th',{class:'num'},'Actual'),h('th',{class:'num'},'Budget'),h('th',{class:'num'},'Variance'),h('th',{class:'num'},'%'),h('th',{class:'num'},'Comparative'),h('th',{class:'num'},'Change'),h('th',{class:'num'},'%'))),tb,
+        h('tfoot',{},h('tr',{},h('td',{},'Total expenses'),...cells(tA,tB,tC)))))));}
+
+  // ---------- Groups: group accounts for analysis and choose the financial-statement line ----------
+  function drawGroups(){const can=S.canEdit&&S.entity!=='all';let G=JSON.parse(JSON.stringify(expGroups()));const msg=h('div',{class:'mini',role:'status'});const box=h('div',{class:'stack'});
+    const accs=expAccounts();const r=expRange(P);const amt=sumBy(expLines(r[0],r[1]),x=>x.l.account);
+    function draw(){box.textContent='';const used=new Set(G.flatMap(g=>g.accounts||[]));
+      G.forEach((g,gi)=>{const card=h('div',{class:'expgcard'});
+        const nm=h('input',{type:'text',value:g.name,'aria-label':'Group name',disabled:!can,oninput:e=>{g.name=e.target.value;}});
+        const ln=h('select',{'aria-label':'Financial statement line',disabled:!can,onchange:e=>{g.line=e.target.value;}},EXP_LINES.map(([k,l])=>h('option',{value:k},l)));ln.value=g.line||'admin';
+        const list=h('div',{class:'expacclist'},(g.accounts||[]).map(code=>h('span',{class:'expacc'},h('span',{class:'code mini'},code),' ',(S.accounts[code]||{}).name||code,amt[code]?h('span',{class:'mini mut'},' '+money(amt[code])):null,can?h('button',{type:'button','aria-label':'Remove from group',onclick:()=>{g.accounts=g.accounts.filter(x=>x!==code);draw();}},'×'):null)));
+        const free=accs.filter(a=>!used.has(a.id));
+        const addSel=h('select',{'aria-label':'Add an account',disabled:!can||!free.length,onchange:e=>{if(e.target.value){g.accounts=[...(g.accounts||[]),e.target.value];draw();}}},h('option',{value:''},free.length?'Add an account…':'All accounts are grouped'),...free.map(a=>h('option',{value:a.id},`${a.id} ${a.name}`)));
+        const tot=r2((g.accounts||[]).reduce((s,c)=>s+(amt[c]||0),0));
+        card.append(h('div',{class:'expghead'},h('i',{class:'expdot',style:`background:${EXP_COL[gi%EXP_COL.length]}`}),nm,h('label',{class:'expln'},h('span',{class:'mini mut'},'In the financial statements under'),ln),h('span',{class:'expgt'},money(tot)),can?h('button',{class:'btn ghost sm',type:'button',onclick:()=>{G.splice(gi,1);draw();}},'Delete group'):null),list,can?addSel:null);box.append(card);});
+      const left=accs.filter(a=>!used.has(a.id));if(left.length) box.append(h('div',{class:'banner info'},`${left.length} expense ${left.length===1?'account is':'accounts are'} not in a group: ${left.slice(0,6).map(a=>a.name).join(', ')}${left.length>6?'…':''}. They show as “Not grouped”.`));}
+    const addG=h('button',{class:'btn',type:'button',disabled:!can,onclick:()=>{G.push({id:'g'+Math.random().toString(36).slice(2,8),name:'New group',line:'admin',accounts:[]});draw();}},'Add a group');
+    const sug=h('button',{class:'btn agent',type:'button',disabled:!can,onclick:()=>{if(G.length&&!confirm('Replace the current groups with suggested ones?')) return;G=expSuggestGroups();draw();msg.textContent='Suggested from your account names. Check them, then save.';}},'Suggest groups');
+    const save=h('button',{class:'btn primary',type:'button',disabled:!can,onclick:async()=>{save.disabled=true;msg.textContent='';try{const clean=G.filter(g=>g.name.trim()).map(g=>({id:g.id,name:g.name.trim().slice(0,80),line:g.line||'admin',accounts:[...new Set(g.accounts||[])]}));
+        const fsf=entDoc().fs_format||{};const ov={...(fsf.overrides||{})};clean.forEach(g=>g.accounts.forEach(c=>{ov[c]=g.line;}));
+        await saveEnt({exp_groups:clean,fs_format:{...fsf,overrides:ov,sig:null}});if(typeof fsSyncFormat==='function') await fsSyncFormat(true);G=JSON.parse(JSON.stringify(clean));draw();msg.textContent='Saved. Analysis and the financial statements now use these groups.';revToast&&revToast('Expense groups saved.');}
+      catch(e){msg.textContent=e.message;}finally{save.disabled=!can;}}},'Save groups');
+    body.append(h('div',{class:'card stack'},h('div',{class:'row'},h('div',{style:'flex:1'},h('h3',{style:'margin:0'},'Expense groups'),h('p',{class:'mini mut',style:'margin:.2rem 0 0'},'Group expense accounts the way management reads them. Each group sits under one line of the profit and loss, so the financial statements follow the same grouping.')),sug,addG,save),msg,box),
+      expNote(r));draw();}
+  // expenses by group, as a note to the financial statements
+  function expNote(r){const c=expCmpRange({...P,cmp:'ly'},r);const A=sumBy(expLines(r[0],r[1]),x=>gKey(x.l.account)),C=sumBy(expLines(c[0],c[1]),x=>gKey(x.l.account));
+    const byLine={};[...new Set([...Object.keys(A),...Object.keys(C)])].forEach(g=>{const gg=expGroups().find(x=>x.id===g);const ln=gg?gg.line:'admin';(byLine[ln]||(byLine[ln]=[])).push(g);});
+    const tb=h('tbody');EXP_LINES.forEach(([ln,l])=>{const L=byLine[ln];if(!L) return;tb.append(h('tr',{class:'expgrp'},h('td',{},l),h('td',{class:'num'},money2(r2(L.reduce((s,g)=>s+(A[g]||0),0)))),h('td',{class:'num mut'},money2(r2(L.reduce((s,g)=>s+(C[g]||0),0))))));
+      L.forEach(g=>tb.append(h('tr',{class:'expsub'},h('td',{},gName(g)),h('td',{class:'num'},money2(A[g]||0)),h('td',{class:'num mut'},money2(C[g]||0)))));});
+    const card=h('div',{class:'card expnote'},h('div',{class:'row'},h('h3',{style:'margin:0;flex:1'},'Note: expenses by group'),h('button',{class:'btn ghost sm',type:'button',onclick:()=>{const w=window.open('','_blank');if(!w) return;w.document.write(`<title>Expenses by group</title><style>body{font:14px system-ui;padding:24px}table{border-collapse:collapse;width:100%}td,th{padding:6px 8px;border-bottom:1px solid #ddd}.num{text-align:right}.expgrp td{font-weight:600}</style><h2>${esc(S.settings.company||'')} – Expenses by group</h2>`+card.querySelector('table').outerHTML);w.document.close();w.print();}},'Print')),
+      h('div',{class:'tablewrap'},h('table',{class:'exptab'},h('thead',{},h('tr',{},h('th',{},'Line and group'),h('th',{class:'num'},expRangeLabel(r)),h('th',{class:'num'},expRangeLabel(c)))),tb)));return card;}
+  return {el,refresh};};
+
+// ---- a manual expense journal: one or more expense lines, VAT, paid from or owed to, a supplier and a receipt
+function expJV(done){const box=h('div',{class:'stack expjv'});const cash=Object.values(S.accounts).filter(a=>!a.deprecated&&!a.group&&(a.type==='asset_cash'||/^liability/.test(a.type||''))).sort((a,b)=>a.id<b.id?-1:1);
+  const vatA=S.accounts['1400']?'1400':(Object.values(S.accounts).find(a=>/input vat|vat recoverable|vat receivable/i.test(a.name||''))||{}).id;
+  const d={date:today(),ref:'',partner:'',from:(cash.find(a=>a.type==='asset_cash')||cash[0]||{}).id||'',lines:[{account:'',label:'',amount:0,vat:0}]};let file=null;
+  const msg=h('p',{class:'err',hidden:true});const linesBox=h('div',{class:'tablewrap'});const tot=h('div',{class:'row end mini'});
+  const names=[...new Set([...(S.partners||[]).map(p=>p.name),...S.moves.map(m=>m.partner)].filter(Boolean))].sort().slice(0,500);const dl=h('datalist',{id:'expjv-sup'},names.map(n=>h('option',{value:n})));
+  const opts=expAccounts();
+  function drawLines(){linesBox.textContent='';const tb=h('tbody');d.lines.forEach((l,i)=>{const s=h('select',{'aria-label':'Expense account',onchange:e=>{l.account=e.target.value;drawLines();}},h('option',{value:''},'Choose the expense'),...opts.map(a=>h('option',{value:a.id,selected:a.id===l.account},`${a.id} ${a.name}`)));
+      const g=l.account?expGroupOf(l.account):null;
+      tb.append(h('tr',{},h('td',{},s,g?h('div',{class:'mini mut'},'Group: '+g.name):null),h('td',{},h('input',{type:'text','aria-label':'Description',value:l.label,placeholder:'What it was for',oninput:e=>{l.label=e.target.value;}})),
+        h('td',{},h('input',{type:'number',step:'0.01',min:'0',class:'num','aria-label':'Amount before VAT',value:l.amount||'',oninput:e=>{l.amount=r2(e.target.value);drawTot();}})),
+        vatA?h('td',{},h('input',{type:'number',step:'0.01',min:'0',class:'num','aria-label':'VAT',value:l.vat||'',oninput:e=>{l.vat=r2(e.target.value);drawTot();}})):null,
+        h('td',{},d.lines.length>1?h('button',{class:'btn ghost sm',type:'button','aria-label':'Remove line',onclick:()=>{d.lines.splice(i,1);drawLines();}},'×'):null)));});
+    linesBox.append(h('table',{class:'lines'},h('thead',{},h('tr',{},h('th',{},'Expense account'),h('th',{},'Description'),h('th',{class:'num'},'Amount'),vatA?h('th',{class:'num'},'VAT'):null,h('th',{}))),tb),h('button',{class:'btn ghost sm',type:'button',onclick:()=>{d.lines.push({account:'',label:'',amount:0,vat:0});drawLines();}},'Add a line'));drawTot();}
+  function drawTot(){const n=r2(d.lines.reduce((s,l)=>s+(+l.amount||0),0)),v=r2(d.lines.reduce((s,l)=>s+(+l.vat||0),0));tot.textContent='';tot.append(h('span',{},'Expense ',h('b',{},money2(n))),vatA?h('span',{},'VAT ',h('b',{},money2(v))):null,h('span',{},'Total ',h('b',{},money2(r2(n+v)))));}
+  const from=h('select',{'aria-label':'Paid from or owed to',onchange:e=>{d.from=e.target.value;}},cash.map(a=>h('option',{value:a.id,selected:a.id===d.from},`${a.id} ${a.name}`)));
+  const fileIn=h('input',{type:'file',accept:'image/*,application/pdf','aria-label':'Receipt or invoice',onchange:e=>{file=e.target.files[0]||null;}});
+  const save=h('button',{class:'btn primary',type:'button'},'Post expense'),cancel=h('button',{class:'btn ghost',type:'button',onclick:()=>done()},'Cancel');
+  save.onclick=async()=>{msg.hidden=true;const L=d.lines.filter(l=>l.account||l.amount);
+    const bad=!L.length?'Add at least one expense line.':L.some(l=>!l.account)?'Choose the expense account on every line.':L.some(l=>!(+l.amount>0))?'Enter an amount on every line.':!d.from?'Choose where it was paid from.':null;if(bad){msg.textContent=bad;msg.hidden=false;return;}
+    const lines=[];L.forEach(l=>{lines.push({account:l.account,label:l.label||d.ref||'Expense',debit:r2(l.amount),credit:0});});const vat=r2(L.reduce((s,l)=>s+(+l.vat||0),0));if(vat&&vatA) lines.push({account:vatA,label:'Input VAT',debit:vat,credit:0});
+    const total=r2(lines.reduce((s,l)=>s+l.debit,0));lines.push({account:d.from,label:d.ref||L[0].label||'Expense',debit:0,credit:total});
+    const mv={journal:S.journals&&S.journals.PUR&&!/^asset_cash/.test((S.accounts[d.from]||{}).type||'')?'PUR':'MISC',date:d.date,ref:d.ref||L[0].label||'Expense',partner:d.partner||null,lines,source:'expense_jv',created_by:S.me};
+    save.disabled=true;try{await submitMove(mv,{reason:'Recorded in Expenses'});
+      if(file&&typeof storeFile==='function'){try{const loc=await storeFile(file,{title:`Expense · ${mv.ref}`,folder:'Expenses',source:'expense_jv'});await db.doc('files/'+loc.id).update({module:'accounting',sub:'Expenses',record:{kind:'move',id:mv.id||null}});}catch(e){/* the entry is posted; the file can be added later */}}
+      revToast&&revToast(mv.state==='posted'?'Expense posted.':'Expense sent for approval.');done();}
+    catch(e){msg.textContent=e.message;msg.hidden=false;}finally{save.disabled=false;}};
+  box.append(h('h3',{},'Record an expense'),h('p',{class:'mini mut',style:'margin:0'},'For expenses that do not come through Purchases, Payroll or Banking: a manual expense journal. Entries above your approval limit wait for approval.'),
+    h('div',{class:'row'},h('label',{class:'field'},'Date',h('input',{type:'date',value:d.date,onchange:e=>{d.date=e.target.value;}})),h('label',{class:'field',style:'flex:1;min-width:12rem'},'Reference',h('input',{type:'text',placeholder:'Invoice or receipt number',oninput:e=>{d.ref=e.target.value;}})),
+      h('label',{class:'field',style:'flex:1;min-width:12rem'},'Supplier or payee',h('input',{type:'text',list:'expjv-sup',oninput:e=>{d.partner=e.target.value.trim();}}),dl)),
+    linesBox,tot,h('div',{class:'row'},h('label',{class:'field',style:'flex:1;min-width:14rem'},'Paid from or owed to',from),h('label',{class:'field'},'Receipt (optional)',fileIn)),msg,h('div',{class:'row'},save,cancel));drawLines();return box;}
 
 
 // test hook (local development only)
