@@ -1654,7 +1654,7 @@ html body.tb2 .topbar :focus-visible{outline:2px solid #818CF8!important;outline
 .tbmove{display:grid;gap:.35rem;padding:.35rem;border:1px solid var(--accent,#2457C5);border-radius:10px}.tbmove .tbchip{cursor:default}
 .tbcol,.tbbox,.tbgrid>*,.tbmap{min-width:0}
 /* slim top bar: no workspace pill, breadcrumb or workspace settings */
-body:not(.multiws) header.topbar #sx-co,header.topbar #tn-app,header.topbar #tn-wsset{display:none!important}
+body:not(.multiws) header.topbar #sx-co,header.topbar #tn-app,body:not(.onws) header.topbar #tn-wsset{display:none!important}
 body.onecompany header.topbar #tn-ws{display:none!important}
 .acctpanel{max-width:44rem}.acctrow{display:flex;gap:1rem;align-items:center;justify-content:space-between;padding:.7rem 0;border-top:1px solid var(--line)}
 /* bank line: match the receipt to invoices */
@@ -12505,7 +12505,8 @@ function tbMapBoard({D,map,caps,can,staged,refresh,save,undo,msg}){const M=S.tbM
 
 // ===== Top bar, left side: home, company name and the modules icon only. "Companies" shows only for people with more than one company =====
 function coCount(){const es=document.getElementById('ent-sel');if(es) return [...es.options].filter(o=>o.value&&o.value!=='all').length;return Object.keys(S.ent||{}).length;}
-function tbSlim(){const many=coCount()>1;document.body.classList.toggle('onecompany',!many);}
+function tbSlim(){const many=coCount()>1;document.body.classList.toggle('onecompany',!many);document.body.classList.toggle('onws',['wshome','wsset','estnew'].includes(S.tab));
+  const b=document.getElementById('tn-wsset');if(b&&!b.dataset.slim){b.dataset.slim='1';b.title='Logins and access rights';b.setAttribute('aria-label','Logins and access rights');b.addEventListener('click',()=>{S.wsSec=typeof wsIsAdmin==='function'&&wsIsAdmin()?'logins':'password';},true);}}
 {const _r=refreshHeader;refreshHeader=function(...a){const r=_r.apply(this,a);try{tbSlim();}catch(e){}return r;};}
 {const _s=showTab;showTab=function(...a){const r=_s.apply(this,a);try{tbSlim();}catch(e){}return r;};}
 setTimeout(()=>{try{tbSlim();}catch(e){}},1500);
