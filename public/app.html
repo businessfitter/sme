@@ -1752,6 +1752,8 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .bkeinv{padding:.6rem;border-radius:10px;background:var(--sunk)}
 @media (max-width:760px){.bktab th:nth-child(6),.bktab td:nth-child(6),.bktab th:nth-child(7),.bktab td:nth-child(7){display:none}.bkref{max-width:12rem}}
 .pwok{color:var(--ok)}
+.paidon{display:inline-flex;flex-direction:column;line-height:1.25}
+.paidfrom{color:var(--accent,#2457C5)}
 
 </style>
 
@@ -3134,9 +3136,9 @@ Use net amounts before VAT. Choose accounts only from this list (expenses, cost 
   function drawList(){list.textContent='';try{const nc=numberCheck(kind);if(nc) list.append(nc);}catch(e){}const q=norm(search.value);let ls=S.invoices.filter(i=>i.kind===kind).sort((a,b)=>a.date<b.date?1:-1);if(q) ls=ls.filter(i=>norm(i.number+' '+i.partner+' '+(i.supplier_ref||'')).includes(q));
     if(stSel.value!=='All') ls=ls.filter(i=>invStatus(i)[0].startsWith(stSel.value==='Open'?'Open':stSel.value)||(stSel.value==='Overdue'&&invStatus(i)[0].includes('overdue')));
     if(!ls.length){list.append(emptyNote(isC?'No invoices yet. Create one with New invoice.':'No bills yet. Upload one to the bills agent or enter it by hand.'));return;}
-    const t=h('table',{},h('thead',{},h('tr',{},h('th',{},'Number'),h('th',{},isC?'Customer':'Supplier'),h('th',{},'Date'),h('th',{},'Due'),h('th',{class:'num'},'Total'),h('th',{class:'num'},'Balance'),h('th',{},'Status'),h('th',{},''))));const tb=h('tbody');
+    const t=h('table',{},h('thead',{},h('tr',{},h('th',{},'Number'),h('th',{},isC?'Customer':'Supplier'),h('th',{},'Date'),h('th',{},'Due'),h('th',{class:'num'},'Total'),h('th',{class:'num'},'Balance'),h('th',{},'Paid on'),h('th',{},'Status'),h('th',{},''))));const tb=h('tbody');
     ls.slice(0,300).forEach(i=>{const [s,k]=invStatus(i);const open=!!S.open['inv-'+i.id];tb.append(h('tr',{class:'click',tabindex:'0',onclick:()=>{S.open['inv-'+i.id]=!open;drawList();}},h('td',{class:'code'},i.number,i.supplier_ref?h('div',{class:'mini'},i.supplier_ref):null),h('td',{},i.partner),h('td',{style:'white-space:nowrap'},fmtDate(i.date)),h('td',{style:'white-space:nowrap'},fmtDate(i.due)),
-      h('td',{class:'num'},(i.currency!==S.baseCur?i.currency+' ':'')+money2(i.total)),h('td',{class:'num'},money2(invDue(i))),h('td',{},pill(s,k)),invQuick(i,()=>drawList())));
+      h('td',{class:'num'},(i.currency!==S.baseCur?i.currency+' ':'')+money2(i.total)),h('td',{class:'num'},money2(invDue(i))),h('td',{class:'nowrap'},typeof invPaidOn==='function'?invPaidOn(i):''),h('td',{},pill(s,k)),invQuick(i,()=>drawList())));
       if(open){const box=h('div',{class:'stack',style:'gap:.6rem'});const mv=S.moves.find(m=>m.id===i.move_id);
         box.append(h('div',{class:'mini mut'},`${i.lines.length} line(s). Net ${money2(i.net)}, VAT ${money2(i.vat)}, total ${i.currency} ${money2(i.total)}${i.currency!==S.baseCur?` (${S.baseCur} ${money2(i.total_base)})`:''}. Entry ${mv&&mv.name||'awaiting approval'}.`),i.doc?h('div',{class:'row'},attachLinks([i.doc])):null);box.append(invoiceActions(i,()=>drawList()));{const mp_=invBankMap(i);if(mp_) box.append(mp_);}{const eb_=invEditBtn(i,()=>drawList());if(eb_) box.append(eb_);const db_=invDeleteBtn(i,()=>drawList());if(db_) box.append(db_);}
         if(S.canWrite&&invDue(i,true)>0.01&&mv&&mv.state==='posted') box.append(paymentForm(i,()=>{S.open['inv-'+i.id]=false;drawList();}));
@@ -3144,7 +3146,7 @@ Use net amounts before VAT. Choose accounts only from this list (expenses, cost 
           const b=h('button',{class:'btn agent sm',type:'button',onclick:async()=>{b.disabled=true;out.textContent='Drafting…';const days=Math.floor((Date.parse(today())-Date.parse(i.due))/864e5);
             try{await sample(`You are the Collections agent for ${S.settings.company}. Draft a short, polite but firm payment reminder email to ${i.partner} for invoice ${i.number} dated ${i.date}, due ${i.due} (${days} days overdue), balance ${i.currency} ${money2(invDue(i)/(fx(i.currency,S.baseCur)||1))}. Tone: ${days>60?'firm, mention next steps':days>30?'firm':'friendly'}. Include a subject line. No placeholders for amounts. ${langLine()}`,{onText:({text})=>{out.textContent=text;}});copy.hidden=false;}catch(e){out.textContent=sampleErr(e);}finally{b.disabled=false;}}},'Draft reminder');
           box.append(h('div',{class:'row'},b,copy),out);}
-        tb.append(h('tr',{class:'detail'},h('td',{colspan:8},box)));}});t.append(tb);list.append(t);}
+        tb.append(h('tr',{class:'detail'},h('td',{colspan:9},box)));}});t.append(tb);list.append(t);}
   function refresh(){if(allGuard(el,'work with '+(isC?'invoices':'bills'))) return;newB.hidden=!S.canWrite;const nd=needData();if(nd){kpis.textContent='';kpis.append(nd);return;}
     const ls=S.invoices.filter(i=>i.kind===kind&&i.status!=='cancelled');const open=ls.reduce((s,i)=>s+invDue(i),0),over=ls.filter(i=>i.due<today()).reduce((s,i)=>s+invDue(i),0);const mo=today().slice(0,7);
     let paidM=0;posted().forEach(m=>{if(m.date.slice(0,7)===mo)(m.settles||[]).forEach(x=>{if(ls.some(i=>i.id===x.invoice_id)) paidM+=+x.amount||0;});});
@@ -13445,6 +13447,36 @@ async function proposeWhtLines(){if(S._whtProp&&Date.now()-S._whtProp<30000) ret
       audit:[...(f.m.audit||[]),{at:nowISO(),by:'agent:bank',action:`Proposed as the bank’s ${rate}% tax on ${r.name||r.ref}`}]};try{await db.doc('moves/'+f.m.id).update(up);Object.assign(f.m,up);n++;}catch(e){}}
   return n;}
 {const _tv=bankTxView;bankTxView=function(redraw){proposeWhtLines().then(n=>{if(n) redraw();});return _tv.apply(this,arguments);};}
+
+// ===== Invoice list: "Paid on" — the bank statement date when matched from the bank, the date the user entered when recorded by hand =====
+function invPayDate(m){if(!m) return null;if(m.bank_match_of){const o=S.moves.find(x=>x.id===m.bank_match_of);if(o) return o.bank_date||o.date;}if(m.source==='bank_statement') return m.bank_date||m.date;return m.date;}
+function invPaidOn(inv){const pays=S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.reversal_of&&(m.settles||[]).some(x=>x.invoice_id===inv.id));if(!pays.length) return h('span',{class:'mini mut'},'—');
+  const d=pays.map(invPayDate).filter(Boolean).sort().pop();const full=invDue(inv)<=0.01;const bank=pays.some(m=>m.source==='bank_statement'||m.bank_match_of);
+  return h('span',{class:'paidon',title:bank?'Date of the bank statement transaction':'Date entered when the payment was recorded'},fmtDate(d),h('span',{class:'mini mut'},(full?'':'part · ')+(bank?'bank':'manual')));}
+
+// ===== Excess received on an invoice is applied to the same customer's short-paid / open invoices, oldest first (FIFO), and the list says where it came from =====
+const excessApplied=m=>r2(S.moves.filter(x=>x.state!=='cancelled'&&!x.reversed_by&&x.alloc_from===m.id).reduce((t,x)=>t+(x.settles||[]).reduce((s,y)=>s+(+y.amount||0),0),0));
+const excessLeft=m=>m&&m.overpaid?r2(Math.max(0,(+m.overpaid.amount||0)-excessApplied(m))):0;
+async function applyExcessFIFO(m,src){let left=excessLeft(m);if(left<=0.009) return [];const isC=(src&&src.kind)!=='supplier';const ctrl=isC?'1100':'2000';const party=m.partner||(src&&src.partner);const done=[];
+  const targets=openInvoices(isC?'customer':'supplier').filter(i=>norm(i.partner)===norm(party)&&i.id!==(src&&src.id)).sort((a,b)=>(a.date<b.date?-1:a.date>b.date?1:String(a.number).localeCompare(String(b.number))));
+  for(const t of targets){if(left<=0.009) break;const amt=r2(Math.min(left,invDue(t,true)));if(amt<=0) continue;
+    await submitMove({journal:'MISC',date:m.date,ref:`Excess from ${src?src.number:'payment'} applied to ${t.number}`,partner:party,source:'allocation',alloc_from:m.id,alloc_src_inv:src?src.number:null,
+      lines:[{account:ctrl,label:`Excess from ${src?src.number:'payment'} → ${t.number}`,partner:party,debit:isC?amt:0,credit:isC?0:amt},{account:ctrl,label:`Excess from ${src?src.number:'payment'} → ${t.number}`,partner:party,debit:isC?0:amt,credit:isC?amt:0}],settles:[{invoice_id:t.id,amount:amt}]},{reason:'Excess payment applied, oldest invoice first'});
+    left=r2(left-amt);done.push({n:t.number,amt});}
+  return done;}
+// after a payment that is more than the invoice: apply the excess straight away (FIFO)
+{const _rp=recordPayment;recordPayment=async function(inv,P){const r=await _rp.apply(this,arguments);try{const m=S.moves.find(x=>x===r)||r;if(m&&m.overpaid&&m.state==='posted'){const d=await applyExcessFIFO(m,inv);if(d.length&&typeof revToast==='function') revToast(`Excess applied to ${d.map(x=>x.n).join(', ')}.`);}}catch(e){console.warn(e);}return r;};}
+{const _sf=settleFromBank;settleFromBank=async function(inv,x,amt,apply){const r=await _sf.apply(this,arguments);try{const m=r||x.m;if(m&&m.overpaid&&m.state==='posted'){const d=await applyExcessFIFO(m,inv);if(d.length&&typeof revToast==='function') revToast(`Excess applied to ${d.map(z=>z.n).join(', ')}.`);}}catch(e){console.warn(e);}return r;};}
+// the overpaid tag shows what is still unapplied; click to apply it if there are open invoices now
+invOverpaid=inv=>r2(S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.reversal_of&&m.overpaid&&m.overpaid.invoice_id===inv.id).reduce((t,m)=>t+excessLeft(m),0));
+{const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const tag=td.querySelector('.invover');const src=S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&m.overpaid&&m.overpaid.invoice_id===inv.id);
+    const appliedTo=S.moves.filter(x=>x.state==='posted'&&!x.reversed_by&&src.some(m=>x.alloc_from===m.id)).flatMap(x=>(x.settles||[]).map(s=>(S.invoices.find(i=>i.id===s.invoice_id)||{}).number)).filter(Boolean);
+    if(appliedTo.length){td.append(h('div',{class:'mini mut'},`Excess applied to ${[...new Set(appliedTo)].join(', ')}`));}
+    if(tag){const open=openInvoices(inv.kind).some(i=>norm(i.partner)===norm(inv.partner)&&i.id!==inv.id);if(open&&S.canWrite){tag.style.cursor='pointer';tag.title='Apply the excess to the oldest open invoices of '+inv.partner;
+        tag.onclick=async e=>{e.stopPropagation();tag.textContent='Applying…';try{let all=[];for(const m of src){all=all.concat(await applyExcessFIFO(m,inv));}typeof revToast==='function'&&revToast(all.length?`Applied to ${all.map(x=>x.n).join(', ')}.`:'Nothing to apply.');setTimeout(redraw,400);}catch(x){tag.textContent=x.message;}};}}}catch(e){}return td;};}
+// invoices paid (partly) from another invoice's excess say so
+{const _po=invPaidOn;invPaidOn=function(inv){const el=_po(inv);try{const al=S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&m.alloc_src_inv&&(m.settles||[]).some(s=>s.invoice_id===inv.id));if(al.length) el.append(h('span',{class:'mini paidfrom'},`applied from ${[...new Set(al.map(m=>m.alloc_src_inv))].join(', ')}`));}catch(e){}return el;};}
+{const _bm=invBankMap;invBankMap=function(inv){const el=_bm(inv);try{if(el){S.moves.filter(m=>m.alloc_src_inv&&(m.settles||[]).some(s=>s.invoice_id===inv.id)).forEach(m=>{const tr=[...el.querySelectorAll('tbody tr')].find(r=>r.textContent.includes(m.name||'§'));if(tr&&tr.cells[1]) tr.cells[1].firstChild.textContent=`Excess applied from ${m.alloc_src_inv}`;});}}catch(e){}return el;};}
 
 
 // test hook (local development only)
