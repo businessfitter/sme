@@ -1715,6 +1715,14 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .bkmatchrow td{background:var(--sunk)}.bkmatch{padding:.4rem .2rem}.bkinvr{grid-template-columns:auto 1fr 8.5rem;background:var(--panel)}
 .invq{white-space:nowrap}.invicons{display:inline-flex;gap:.25rem;margin-right:.4rem;vertical-align:middle}.invicons .icob{width:1.9rem;height:1.9rem}
 .invrm{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;white-space:normal;max-width:24rem}
+/* ===== Paid window, match and receipts ===== */
+.pwin{min-width:min(100%,30rem)}.pwhead{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--line)}
+.pwamt{font-weight:700;font-size:1.15rem;white-space:nowrap}.pwsel{width:100%}
+.pwbank{display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:.7rem .85rem;border-radius:10px;border:1px solid var(--ok);background:color-mix(in srgb,var(--ok-soft) 70%,var(--panel))}
+.pwsum{display:flex;flex-wrap:wrap;gap:.3rem 1.1rem;font-size:.84rem;color:var(--muted);padding:.55rem .7rem;border-radius:8px;background:var(--sunk)}.pwsum b{color:var(--ink);margin-left:auto}
+.icob{position:relative}.icob.hasm{color:var(--accent,#2457C5);border-color:color-mix(in srgb,var(--accent,#2457C5) 40%,var(--line))}
+.icobn{position:absolute;top:-.35rem;right:-.35rem;min-width:1rem;height:1rem;border-radius:999px;background:var(--accent,#2457C5);color:#fff;font-size:.62rem;font-weight:700;display:grid;place-items:center;padding:0 .2rem}
+.rcrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.6rem;align-items:center;padding:.6rem 0;border-top:1px solid var(--line)}
 
 </style>
 
@@ -12764,7 +12772,7 @@ const payModeName=k=>(PAY_MODES.find(x=>x[0]===k)||[k,k])[1];
 const isCashAcc=c=>/cash|petty/i.test(aname(c)||'')&&!/bank/i.test(aname(c)||'');
 // bank entries already booked to this party's control account but not (fully) applied to invoices
 function bankCandidates(inv){const isC=inv.kind==='customer',ctrl=isC?'1100':'2000';const cash=new Set(cashCodes());const out=[];
-  for(const m of S.moves){if(m.state!=='posted'||(m.source!=='bank_statement'&&m.source!=='payment'&&m.journal!=='BNK1')) continue;
+  for(const m of S.moves){if(m.state!=='posted'||m.source!=='bank_statement'||m.reversed_by||m.reversal_of) continue;
     const onCtrl=r2((m.lines||[]).filter(l=>l.account===ctrl).reduce((t,l)=>t+(isC?(+l.credit||0)-(+l.debit||0):(+l.debit||0)-(+l.credit||0)),0));if(onCtrl<=0.009) continue;
     if(!(m.lines||[]).some(l=>cash.has(l.account))) continue;
     const used=r2((m.settles||[]).reduce((t,x)=>t+(+x.amount||0),0));const free=r2(onCtrl-used);if(free<=0.009) continue;
@@ -12917,7 +12925,7 @@ function bkCash(m){const cash=new Set(cashCodes());const c=(m.lines||[]).filter(
 function bkCounter(m){const cash=new Set(cashCodes());return (m.lines||[]).filter(l=>!cash.has(l.account));}
 function bkMatched(m){return r2((m.settles||[]).reduce((t,x)=>t+(+x.amount||0),0))+r2(S.moves.filter(x=>x.state!=='cancelled'&&x.bank_match_of===m.id).reduce((t,x)=>t+(x.settles||[]).reduce((s,y)=>s+(+y.amount||0),0),0));}
 function bankTxView(redraw){const F=S.bkTx||(S.bkTx={from:addDays(today(),-90),to:today(),dir:'',st:'',q:''});const box=h('div',{class:'stack'});
-  const list=S.moves.filter(m=>(m.source==='bank_statement'||/^BNK/.test(m.journal||''))&&m.journal!=='OPEN'&&m.state!=='cancelled'&&m.date>=F.from&&m.date<=F.to&&bkCash(m).amt>0).map(m=>{const c=bkCash(m);const done=bkMatched(m);const ctr=bkCounter(m);
+  const list=S.moves.filter(m=>m.source==='bank_statement'&&!m.reversal_of&&!m.reversed_by&&m.journal!=='OPEN'&&m.state!=='cancelled'&&m.date>=F.from&&m.date<=F.to&&bkCash(m).amt>0).map(m=>{const c=bkCash(m);const done=bkMatched(m);const ctr=bkCounter(m);
     const st=m.state==='to_approve'?'review':done>=c.amt-0.009&&done>0?'matched':done>0?'part':ctr.some(l=>l.account==='1990')?'suspense':'posted';return {m,c,done,ctr,st};}).sort((a,b)=>a.m.date<b.m.date?1:-1);
   const n=k=>list.filter(x=>x.st===k).length;
   const ctl=h('div',{class:'row bktxctl'},h('label',{class:'field'},'From',h('input',{type:'date',value:F.from,onchange:e=>{F.from=e.target.value||F.from;redraw();}})),h('label',{class:'field'},'To',h('input',{type:'date',value:F.to,onchange:e=>{F.to=e.target.value||F.to;redraw();}})),
@@ -13082,6 +13090,95 @@ const invActivePays=inv=>S.moves.filter(m=>m.state!=='cancelled'&&!m.reversal_of
           h('button',{class:'btn sm danger',type:'button',onclick:async ev=>{ev.target.disabled=true;try{await invRemovePayment(inv,m);typeof revToast==='function'&&revToast('Payment removed. The invoice is open again.');setTimeout(redraw,500);}catch(x){er.textContent=x.message;ev.target.disabled=false;}}},'Remove'),
           h('button',{class:'btn ghost sm',type:'button',onclick:()=>redraw()},'Keep'),er);td.textContent='';td.append(box);};icons.append(rb);}
     td.prepend(icons);}catch(e){}return td;};}
+
+// ===== Open invoices: one "Paid" window — pick the matching bank receipt if it is in the statements, or record the collection by hand — then a receipt (PDF, email) =====
+// bank lines that could pay this invoice: money in (or out for bills) not yet fully matched
+function invBankLines(inv){const isC=inv.kind==='customer',ctrl=isC?'1100':'2000';const due=invDue(inv,true);const out=[];
+  for(const m of S.moves){if(m.state!=='posted'||m.reversed_by||m.reversal_of||m.journal==='OPEN') continue;if(m.source!=='bank_statement') continue;
+    const c=bkCash(m);if(!c.amt||c.inflow!==isC) continue;const free=r2(c.amt-bkMatched(m));if(free<=0.009) continue;const ctr=bkCounter(m);
+    const other=ctr.find(l=>l.account===ctrl&&norm(l.partner||m.partner||'')&&norm(l.partner||m.partner||'')!==norm(inv.partner));if(other) continue;
+    const same=norm(m.partner||'')===norm(inv.partner)||norm(m.ref||'').includes(norm(inv.partner).slice(0,8))||norm(m.ref||'').includes(norm(inv.number||''));
+    out.push({m,c,ctr,free,done:c.amt-free,same});}
+  return out.sort((a,b)=>(b.same-a.same)||(Math.abs(a.free-due)-Math.abs(b.free-due))||(a.m.date<b.m.date?1:-1)).slice(0,25);}
+async function settleFromBank(inv,x,amt){const isC=inv.kind==='customer',ctrl=isC?'1100':'2000';const S2=[{invoice_id:inv.id,amount:r2(amt)}];const onCtrl=x.ctr.length===1&&x.ctr[0].account===ctrl;
+  if(onCtrl){const up={settles:[...(x.m.settles||[]),...S2],partner:x.m.partner||inv.partner,audit:[...(x.m.audit||[]),{at:nowISO(),by:S.me,action:`Matched to ${inv.number}`}]};
+    up.lines=(x.m.lines||[]).map(l=>l.account===ctrl&&!l.partner?{...l,partner:inv.partner}:l);await db.doc('moves/'+x.m.id).update(up);Object.assign(x.m,up);return x.m;}
+  const from=x.ctr[0].account;return submitMove({journal:'MISC',date:x.m.date,ref:`Receipt ${inv.number} ${inv.partner} (bank ${x.m.name||x.m.ref||''})`,partner:inv.partner,bank_match_of:x.m.id,source:'bank_match',payment:{mode:'transfer',ref:x.m.ref||x.m.name||''},
+    lines:isC?[{account:from,label:`From ${aname(from)||from}`,debit:amt,credit:0},{account:ctrl,label:inv.number,partner:inv.partner,debit:0,credit:amt}]:[{account:ctrl,label:inv.number,partner:inv.partner,debit:amt,credit:0},{account:from,label:`From ${aname(from)||from}`,debit:0,credit:amt}],settles:S2},{reason:'Matched to the bank line '+(x.m.name||'')});}
+// the window
+function paidWindow(inv,redraw,{match}={}){const isC=inv.kind==='customer';const due=invDue(inv,true);const lines=invBankLines(inv);const W_=isC&&typeof whtFor==='function'?whtFor(inv):null;
+  const P={line:'',mode:'transfer',date:today(),amount:due,wht:W_?r2(due*W_.rate/100):0,acc:S.accounts['1010']?'1010':(cashCodes().find(c=>!isCashAcc(c))||cashCodes()[0]||''),ref:'',cdate:today(),drawn:''};
+  const er=h('div',{class:'err mini',role:'status'});const body=h('div',{class:'stack pwbody'});
+  const sel=h('select',{'aria-label':'Matching bank receipt',class:'pwsel'},h('option',{value:''},lines.length?`No bank entry: record it by hand`:'No unmatched bank entry yet: record it by hand'),
+    lines.map((x,i)=>h('option',{value:String(i)},`${fmtDate(x.m.date)} · ${money2(x.free)}${x.done>0.009?' (part used)':''} · ${(x.m.ref||x.m.name||'Bank entry').slice(0,60)}${x.same?' ✓':''}`)));
+  const fld=(l,i)=>h('label',{class:'field'},l,i);
+  const accSel=h('select',{'aria-label':isC?'Received into':'Paid from',onchange:e=>P.acc=e.target.value});const fillAcc=()=>{const L=cashCodes().filter(c=>P.mode==='cash'?isCashAcc(c):!isCashAcc(c));const use=L.length?L:cashCodes();accSel.textContent='';use.forEach(c=>accSel.append(h('option',{value:c},`${c} ${aname(c)}`)));if(!use.includes(P.acc)) P.acc=use[0]||'';accSel.value=P.acc;};
+  const modeSel=h('select',{'aria-label':'Mode of collection',onchange:e=>{P.mode=e.target.value;fillAcc();draw();}},PAY_MODES.map(([k,l])=>h('option',{value:k},l)));
+  const dateIn=h('input',{type:'date',value:P.date,onchange:e=>P.date=e.target.value});const amtIn=h('input',{type:'number',step:'0.01',min:'0',class:'num',value:P.amount,oninput:e=>{P.amount=e.target.value;if(W_){P.wht=r2(+P.amount*W_.rate/100);whtIn.value=P.wht;}sum();}});
+  const whtIn=h('input',{type:'number',step:'0.01',min:'0',class:'num',value:P.wht,oninput:e=>{P.wht=e.target.value;sum();}});const refIn=h('input',{type:'text',maxlength:'60',oninput:e=>P.ref=e.target.value.trim()});
+  const extra=h('div',{class:'row'});const total=h('div',{class:'pwsum'});
+  const sum=()=>{const a=+P.amount||0,w=+P.wht||0;total.textContent='';total.append(h('span',{},`Invoice ${money2(due)}`),h('span',{},`${isC?'Received':'Paid'} ${money2(r2(a-w))}`),w?h('span',{},`Tax withheld ${money2(w)}`):null,h('b',{},r2(due-a)>0.009?`Still open ${money2(r2(due-a))}`:'Fully paid'));};
+  function draw(){body.textContent='';const x=P.line!==''?lines[+P.line]:null;
+    if(x){P.amount=r2(Math.min(x.free+(+P.wht||0),due));amtIn.value=P.amount;sum();
+      body.append(h('div',{class:'pwbank'},h('div',{},h('b',{},`Bank ${fmtDate(x.m.date)}`),h('div',{class:'mini mut'},x.m.ref||x.m.name||''),h('div',{class:'mini mut'},`Account ${x.ctr.map(l=>l.account+' '+(aname(l.account)||'')).join(', ')} · available ${money2(x.free)}`)),h('span',{class:'pwamt'},money2(x.free))),
+        h('div',{class:'row'},fld('Amount to apply',amtIn),W_?fld('Tax withheld',whtIn):null),total);return;}
+    const refL=P.mode==='cheque'?'Cheque number':P.mode==='cash'?'Cash receipt number':P.mode==='card'?'Card slip / approval code':P.mode==='transfer'?'Transfer reference':'Reference';
+    extra.textContent='';if(P.mode==='cheque') extra.append(fld('Cheque date',h('input',{type:'date',value:P.cdate,onchange:e=>P.cdate=e.target.value})),fld('Drawn on (bank)',h('input',{type:'text',value:P.drawn,oninput:e=>P.drawn=e.target.value.trim()})));
+    body.append(h('div',{class:'row'},fld(isC?'Bank (received into)':'Bank (paid from)',accSel),fld('Mode of collection',modeSel)),h('div',{class:'row'},fld(isC?'Date of collection':'Date paid',dateIn),fld('Amount',amtIn),W_?fld('Tax withheld',whtIn):null),
+      h('div',{class:'row'},h('label',{class:'field',style:'flex:1'},refL,refIn)),extra,total);sum();}
+  sel.onchange=()=>{P.line=sel.value;draw();};modeSel.value=P.mode;fillAcc();
+  if(lines.length&&(match||lines[0].same)){P.line='0';sel.value='0';}
+  const ok=h('button',{class:'btn primary',type:'button'},'Paid');let close;
+  ok.onclick=async()=>{er.textContent='';const a=r2(+P.amount||0);if(!(a>0)){er.textContent='Enter the amount.';return;}if(a-due>0.009){er.textContent=`More than the ${money2(due)} still open on the invoice.`;return;}ok.disabled=true;ok.textContent='Saving…';
+    try{let mv;if(P.line!==''){const x=lines[+P.line];const cashPart=r2(a-(+P.wht||0));if(cashPart-x.free>0.009) throw new Error(`The bank entry has only ${money2(x.free)} available.`);mv=await settleFromBank(inv,x,cashPart);const w=r2(+P.wht||0);if(w>0&&isC&&typeof whtCfg==='function'){if(typeof whtEnsure==='function') await whtEnsure();await submitMove({journal:'MISC',date:x.m.date,ref:`Tax withheld on ${inv.number} ${inv.partner}`,partner:inv.partner,source:'payment',wht:{rate:whtCfg().rate,amount:w,invoices:[inv.number]},lines:[{account:whtCfg().account,label:`Final tax withheld on ${inv.number}`,debit:w,credit:0},{account:'1100',label:inv.number,partner:inv.partner,debit:0,credit:w}],settles:[{invoice_id:inv.id,amount:w}]},{reason:'Tax withheld at source'});}}
+      else{if(!P.ref) throw new Error('Enter the reference (transfer, cheque or cash receipt number).');if(!P.acc) throw new Error('Add a bank or cash account first.');mv=await recordPayment(inv,{...P,amount:a});}
+      close();typeof revToast==='function'&&revToast(mv&&mv.state==='to_approve'?'Sent for approval. The receipt is ready once it is approved.':`${inv.number} marked as paid. The receipt is ready.`);setTimeout(redraw,500);}
+    catch(e){er.textContent=e.message;ok.disabled=false;ok.textContent='Paid';}};
+  const content=h('div',{class:'stack pwin'},h('div',{class:'pwhead'},h('div',{},h('b',{},`${inv.number} · ${inv.partner}`),h('div',{class:'mini mut'},`${isC?'Invoice':'Bill'} ${fmtDate(inv.date)} · due ${fmtDate(inv.due||inv.date)}`)),h('span',{class:'pwamt'},money2(due))),
+    h('label',{class:'field'},isC?'Matching receipt in the bank statement':'Matching payment in the bank statement',sel),body,er,h('div',{class:'row'},ok,h('button',{class:'btn ghost',type:'button',onclick:()=>close()},'Cancel')));
+  draw();close=miniModal(isC?'Mark as paid':'Mark bill as paid',content);}
+
+// ---- receipt: PDF and email, from the payment entry
+const invPaysOf=inv=>S.moves.filter(m=>m.state==='posted'&&!m.reversal_of&&!m.reversed_by&&(m.settles||[]).some(x=>x.invoice_id===inv.id)).sort((a,b)=>a.date<b.date?1:-1);
+function receiptNo(m){return 'RCT-'+String(m.name||m.id).replace(/^[A-Z]+\d*\//,'').replace(/\//g,'-');}
+async function receiptPdf(m){await loadScript(JSPDF_URL,()=>window.jspdf);const {jsPDF}=window.jspdf;const d=new jsPDF({unit:'pt',format:'a4'});_pdfLogo=null;
+  const e=S.ent[S.entity]||{};const B=brandFor();const [cr,cg,cb]=hexRgb(B.color);const L=await coLogo();const W=595,M=48;const party=m.partner||'';const C=custInfo(party);
+  const items=(m.settles||[]).map(s=>({s,i:S.invoices.find(x=>x.id===s.invoice_id)})).filter(x=>x.i);const total=r2(items.reduce((t,x)=>t+(+x.s.amount||0),0));const wht=m.wht?+m.wht.amount||0:0;
+  d.setFillColor(cr,cg,cb);d.rect(0,0,W,6,'F');const lw=drawLogo(d,L,M,24,110,44);const tx=lw?M+lw+14:M;d.setFont('helvetica','bold');d.setFontSize(13);d.setTextColor(30,36,44);d.text(d.splitTextToSize(e.name||'',W-tx-M-170)[0]||'',tx,38);
+  d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(95,104,116);let iy=52;[e.address,e.trn?'TRN '+e.trn:'',[e.email,e.phone].filter(Boolean).join('   ')].filter(Boolean).forEach(l=>{d.splitTextToSize(String(l),W-tx-M-170).slice(0,2).forEach(s=>{d.text(s,tx,iy);iy+=11;});});
+  d.setFont('helvetica','bold');d.setFontSize(20);d.setTextColor(cr,cg,cb);d.text('Payment receipt',W-M,42,{align:'right'});d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(95,104,116);d.text(`${receiptNo(m)}  ·  ${fmtDate(m.date)}`,W-M,57,{align:'right'});
+  let y=Math.max(iy,80)+16;d.setDrawColor(227,230,234);d.line(M,y,W-M,y);y+=24;
+  // big amount band
+  d.setFillColor(246,248,250);d.roundedRect(M,y,W-2*M,70,8,8,'F');d.setFontSize(8.5);d.setTextColor(95,104,116);d.text('RECEIVED FROM',M+16,y+20);d.setFont('helvetica','bold');d.setFontSize(13);d.setTextColor(30,36,44);d.text(d.splitTextToSize(party,260)[0]||'',M+16,y+38);
+  d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(95,104,116);d.text([C.trn?'TRN '+C.trn:'',C.email].filter(Boolean).join('  ·  ')||' ',M+16,y+54);
+  d.text('AMOUNT RECEIVED',W-M-16,y+20,{align:'right'});d.setFont('helvetica','bold');d.setFontSize(18);d.setTextColor(cr,cg,cb);d.text(`${S.baseCur} ${money2(r2(total-wht))}`,W-M-16,y+44,{align:'right'});y+=92;
+  // details
+  const how=m.payment?`${payModeName(m.payment.mode)}${m.payment.ref?' · '+m.payment.ref:''}${m.payment.drawn_on?' · drawn on '+m.payment.drawn_on:''}${m.payment.cheque_date?' · cheque date '+fmtDate(m.payment.cheque_date):''}`:(m.source==='bank_statement'||m.bank_match_of?'Bank transfer (from the bank statement)':'Payment');
+  const cash=(m.lines||[]).find(l=>cashCodes().includes(l.account));const kv=(k,v)=>{d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(95,104,116);d.text(k,M,y);d.setTextColor(30,36,44);d.text(String(v||'—'),M+130,y);y+=16;};
+  kv('Payment method',how);kv('Received into',cash?`${cash.account} ${aname(cash.account)||''}`:(m.bank_match_of?'Bank account':'—'));kv('Date received',fmtDate(m.date));if(wht) kv('Tax withheld',`${S.baseCur} ${money2(wht)} (withheld at source)`);y+=8;
+  // invoices settled
+  d.setFillColor(cr,cg,cb);d.rect(M,y,W-2*M,20,'F');d.setTextColor(255,255,255);d.setFont('helvetica','bold');d.setFontSize(8.5);d.text('Invoice',M+8,y+13);d.text('Invoice date',M+150,y+13);d.text('Invoice total',W-M-170,y+13,{align:'right'});d.text('Applied',W-M-90,y+13,{align:'right'});d.text('Still open',W-M-8,y+13,{align:'right'});y+=20;
+  d.setFont('helvetica','normal');d.setTextColor(30,36,44);items.forEach((x,k)=>{if(k%2){d.setFillColor(250,251,252);d.rect(M,y,W-2*M,18,'F');}d.text(x.i.number||'',M+8,y+12);d.text(fmtDate(x.i.date),M+150,y+12);d.text(money2(+x.i.total_base||0),W-M-170,y+12,{align:'right'});d.text(money2(+x.s.amount||0),W-M-90,y+12,{align:'right'});d.text(money2(invDue(x.i)),W-M-8,y+12,{align:'right'});d.setDrawColor(235,238,242);d.line(M,y+18,W-M,y+18);y+=18;});
+  d.setFont('helvetica','bold');d.text('Total applied',M+8,y+13);d.text(money2(total),W-M-90,y+13,{align:'right'});y+=40;
+  d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(95,104,116);d.text(d.splitTextToSize(`Thank you for your payment. This receipt confirms the amount above was received and applied to your account with ${e.name||'us'}.`,W-2*M),M,y);
+  d.setFontSize(7.5);d.setTextColor(140);d.text(`${e.name||''} · ${receiptNo(m)} · Generated ${fmtDate(today())}`,M,842-22);if(B.footer) d.text(B.footer,W-M,842-22,{align:'right'});
+  return d.output('blob');}
+function receiptMenu(inv,anchorTd,redraw){const pays=invPaysOf(inv);if(!pays.length) return;const em=custInfo(inv.partner).email;const msg=h('div',{class:'mini',role:'status'});
+  const content=h('div',{class:'stack'},h('p',{class:'mini mut',style:'margin:0'},`${pays.length} ${pays.length>1?'payments':'payment'} for ${inv.number}. Each receipt is posted in ${inv.partner}’s sub-ledger.`),
+    ...pays.map(m=>{const amt=+(m.settles.find(s=>s.invoice_id===inv.id)||{}).amount||0;const dl=h('button',{class:'btn sm',type:'button',onclick:async()=>{dl.disabled=true;try{await saveFile(fileSlug(`${receiptNo(m)}-${inv.partner}`)+'.pdf',await receiptPdf(m));}catch(e){msg.textContent=e.message;}finally{dl.disabled=false;}}},'Download PDF');
+      const mail=h('button',{class:'btn sm',type:'button',disabled:!em,title:em?'':'Add the customer’s email in Customers first',onclick:async()=>{mail.disabled=true;try{const how=await sendMail(em,`Payment receipt ${receiptNo(m)} from ${entDoc().name||''}`,`Dear ${inv.partner},\n\nThank you for your payment of ${S.baseCur} ${money2(amt)} received on ${fmtDate(m.date)}${m.payment&&m.payment.ref?` (reference ${m.payment.ref})`:''}, applied to invoice ${inv.number}.\n\nReceipt number: ${receiptNo(m)}.\n\nKind regards,\n${entDoc().name||''}`,`${location.origin}/`,'Open your customer portal','receipt');msg.textContent=how==='sent'?`Receipt emailed to ${em}.`:'Your email program opened with the receipt details. Attach the PDF you downloaded.';}catch(e){msg.textContent=e.message;}finally{mail.disabled=!em;}}},em?'Email to customer':'Email (no address)');
+      return h('div',{class:'rcrow'},h('div',{},h('b',{},receiptNo(m)),h('div',{class:'mini mut'},`${fmtDate(m.date)} · ${money2(amt)}${m.payment?` · ${payModeName(m.payment.mode)} ${m.payment.ref||''}`:m.source==='bank_statement'||m.bank_match_of?' · bank':''}`)),h('div',{class:'row',style:'gap:.35rem'},dl,mail));}),msg);
+  miniModal('Receipts',content);}
+// list row: Paid (window), Match (window on the bank list) and Receipt icons
+{const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{if(inv.status==='cancelled') return td;const icons=td.querySelector('.invicons')||(()=>{const s=h('span',{class:'invicons'});td.prepend(s);return s;})();
+    const open=invDue(inv,true)>0.01;const mv=(S.moves||[]).find(m=>m.id===inv.move_id);
+    const mark=[...td.querySelectorAll('button')].find(b=>/Mark as paid/.test(b.textContent));if(mark){mark.textContent='Paid';mark.title='Mark as paid';mark.onclick=e=>{e.stopPropagation();paidWindow(inv,redraw);};}
+    if(open&&S.canWrite&&mv&&mv.state==='posted'){const n=invBankLines(inv).length;const mb=h('button',{type:'button',class:'icob'+(n?' hasm':''),'aria-label':'Match with the bank statement',title:n?`Match with the bank statement (${n} possible)`:'Match with the bank statement (no unmatched bank entry yet)'});
+      mb.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>'+(n?`<span class="icobn">${n}</span>`:'');
+      mb.onclick=e=>{e.stopPropagation();paidWindow(inv,redraw,{match:true});};icons.prepend(mb);}
+    if(invPaysOf(inv).length){const rc=h('button',{type:'button',class:'icob ok','aria-label':'Receipt',title:'Receipt: download or email'});rc.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-2.5-1.6L13 21l-2.5-1.6L8 21l-2-1.3z"/><path d="M9 8h6M9 11.5h6M9 15h4"/></svg>';rc.onclick=e=>{e.stopPropagation();receiptMenu(inv,td,redraw);};icons.append(rc);}}catch(e){console.error(e);}return td;};}
+// the invoice's own "Payments" area keeps its receipts handy too
+{const _bm=invBankMap;invBankMap=function(inv){const el=_bm(inv);try{if(el&&invPaysOf(inv).length){el.querySelector('b')&&el.querySelector('b').after(h('button',{class:'btn sm',type:'button',style:'margin-left:.6rem',onclick:e=>{e.stopPropagation();receiptMenu(inv);}},'Receipts'));}}catch(e){}return el;};}
 
 
 // test hook (local development only)
