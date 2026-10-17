@@ -13461,8 +13461,8 @@ const excessLeft=m=>m&&m.overpaid?r2(Math.max(0,(+m.overpaid.amount||0)-excessAp
 async function applyExcessFIFO(m,src){let left=excessLeft(m);if(left<=0.009) return [];const isC=(src&&src.kind)!=='supplier';const ctrl=isC?'1100':'2000';const party=m.partner||(src&&src.partner);const done=[];
   const targets=openInvoices(isC?'customer':'supplier').filter(i=>norm(i.partner)===norm(party)&&i.id!==(src&&src.id)).sort((a,b)=>{const sa=invDue(a,true)<(+a.total_base||0)-0.009?0:1,sb=invDue(b,true)<(+b.total_base||0)-0.009?0:1;return sa-sb||(a.date<b.date?-1:a.date>b.date?1:String(a.number).localeCompare(String(b.number)));});
   for(const t of targets){if(left<=0.009) break;const amt=r2(Math.min(left,invDue(t,true)));if(amt<=0) continue;
-    await submitMove({journal:'MISC',date:m.date,ref:`Excess from ${src?src.number:'payment'} applied to ${t.number}`,partner:party,source:'allocation',alloc_from:m.id,alloc_src_inv:src?src.number:null,
-      lines:[{account:ctrl,label:`Excess from ${src?src.number:'payment'} → ${t.number}`,partner:party,debit:isC?amt:0,credit:isC?0:amt},{account:ctrl,label:`Excess from ${src?src.number:'payment'} → ${t.number}`,partner:party,debit:isC?0:amt,credit:isC?amt:0}],settles:[{invoice_id:t.id,amount:amt}]},{reason:'Excess payment applied, oldest invoice first'});
+    await submitMove({journal:'MISC',date:m.date,ref:`Overpayment adjustment: ${src?src.number:'payment'} → ${t.number}`,partner:party,source:'allocation',alloc_from:m.id,alloc_src_inv:src?src.number:null,
+      lines:[{account:ctrl,label:`Overpayment on ${src?src.number:'payment'} adjusted against ${t.number}`,partner:party,debit:isC?amt:0,credit:isC?0:amt},{account:ctrl,label:`Overpayment on ${src?src.number:'payment'} adjusted against ${t.number}`,partner:party,debit:isC?0:amt,credit:isC?amt:0}],settles:[{invoice_id:t.id,amount:amt}]},{reason:'Excess payment applied, oldest invoice first'});
     left=r2(left-amt);done.push({n:t.number,amt});}
   return done;}
 // after a payment that is more than the invoice: apply the excess straight away (FIFO)
@@ -13473,7 +13473,7 @@ const moveById=async id=>{for(let k=0;k<20;k++){const m=S.moves.find(x=>x.id===i
 invOverpaid=inv=>r2(S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.reversal_of&&m.overpaid&&m.overpaid.invoice_id===inv.id).reduce((t,m)=>t+excessLeft(m),0));
 {const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const tag=td.querySelector('.invover');const src=S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&m.overpaid&&m.overpaid.invoice_id===inv.id);
     const appliedTo=S.moves.filter(x=>x.state==='posted'&&!x.reversed_by&&src.some(m=>x.alloc_from===m.id)).flatMap(x=>(x.settles||[]).map(s=>(S.invoices.find(i=>i.id===s.invoice_id)||{}).number)).filter(Boolean);
-    if(appliedTo.length){td.append(h('div',{class:'mini mut'},`Excess applied to ${[...new Set(appliedTo)].join(', ')}`));}
+    if(appliedTo.length){td.append(h('div',{class:'mini mut'},`Overpayment adjusted against ${[...new Set(appliedTo)].join(', ')}`));}
     if(tag){const open=openInvoices(inv.kind).some(i=>norm(i.partner)===norm(inv.partner)&&i.id!==inv.id);if(open&&S.canWrite){tag.style.cursor='pointer';tag.title='Apply the excess to the oldest open invoices of '+inv.partner;
         tag.onclick=async e=>{e.stopPropagation();tag.textContent='Applying…';try{let all=[];for(const m of src){all=all.concat(await applyExcessFIFO(m,inv));}typeof revToast==='function'&&revToast(all.length?`Applied to ${all.map(x=>x.n).join(', ')}.`:'Nothing to apply.');setTimeout(redraw,400);}catch(x){tag.textContent=x.message;}};}}}catch(e){}return td;};}
 // invoices paid (partly) from another invoice's excess say so
@@ -13514,6 +13514,27 @@ const needsSecond=m=>(m.audit||[]).some(a=>/^First approval/.test(a.action||''))
 {const _ri=bkRowInfo;bkRowInfo=function(m){const x=_ri(m);if(x.st==='m_wait'&&needsSecond(m)) x.st='m_wait2';return x;};}
 BK_ST.m_wait2=['Matched · 2nd approval','warn'];
 {const _tv=bankTxView;bankTxView=function(redraw){const el=_tv.apply(this,arguments);return el;};}
+// ===== Overpayment adjustment: a customer's unapplied overpayments settle their short-paid invoices, oldest overpayment first (FIFO), as separate "Overpayment adjustment" entries =====
+function custCredits(party){return S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.reversal_of&&m.overpaid&&norm(m.partner||'')===norm(party)&&excessLeft(m)>0.009).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);}
+async function adjustShortPaid(inv){if(!inv||inv.kind!=='customer'||!S.canWrite) return [];let due=invDue(inv,true);if(due<=0.009) return [];const out=[];
+  for(const m of custCredits(inv.partner)){if(due<=0.009) break;const src=S.invoices.find(i=>i.id===(m.overpaid||{}).invoice_id)||{number:m.ref||'payment'};const amt=r2(Math.min(excessLeft(m),due));if(amt<=0) continue;
+    await submitMove({journal:'MISC',date:today()>((S.settings||{}).lock_date||'')?today():addDays(S.settings.lock_date,1),ref:`Overpayment adjustment: ${src.number} → ${inv.number}`,partner:inv.partner,source:'allocation',alloc_from:m.id,alloc_src_inv:src.number,adjust_kind:'overpayment',
+      lines:[{account:'1100',label:`Overpayment on ${src.number} adjusted against ${inv.number}`,partner:inv.partner,debit:amt,credit:0},{account:'1100',label:`Overpayment on ${src.number} adjusted against ${inv.number}`,partner:inv.partner,debit:0,credit:amt}],settles:[{invoice_id:inv.id,amount:amt}]},{reason:'Overpayment adjustment (FIFO)'});
+    due=r2(due-amt);out.push({src:src.number,amt});}
+  return out;}
+// FIFO excess entries carry the same name
+{const _ap=applyExcessFIFO;applyExcessFIFO=async function(m,src){const before=new Set(S.moves.map(x=>x.id));const r=await _ap.apply(this,arguments);return r;};}
+// after a payment leaves an invoice short paid, use the customer's earlier overpayments
+{const _rp=recordPayment;recordPayment=async function(inv,P){const r=await _rp.apply(this,arguments);try{await new Promise(z=>setTimeout(z,300));if(invDue(inv,true)>0.009&&custCredits(inv.partner).length){const d=await adjustShortPaid(inv);if(d.length&&typeof revToast==='function') revToast(`Short payment adjusted from ${d.map(x=>x.src).join(', ')} overpayment.`);}}catch(e){}return r;};}
+{const _sf=settleFromBank;settleFromBank=async function(inv){const r=await _sf.apply(this,arguments);try{await new Promise(z=>setTimeout(z,300));if(invDue(inv,true)>0.009&&custCredits(inv.partner).length){const d=await adjustShortPaid(inv);if(d.length&&typeof revToast==='function') revToast(`Short payment adjusted from ${d.map(x=>x.src).join(', ')} overpayment.`);}}catch(e){}return r;};}
+// once per visit: short-paid invoices pick up any unapplied overpayment of the same customer
+async function sweepOverpayments(){if(S._ovSweep||!S.canWrite||S.entity==='all') return 0;S._ovSweep=true;let n=0;
+  const short=openInvoices('customer').filter(i=>invDue(i,true)<(+i.total_base||0)-0.009).sort((a,b)=>a.date<b.date?-1:1);
+  for(const i of short){if(!custCredits(i.partner).length) continue;try{n+=(await adjustShortPaid(i)).length;}catch(e){}}return n;}
+{const _iq=invQuick;invQuick=function(inv,redraw){if(!S._ovSweep) sweepOverpayments().then(n=>{if(n){typeof revToast==='function'&&revToast(`${n} short payment${n>1?'s':''} adjusted from overpayments.`);setTimeout(redraw,300);}});return _iq(inv,redraw);};}
+// invoices list wording
+{const _po=invPaidOn;invPaidOn=function(inv){const el=_po(inv);try{el.querySelectorAll('.paidfrom').forEach(x=>x.remove());const al=S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&m.alloc_src_inv&&(m.settles||[]).some(s=>s.invoice_id===inv.id));
+    if(al.length) el.append(h('span',{class:'mini paidfrom'},`short payment adjusted from ${[...new Set(al.map(m=>m.alloc_src_inv))].join(', ')} overpayment`));}catch(e){}return el;};}
 
 
 // test hook (local development only)
