@@ -1546,6 +1546,11 @@ section.mapp{position:fixed;inset:0;z-index:60;display:flex;flex-direction:colum
 .mver{text-align:center}
 @media (prefers-reduced-motion:reduce){.mspin{animation:none}}
 .mform select{height:auto;min-height:3rem;line-height:1.3;padding:.6rem 2.2rem .6rem .75rem}.mco{height:auto;line-height:1.3}
+/* any-period control */
+.pmbox{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end}.pmctl{display:flex;flex-wrap:wrap;gap:.45rem;align-items:flex-end}
+.pmctl select,.pmctl input[type=date]{height:2.2rem;padding:0 .55rem;border-radius:8px;border:1px solid var(--line,#D0D5DD);background:var(--panel,#fff);color:var(--ink,#101828);font:inherit;font-size:.86rem}
+.pmd{display:flex;flex-direction:column;gap:.15rem;font-size:.72rem}.pmd span{opacity:.8}
+.fsrange{display:inline-flex;gap:.35rem;align-items:center}.fsrange input{height:2.2rem}
 
 </style>
 
@@ -1942,7 +1947,7 @@ BUILD.overview=()=>{
   const el=h('section',{class:'stack'});
   const monthSel=h('select',{id:'ov-month','aria-label':'Month',onchange:e=>{S.month=e.target.value;refresh();}});
   const lede=h('p',{class:'lede'});
-  const hi=h('h1',{}),chips=h('div',{class:'chips',style:'margin-top:.9rem'});el.append(h('div',{class:'hero'},h('div',{style:'min-width:0;flex:1'},h('p',{style:'margin:0 0 .2rem'},'Executive overview'),hi,lede,chips),h('label',{class:'sel',style:'color:#fff'},'Month',monthSel)));
+  const hi=h('h1',{}),chips=h('div',{class:'chips',style:'margin-top:.9rem'});el.append(h('div',{class:'hero'},h('div',{style:'min-width:0;flex:1'},h('p',{style:'margin:0 0 .2rem'},'Executive overview'),hi,lede,chips),ovPerCtl(h('label',{class:'sel',style:'color:#fff'},'Month',monthSel),()=>refresh())));
   const kpis=h('div',{class:'kpis'});el.append(kpis);
   const byEnt=h('div',{class:'tablewrap'});const entCard=h('div',{class:'card'},h('div',{class:'cardhead'},h('div',{},h('h3',{},'By entity'),h('p',{class:'note'},'Each entity in its own book currency and in the display currency.'))),byEnt);el.append(entCard);
   const c1=h('div',{class:'chart'}),c2=h('div',{class:'chart'});
@@ -1961,15 +1966,15 @@ BUILD.overview=()=>{
     const pl=monthlyPL();const months=pl.map(r=>r.month);
     monthSel.textContent='';months.slice().reverse().forEach(mo=>monthSel.append(h('option',{value:mo},mLabel(mo,true))));
     if(!S.month||!months.includes(S.month)){const done=months.filter(m=>m<today().slice(0,7));S.month=done.length?done[done.length-1]:months[months.length-1];}if(S.month) monthSel.value=S.month;
-    const M=S.month;const r=pl.find(x=>x.month===M)||{income:0,cost:0,opex:0,expenses:0,net:0};const yr=M?M.slice(0,4):today().slice(0,4);
-    const partial=M===today().slice(0,7);let bud=M?budgetMonth(yr,M,isIncome):null;if(partial&&bud!=null) bud=bud*(+today().slice(8))/(+lastDay(M).slice(8));const bal=balancesTo(M?monthEnd(M):today());const prevBal=M?balancesTo(monthEnd(addMonths(M,-1))):null;
+    const PR=ovPer();const M=PR?null:S.month;const r=PR?rangePL(PR[0],PR[1]):(pl.find(x=>x.month===M)||{income:0,cost:0,opex:0,expenses:0,net:0});const yr=PR?PR[1].slice(0,4):M?M.slice(0,4):today().slice(0,4);
+    const partial=M===today().slice(0,7);let bud=M?budgetMonth(yr,M,isIncome):null;if(partial&&bud!=null) bud=bud*(+today().slice(8))/(+lastDay(M).slice(8));const bal=balancesTo(PR?PR[1]:M?monthEnd(M):today());const prevBal=PR?balancesTo(addDays(PR[0],-1)):M?balancesTo(monthEnd(addMonths(M,-1))):null;
     const cash=balanceOf(cashCodes(),null,bal),cashPrev=prevBal?balanceOf(cashCodes(),null,prevBal):0;
     const ar=balanceOf(codes(t=>t==='asset_receivable'),null,bal),ap=balanceOf(codes(t=>t==='liability_payable'),null,bal);
     const waiting=S.moves.filter(m=>m.state==='to_approve');const oldest=waiting.reduce((o,m)=>Math.max(o,(Date.now()-new Date(m.created_at||Date.now()))/864e5),0);
     const margin=r.income?r.net/r.income:0;const vsB=bud?(r.income-bud)/bud:null;
     kpis.textContent='';
-    const tile=(l,v,d,k,fn)=>h(fn?'button':'div',{class:'kpi',type:fn?'button':null,onclick:fn||null,title:fn?'Show the entries behind this number':null},h('div',{class:'kl'},l),h('div',{class:'kv'},v),h('div',{class:'kd '+(k||'')},d));const me=M?lastDay(M):today(),ms=M?M+'-01':null;
-    kpis.append(tile('Revenue · '+(M?mLabel(M,true):'—'),vmc(r.income),vsB==null?'No budget for this month':`${pct(vsB)} vs budget${partial?' to date':''}`,vsB==null?'':vsB>=0?'good':'badc',()=>openDrill('Revenue',codes(isIncome),ms,me)),
+    const tile=(l,v,d,k,fn)=>h(fn?'button':'div',{class:'kpi',type:fn?'button':null,onclick:fn||null,title:fn?'Show the entries behind this number':null},h('div',{class:'kl'},l),h('div',{class:'kv'},v),h('div',{class:'kd '+(k||'')},d));const me=PR?PR[1]:M?lastDay(M):today(),ms=PR?PR[0]:M?M+'-01':null;
+    kpis.append(tile('Revenue · '+(PR?ovPerLabel():M?mLabel(M,true):'—'),vmc(r.income),vsB==null?'No budget for this month':`${pct(vsB)} vs budget${partial?' to date':''}`,vsB==null?'':vsB>=0?'good':'badc',()=>openDrill('Revenue',codes(isIncome),ms,me)),
       tile('Net profit',vmc(r.net),`${(margin*100).toFixed(1)}% margin`,r.net>=0?'':'badc',()=>openDrill('Income and expenses',codes(t=>isIncome(t)||isCost(t)||isOpex(t)),ms,me)),
       tile('Cash in bank',vmc(cash),`${vn(cash-cashPrev)} vs prior month`,cash-cashPrev>=0?'good':'badc',()=>openDrill('Cash in bank',cashCodes(),null,me)),
       tile('Receivables',vmc(ar),'Owed by customers','',()=>openDrill('Receivables',codes(t=>t==='asset_receivable'),null,me)),tile('Payables',vmc(ap),'Owed to suppliers','',()=>openDrill('Payables',codes(t=>t==='liability_payable'),null,me)),
@@ -5193,7 +5198,7 @@ BUILD.dash=()=>{
   const monthSel=h('select',{'aria-label':'Month',onchange:e=>{S.month=e.target.value;refresh();}});
   const hi=h('h1',{}),ctx=h('p',{class:'dctx'});
   const scopeBtn=h('button',{class:'btn sm',type:'button',hidden:true});
-  el.append(h('div',{class:'dhead'},h('div',{style:'min-width:0'},h('div',{class:'eyebrow'},'Executive dashboard'),hi,ctx),h('div',{class:'dctl'},scopeBtn,h('label',{class:'dsel'},h('span',{},'Month'),monthSel))));
+  el.append(h('div',{class:'dhead'},h('div',{style:'min-width:0'},h('div',{class:'eyebrow'},'Executive dashboard'),hi,ctx),h('div',{class:'dctl'},scopeBtn,ovPerCtl(h('label',{class:'dsel'},h('span',{},'Month'),monthSel),()=>refresh()))));
   const kpis=h('div',{class:'dkpis'});el.append(kpis);
   const c1=h('div',{class:'chart'}),attn=h('div',{class:'attn'});
   const finRow=h('div',{class:'drow'},h('div',{class:'card'},h('div',{class:'cardhead'},h('div',{},h('h3',{},'Revenue and expenses'),h('p',{class:'note'},'Last 12 months, from posted entries. Dashed line: revenue budget.'))),c1),
@@ -5227,9 +5232,9 @@ BUILD.dash=()=>{
     const pl=monthlyPL();const months=pl.map(r=>r.month);
     monthSel.textContent='';months.slice().reverse().forEach(mo=>monthSel.append(h('option',{value:mo},mLabel(mo,true))));
     if(!S.month||!months.includes(S.month)){const done=months.filter(m=>m<today().slice(0,7));S.month=done.length?done[done.length-1]:months[months.length-1];}if(S.month) monthSel.value=S.month;
-    const M=S.month;const idx=months.indexOf(M);const r=pl[idx]||{income:0,net:0,expenses:0};const pr=idx>0?pl[idx-1]:null;
+    const PR=ovPer();const M=S.month;const idx=months.indexOf(M);const r=PR?rangePL(PR[0],PR[1]):(pl[idx]||{income:0,net:0,expenses:0});const pr=PR?null:(idx>0?pl[idx-1]:null);
     const last12=pl.slice(Math.max(0,idx-11),idx+1);
-    const me=M?monthEnd(M):today(),ms=M?M+'-01':null;const bal=balancesTo(me);const prevBal=M?balancesTo(monthEnd(addMonths(M,-1))):null;
+    const me=PR?PR[1]:M?monthEnd(M):today(),ms=PR?PR[0]:M?M+'-01':null;const bal=balancesTo(me);const prevBal=PR?balancesTo(addDays(PR[0],-1)):M?balancesTo(monthEnd(addMonths(M,-1))):null;
     const cc=cashCodes(),arC=codes(t=>t==='asset_receivable'),apC=codes(t=>t==='liability_payable');
     const cash=balanceOf(cc,null,bal),cashPrev=prevBal?balanceOf(cc,null,prevBal):0;const ar=balanceOf(arC,null,bal),ap=balanceOf(apC,null,bal);
     const t0=today();const custInv=S.invoices.filter(i=>i.kind==='customer'&&i.doc_type!=='credit_note'&&i.status!=='cancelled');
@@ -7265,7 +7270,7 @@ function fsCashFlow(R,Rprev){const v=R.val,o=Rprev.val,d=k=>(v[k]||0)-(o[k]||0);
   f.capex=-(d('ppe')+d('intang')+d('nca_o'))+(v.dep||0);f.cfi=f.capex;
   f.debt=d('borr')+d('ncl_o');f.cap=d('cap');f.div=d('re')-(v.np||0);f.cff=f.debt+f.cap+f.div;f.net=f.op+f.cfi+f.cff;f.open=o.cash||0;f.close=v.cash||0;f.diff=f.close-f.open-f.net;return f;}
 // --- periods ---
-const FS_KINDS=[['month','Month'],['quarter','Quarter'],['ytd','Year to date'],['year','Full year']];
+const FS_KINDS=[['month','Month'],['quarter','Quarter'],['ytd','Year to date'],['year','Full year'],['asat','As at'],['range','Range']];
 function fsMonthsOf(kind,p){if(kind==='month') return [p,p];if(kind==='quarter'){const [y,q]=p.split('-Q');const a=`${y}-${String((+q-1)*3+1).padStart(2,'0')}`;return [a,addMonths(a,2)];}if(kind==='ytd') return [p.slice(0,4)+'-01',p];return [p+'-01',p+'-12'];}
 function fsCmpOf(kind,p,cmp){if(cmp==='ly'||kind==='ytd'){if(kind==='quarter'){const [y,q]=p.split('-Q');return `${+y-1}-Q${q}`;}if(kind==='year') return String(+p-1);return addMonths(p,-12);}
   if(kind==='month') return addMonths(p,-1);if(kind==='quarter'){const [y,q]=p.split('-Q');return +q>1?`${y}-Q${+q-1}`:`${+y-1}-Q4`;}return String(+p-1);}
@@ -7295,13 +7300,13 @@ BUILD.fs=()=>{const el=h('section',{class:'stack fs2'});const F=S.fs2||(S.fs2={k
     const ps=h('select',{'aria-label':'Period',onchange:e=>{F.period=e.target.value;refresh();}},fsPeriods(F.kind).map(p=>h('option',{value:p},fsLabel(F.kind,p))));ps.value=F.period;
     const cs=h('select',{'aria-label':'Compare with',disabled:F.kind==='ytd',onchange:e=>{F.cmp=e.target.value;refresh();}},h('option',{value:'prior'},F.kind==='year'?'Previous year':'Previous period'),h('option',{value:'ly'},'Same period last year'));cs.value=F.kind==='ytd'?'ly':F.cmp;
     const det=h('label',{class:'sel'},h('input',{type:'checkbox',checked:F.detail,onchange:e=>{F.detail=e.target.checked;draw();}}),'Show accounts');
-    bar.append(fld('Framework',fw),fld('Basis',bs),h('div',{class:'field'},'Period type',kd),fld('Period',ps),fld('Compare with',cs),h('span',{style:'flex:1'}),det,h('button',{class:'btn sm',type:'button',onclick:()=>exportAll('excel')},'Excel'),h('button',{class:'btn sm',type:'button',onclick:()=>exportAll('pdf')},'PDF'));}
+    bar.append(fld('Framework',fw),fld('Basis',bs),h('div',{class:'field'},'Period type',kd),fld('Period',fsPerCtl(F,ps,refresh)),fld('Compare with',cs),h('span',{style:'flex:1'}),det,h('button',{class:'btn sm',type:'button',onclick:()=>exportAll('excel')},'Excel'),h('button',{class:'btn sm',type:'button',onclick:()=>exportAll('pdf')},'PDF'));}
   function drawTabs(){tabs.textContent='';TABS_FS.forEach(([k,l])=>tabs.append(h('button',{type:'button',role:'tab','aria-selected':String(F.tab===k),onclick:()=>{F.tab=k;drawTabs();draw();}},l)));}
   // data for the chosen period and its comparative
   function data(){const [a,b]=fsMonthsOf(F.kind,F.period);const cp=fsCmpOf(F.kind,F.period,F.cmp);const [ca,cb]=fsMonthsOf(F.kind,cp);
-    const cur=fsRangeM(a,b),prv=fsRangeM(ca,cb);const ap=fsAppr(F.kind,cp),ac=fsAppr(F.kind,F.period);
+    const DR=fsDates(F.kind,F.period),DC=fsDates(F.kind,cp);const cur=DR?fsRangeD(DR[0],DR[1]):fsRangeM(a,b),prv=DC?fsRangeD(DC[0],DC[1]):fsRangeM(ca,cb);const ap=DR?null:fsAppr(F.kind,cp),ac=DR?null:fsAppr(F.kind,F.period);
     if(ap&&ap.val) prv.val={...prv.val,...ap.val};
-    const cfC=fsCashFlow(cur,fsRangeM(addMonths(a,-1),addMonths(a,-1))),cfP=fsCashFlow(prv,fsRangeM(addMonths(ca,-1),addMonths(ca,-1)));
+    const cfC=fsCashFlow(cur,DR?fsRangeD(addDays(DR[0],-1),addDays(DR[0],-1)):fsRangeM(addMonths(a,-1),addMonths(a,-1))),cfP=fsCashFlow(prv,DC?fsRangeD(addDays(DC[0],-1),addDays(DC[0],-1)):fsRangeM(addMonths(ca,-1),addMonths(ca,-1)));
     return {a,b,cp,cur,prv,ap,ac,cfC,cfP,caps:fsCaptions(fsBasis().framework||'ifrs')};}
   // one statement table: label | current (bold) | comparative | change | %
   function stmt(D,title,rows,opt){opt=opt||{};const cL=fsLabel(F.kind,F.period),pL=fsLabel(F.kind,D.cp);const asAt=opt.position;
@@ -11245,7 +11250,7 @@ function payLastRejected(M){return (S.payruns||[]).filter(p=>p.entity===S.entity
   const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);add();return y;};add();return r;};}
 
 // ===== Period filter on every screen: presets plus a From/To calendar range, applied to every list with a date column =====
-const PER_PRESETS=[['all','All dates'],['month','This month'],['last_month','Last month'],['quarter','This quarter'],['fy','This financial year'],['year','This calendar year'],['last_year','Last calendar year'],['d30','Last 30 days'],['d90','Last 90 days'],['custom','Custom range']];
+const PER_PRESETS=[['all','All dates'],['asat','As at (choose a date)'],['custom','Range (choose dates)'],['month','This month'],['last_month','Last month'],['quarter','This quarter'],['fy','This financial year'],['year','This calendar year'],['last_year','Last calendar year'],['d30','Last 30 days'],['d90','Last 90 days']];
 let PERF=(()=>{try{return JSON.parse(sessionStorage.getItem('orzio-per'))||{p:'all'};}catch(e){return {p:'all'};}})();
 function perSave(){try{sessionStorage.setItem('orzio-per',JSON.stringify(PERF));}catch(e){}}
 function perRange(f){f=f||PERF;const t=today();const y=+t.slice(0,4),m=+t.slice(5,7);const pad=n=>String(n).padStart(2,'0');
@@ -11260,8 +11265,9 @@ function perRange(f){f=f||PERF;const t=today();const y=+t.slice(0,4),m=+t.slice(
     case 'd30':return [addDays(t,-29),t];
     case 'd90':return [addDays(t,-89),t];
     case 'custom':return [f.from||'0000-01-01',f.to||'9999-12-31'];
+    case 'asat':return ['0000-01-01',f.to||t];
     default:return null;}}
-function perLabel(){const r=perRange();if(!r) return 'All dates';const p=PER_PRESETS.find(x=>x[0]===PERF.p);return PERF.p==='custom'?`${PERF.from?fmtDate(PERF.from):'Start'} – ${PERF.to?fmtDate(PERF.to):'today'}`:(p?p[1]:'')+` (${fmtDate(r[0])} – ${fmtDate(r[1])})`;}
+function perLabel(){const r=perRange();if(!r) return 'All dates';const p=PER_PRESETS.find(x=>x[0]===PERF.p);return PERF.p==='asat'?`As at ${fmtDate(PERF.to||today())}`:PERF.p==='custom'?`${PERF.from?fmtDate(PERF.from):'Start'} – ${PERF.to?fmtDate(PERF.to):'today'}`:(p?p[1]:'')+` (${fmtDate(r[0])} – ${fmtDate(r[1])})`;}
 // read a date as the app shows it: "16 Oct 2026", 2026-10-16 or 16/10/2026
 function perParse(s){s=String(s||'').trim();let m=/^(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (\d{4})/.exec(s);if(m) return `${m[3]}-${String(MONTHS.indexOf(m[2])+1).padStart(2,'0')}-${m[1].padStart(2,'0')}`;
   m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m) return m[0];m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;return null;}
@@ -11282,9 +11288,10 @@ function perCount(bar,shown,total){const c=bar.querySelector('.percount');if(c) 
 function perBar(){const sel=h('select',{'aria-label':'Period',class:'perpreset'},PER_PRESETS.map(([k,l])=>h('option',{value:k},l)));sel.value=PERF.p||'all';
   const from=h('input',{type:'date',class:'perfrom','aria-label':'From date',value:PERF.from||''});const to=h('input',{type:'date',class:'perto','aria-label':'To date',value:PERF.to||''});
   const rng=h('span',{class:'perrange'},h('label',{},'From',from),h('label',{},'To',to));
-  const sync=()=>{const r=perRange();rng.hidden=false;if(PERF.p!=='custom'&&r){from.value=r[0];to.value=r[1];}if(PERF.p==='all'){from.value='';to.value='';}};
-  sel.onchange=()=>{PERF={p:sel.value,from:PERF.from,to:PERF.to};if(sel.value==='custom'){const r=perRange({p:'month'});PERF.from=PERF.from||r[0];PERF.to=PERF.to||r[1];}perSave();perAll();};
-  const pick=()=>{PERF={p:'custom',from:from.value||'',to:to.value||''};if(PERF.from&&PERF.to&&PERF.from>PERF.to){const x=PERF.from;PERF.from=PERF.to;PERF.to=x;}perSave();perAll();};
+  const fromL=rng.firstChild,toL=rng.lastChild;
+  const sync=()=>{const r=perRange();rng.hidden=false;fromL.hidden=PERF.p==='asat';toL.firstChild.nodeValue=PERF.p==='asat'?'As at':'To';if(PERF.p!=='custom'&&PERF.p!=='asat'&&r){from.value=r[0];to.value=r[1];}if(PERF.p==='asat') to.value=PERF.to||today();if(PERF.p==='all'){from.value='';to.value='';}};
+  sel.onchange=()=>{PERF={p:sel.value,from:PERF.from,to:PERF.to};if(sel.value==='custom'){const r=perRange({p:'month'});PERF.from=PERF.from||r[0];PERF.to=PERF.to||r[1];}if(sel.value==='asat') PERF.to=PERF.to||today();perSave();perAll();};
+  const pick=()=>{if(PERF.p==='asat'){PERF={p:'asat',to:to.value||today()};perSave();perAll();return;}PERF={p:'custom',from:from.value||'',to:to.value||''};if(PERF.from&&PERF.to&&PERF.from>PERF.to){const x=PERF.from;PERF.from=PERF.to;PERF.to=x;}perSave();perAll();};
   from.onchange=pick;to.onchange=pick;sync();
   const clr=h('button',{class:'btn ghost sm perclear',type:'button',onclick:()=>{PERF={p:'all'};perSave();perAll();}},'Clear');
   const bar=h('div',{class:'perbar',role:'group','aria-label':'Filter by period'},h('span',{class:'perlbl'},'Period'),sel,rng,clr,h('span',{class:'percount mini mut'}));
@@ -11981,6 +11988,41 @@ BUILD.mobile=()=>{const el=h('section',{class:'mapp'});const body=h('div',{class
   return {el,refresh};};
 // open the mobile app once the app is ready
 if(M_ON){const t0=Date.now();const iv=setInterval(()=>{try{if(typeof S!=='undefined'&&S.me&&document.getElementById('main')){clearInterval(iv);showTab('mobile');}else if(Date.now()-t0>30000) clearInterval(iv);}catch(e){}},300);}
+
+// ===== Any period: "As at" a date or a "Range" picked on the calendar, beside the monthly choice =====
+function fyStartOf(d){const ye=((S.ent[S.entity]||{}).year_end)||'12-31';const y=+d.slice(0,4);let end=`${y}-${ye}`;if(end<d) end=`${y+1}-${ye}`;return addDays(`${+end.slice(0,4)-1}-${ye}`,1);}
+function rangePL(from,to){const o={income:0,cost:0,opex:0};for(const m of posted()){if(m.journal==='OPEN'||m.date<from||m.date>to) continue;for(const l of m.lines||[]){const t=typeOf(l.account);const net=(+l.debit||0)-(+l.credit||0);if(isIncome(t)) o.income-=net;else if(isCost(t)) o.cost+=net;else if(isOpex(t)) o.opex+=net;}}
+  return {...o,expenses:o.cost+o.opex,net:o.income-o.cost-o.opex};}
+// overview and dashboard: one shared choice
+function ovPer(){const P=S.ovP;if(!P||P.mode==='month') return null;if(P.mode==='asat'){const d=P.to||today();return [fyStartOf(d),d];}const a=P.from||today().slice(0,8)+'01',b=P.to||today();return a<=b?[a,b]:[b,a];}
+function ovPerLabel(){const P=S.ovP||{};const r=ovPer();if(!r) return '';return P.mode==='asat'?`As at ${fmtDate(r[1])}`:`${fmtDate(r[0])} – ${fmtDate(r[1])}`;}
+function perModeCtl(P,onChange,{monthEl,label}={}){const mode=h('select',{'aria-label':'Show by',class:'pmode'},[['month','Month'],['asat','As at'],['range','Range']].map(([k,l])=>h('option',{value:k},l)));mode.value=P.mode||'month';
+  const to=h('input',{type:'date','aria-label':P.mode==='range'?'To':'As at date',value:P.to||today()});const from=h('input',{type:'date','aria-label':'From',value:P.from||today().slice(0,8)+'01'});
+  const wrap=h('div',{class:'pmctl'});
+  const draw=()=>{wrap.textContent='';wrap.append(mode);to.setAttribute('aria-label',mode.value==='range'?'To':'As at');if(monthEl) monthEl.hidden=mode.value!=='month';if(mode.value==='asat') wrap.append(h('label',{class:'pmd'},h('span',{},'As at'),to));if(mode.value==='range') wrap.append(h('label',{class:'pmd'},h('span',{},'From'),from),h('label',{class:'pmd'},h('span',{},'To'),to));};
+  mode.onchange=()=>{P.mode=mode.value;if(P.mode!=='month'){P.to=P.to||today();if(P.mode==='range') P.from=P.from||today().slice(0,8)+'01';}draw();onChange();};
+  from.onchange=()=>{P.from=from.value;onChange();};to.onchange=()=>{P.to=to.value;onChange();};draw();return wrap;}
+function ovPerCtl(monthLabel,onChange){S.ovP=S.ovP||{mode:'month'};const box=h('div',{class:'pmbox'},monthLabel);box.append(perModeCtl(S.ovP,onChange,{monthEl:monthLabel}));return box;}
+// financial statements: As at and Range as period types
+function fsNetAtD(d){const m={};for(const mv of posted()){if(mv.date>d) continue;for(const l of mv.lines||[]) m[l.account]=(m[l.account]||0)+(+l.debit||0)-(+l.credit||0);}return m;}
+function fsRangeD(d1,d2){const C=fsCache();const n1m=fsNetAtD(d2),n0m=fsNetAtD(addDays(d1,-1));const val={},acc={};
+  Object.entries(C.fmt.map).forEach(([code,cap])=>{if(!cap||!S.accounts[code]) return;const n1=n1m[code]||0,n0=n0m[code]||0;const v=PLC.includes(cap)?-(n1-n0):(ASC.includes(cap)?n1:-n1);val[cap]=(val[cap]||0)+v;if(Math.abs(v)>0.004)(acc[cap]||(acc[cap]=[])).push({code,name:S.accounts[code].name,v});});
+  const plAll=Object.entries(C.fmt.map).filter(([,c])=>PLC.includes(c)).reduce((s,[k])=>s-(n1m[k]||0),0);val.re=(val.re||0)+plAll;
+  const g=k=>val[k]||0;val.gp=g('rev')+g('cor');val.opx=g('sell')+g('admin')+g('dep');val.op=val.gp+val.opx+g('oth');val.pbt=val.op+g('fin');val.np=val.pbt+g('tax');
+  val.nca=g('ppe')+g('intang')+g('nca_o');val.ca=g('inv')+g('tr')+g('prep')+g('cash');val.ta=val.nca+val.ca;val.tl=LIC.reduce((s,k)=>s+g(k),0);val.te=g('cap')+g('re');val.tle=val.tl+val.te;
+  return {m1:d1.slice(0,7),m2:d2.slice(0,7),from:d1,to:d2,val,acc};}
+// period strings: as at "YYYY-MM-DD", range "YYYY-MM-DD..YYYY-MM-DD"
+function fsDates(kind,p){if(kind==='asat'){const d=/^\d{4}-\d{2}-\d{2}$/.test(p||'')?p:today();return [fyStartOf(d),d];}if(kind==='range'){const [a,b]=String(p||'').split('..');const A=/^\d{4}-\d{2}-\d{2}$/.test(a||'')?a:today().slice(0,8)+'01',B=/^\d{4}-\d{2}-\d{2}$/.test(b||'')?b:today();return A<=B?[A,B]:[B,A];}return null;}
+{const _m=fsMonthsOf;fsMonthsOf=function(kind,p){const d=fsDates(kind,p);if(d) return [d[0].slice(0,7),d[1].slice(0,7)];return _m(kind,p);};}
+{const _l=fsLabel;fsLabel=function(kind,p,short){const d=fsDates(kind,p);if(d) return kind==='asat'?`As at ${fmtDate(d[1])}`:`${fmtDate(d[0])} – ${fmtDate(d[1])}`;return _l(kind,p,short);};}
+{const _c=fsCmpOf;fsCmpOf=function(kind,p,cmp){const d=fsDates(kind,p);if(!d) return _c(kind,p,cmp);const ly=x=>`${+x.slice(0,4)-1}${x.slice(4)}`.replace(/-02-29$/,'-02-28');
+  if(kind==='asat') return ly(d[1]);if(cmp==='ly') return `${ly(d[0])}..${ly(d[1])}`;const days=Math.round((Date.parse(d[1])-Date.parse(d[0]))/864e5);const b=addDays(d[0],-1);return `${addDays(b,-days)}..${b}`;};}
+{const _d=fsDefaultPeriod;fsDefaultPeriod=function(kind){if(kind==='asat') return today();if(kind==='range') return `${today().slice(0,8)}01..${today()}`;return _d(kind);};}
+function fsPerCtl(F,ps,refresh){if(F.kind!=='asat'&&F.kind!=='range') return ps;const d=fsDates(F.kind,F.period);
+  if(F.kind==='asat') return h('input',{type:'date','aria-label':'As at',value:d[1],onchange:e=>{F.period=e.target.value||today();refresh();}});
+  const a=h('input',{type:'date','aria-label':'From',value:d[0]}),b=h('input',{type:'date','aria-label':'To',value:d[1]});const set=()=>{F.period=`${a.value||d[0]}..${b.value||d[1]}`;refresh();};a.onchange=set;b.onchange=set;
+  return h('span',{class:'fsrange'},a,h('span',{class:'mini mut'},'to'),b);}
+{const _p=fsPeriods;fsPeriods=function(kind){if(kind==='asat'||kind==='range'){const F=S.fs2;return [F&&F.kind===kind&&fsDates(kind,F.period)?F.period:fsDefaultPeriod(kind)];}return _p(kind);};}
 
 
 // test hook (local development only)
