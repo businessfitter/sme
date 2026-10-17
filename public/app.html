@@ -1688,6 +1688,18 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .lgtab tfoot tr.lgcl td{border-top:1px solid var(--line-2)}
 .lgrowx{cursor:pointer}.lgrowx:hover td{background:var(--sunk)}
 .tbrep{min-width:15rem}.tbparty td{font-size:.86rem}.tbind{padding-left:1.4rem;display:inline-block;color:var(--muted)}.tbind::before{content:"└ ";color:var(--line-2)}
+/* ===== Mark as paid with evidence ===== */
+.paypanel{display:grid;gap:.6rem;padding:.8rem .9rem;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:0 10px 28px -16px rgba(16,24,40,.35);min-width:min(100%,30rem);max-width:40rem;text-align:left;white-space:normal}
+.payhd{display:flex;justify-content:space-between;gap:.8rem;align-items:baseline}
+.paytabs button{font-size:.84rem}
+.paymodes{display:flex;flex-wrap:wrap;gap:.35rem}
+.paymode{display:inline-flex;align-items:center;gap:.35rem;margin:0;padding:.35rem .7rem;border:1px solid var(--line);border-radius:999px;font-size:.85rem;cursor:pointer}
+.paymode input{margin:0;accent-color:var(--accent,#2457C5)}.paymode:has(input:checked){border-color:var(--accent,#2457C5);background:color-mix(in srgb,var(--accent,#2457C5) 9%,var(--panel));font-weight:500}
+.paycands{display:grid;gap:.35rem;max-height:16rem;overflow:auto}
+.paycand{display:grid;grid-template-columns:auto 1fr auto;gap:.6rem;align-items:center;padding:.5rem .65rem;border:1px solid var(--line);border-radius:10px;cursor:pointer;margin:0}
+.paycand:has(input:checked){border-color:var(--ok);background:color-mix(in srgb,var(--ok-soft) 70%,var(--panel))}
+.pcm{display:flex;flex-direction:column;min-width:0}.pcm .mini{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pca{display:flex;flex-direction:column;align-items:flex-end;font-weight:600}
+.payextra:empty{display:none}
 
 </style>
 
@@ -12730,6 +12742,69 @@ function slSetup(done){const cur=new Set(slAccounts());const cand=Object.values(
   return h('div',{class:'card stack'},h('h3',{style:'margin:0'},'Main ledgers that keep sub-ledgers'),h('p',{class:'mini mut',style:'margin:0'},'Tick each account broken down by party (customers, suppliers, employees, directors, lenders). Manual entries on these accounts must name the party.'),list,h('div',{class:'row'},save,h('button',{class:'btn ghost',type:'button',onclick:()=>{list.querySelectorAll('input').forEach(x=>x.checked=slDefault().includes(x.value));}},'Use suggested')),msg);}
 // an old link to the separate Sub-ledgers screen opens Ledgers
 BUILD.subled=BUILD.ledgers;
+
+// ===== Marking an invoice or bill paid needs evidence: a matching bank entry, or the payment method (cash, cheque, transfer, card) with its reference =====
+const PAY_MODES=[['transfer','Bank transfer'],['cheque','Cheque'],['cash','Cash'],['card','Card'],['other','Other']];
+const payModeName=k=>(PAY_MODES.find(x=>x[0]===k)||[k,k])[1];
+const isCashAcc=c=>/cash|petty/i.test(aname(c)||'')&&!/bank/i.test(aname(c)||'');
+// bank entries already booked to this party's control account but not (fully) applied to invoices
+function bankCandidates(inv){const isC=inv.kind==='customer',ctrl=isC?'1100':'2000';const cash=new Set(cashCodes());const out=[];
+  for(const m of S.moves){if(m.state!=='posted'||(m.source!=='bank_statement'&&m.source!=='payment'&&m.journal!=='BNK1')) continue;
+    const onCtrl=r2((m.lines||[]).filter(l=>l.account===ctrl).reduce((t,l)=>t+(isC?(+l.credit||0)-(+l.debit||0):(+l.debit||0)-(+l.credit||0)),0));if(onCtrl<=0.009) continue;
+    if(!(m.lines||[]).some(l=>cash.has(l.account))) continue;
+    const used=r2((m.settles||[]).reduce((t,x)=>t+(+x.amount||0),0));const free=r2(onCtrl-used);if(free<=0.009) continue;
+    const pt=norm(m.partner||(m.lines||[]).find(l=>l.account===ctrl&&l.partner)?.partner||'');const same=pt&&pt===norm(inv.partner);if(pt&&!same) continue;
+    out.push({m,free,same});}
+  const due=invDue(inv,true);return out.sort((a,b)=>(b.same-a.same)||(Math.abs(a.free-due)-Math.abs(b.free-due))||(a.m.date<b.m.date?1:-1)).slice(0,12);}
+async function matchBankToInv(inv,c,amount){const amt=r2(Math.min(amount,c.free,invDue(inv,true)));if(!(amt>0)) throw new Error('Nothing left to apply.');const m=c.m;
+  const settles=[...(m.settles||[]),{invoice_id:inv.id,amount:amt}];const up={settles,audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:`Applied ${money2(amt)} to ${inv.number}`}]};if(!m.partner) up.partner=inv.partner;
+  await db.doc('moves/'+m.id).update(up);Object.assign(m,up);return amt;}
+// record a payment with its method and reference
+async function recordPayment(inv,P){const isC=inv.kind==='customer';const bal=invDue(inv,true);const due=r2(Math.min(+P.amount,bal));if(!(due>0)) throw new Error('Enter the amount.');
+  const wht=isC&&+P.wht>0?r2(Math.min(+P.wht,due)):0;if(wht&&typeof whtEnsure==='function') await whtEnsure();
+  const how=P.mode==='cheque'?`cheque ${P.ref}${P.drawn?' on '+P.drawn:''}`:P.mode==='cash'?`cash, receipt ${P.ref}`:`${payModeName(P.mode).toLowerCase()} ${P.ref}`;
+  return submitMove({journal:P.mode==='cash'&&S.journals&&S.journals.CSH?'CSH':'BNK1',date:P.date,ref:`${isC?'Receipt':'Payment'} ${inv.number} ${inv.partner} (${how})`,partner:inv.partner,
+    payment:{mode:P.mode,ref:P.ref,cheque_date:P.mode==='cheque'?(P.cdate||P.date):undefined,drawn_on:P.mode==='cheque'?(P.drawn||undefined):undefined},
+    wht:wht?{rate:whtCfg().rate,amount:wht,invoices:[inv.number]}:undefined,
+    lines:isC?[{account:P.acc,label:`${inv.number} · ${payModeName(P.mode)} ${P.ref}`,debit:r2(due-wht),credit:0},...(wht?[{account:whtCfg().account,label:`Final tax withheld on ${inv.number}`,debit:wht,credit:0}]:[]),{account:'1100',label:inv.number,partner:inv.partner,debit:0,credit:due}]
+      :[{account:'2000',label:inv.number,partner:inv.partner,debit:due,credit:0},{account:P.acc,label:`${inv.number} · ${payModeName(P.mode)} ${P.ref}`,debit:0,credit:due}],
+    settles:[{invoice_id:inv.id,amount:due}],source:'payment'},{reason:`${isC?'Received':'Paid'} by ${payModeName(P.mode).toLowerCase()}, reference ${P.ref}`});}
+// the panel used by "Mark as paid" on the lists and by the payment form on an invoice
+function payPanel(inv,done,cancel){const isC=inv.kind==='customer';const due=invDue(inv,true);const box=h('div',{class:'paypanel',onclick:e=>e.stopPropagation()});const cands=bankCandidates(inv);
+  const T=S._payT&&S._payT.id===inv.id?S._payT:(S._payT={id:inv.id,tab:cands.length?'bank':'record'});const er=h('div',{class:'err mini',role:'status'});
+  const seg=h('div',{class:'seg paytabs',role:'tablist'},[['bank',`Match a bank entry${cands.length?` (${cands.length})`:''}`],['record','Record the payment']].map(([k,l])=>h('button',{type:'button',role:'tab','aria-selected':String(T.tab===k),onclick:()=>{T.tab=k;box.replaceWith(payPanel(inv,done,cancel));}},l)));
+  const body=h('div',{class:'stack paybody'});const close=cancel?h('button',{class:'btn ghost sm',type:'button',onclick:()=>{S._payT=null;cancel();}},'Cancel'):null;
+  box.append(h('div',{class:'payhd'},h('b',{},`${inv.number} · ${inv.partner}`),h('span',{class:'mini mut'},`Due ${money2(due)}`)),seg,body,er);
+  if(T.tab==='bank'){
+    if(!cands.length) body.append(h('p',{class:'mini mut'},`No unapplied ${isC?'receipt':'payment'} from ${inv.partner} is in the bank yet. Upload the bank statement in Banking, or record the payment with its method and reference.`),h('div',{class:'row'},close));
+    else{let pick=null;const list=h('div',{class:'paycands',role:'radiogroup','aria-label':'Bank entries'},cands.map((c,i)=>{const r=h('input',{type:'radio',name:'paycand-'+inv.id,value:String(i),onchange:()=>{pick=c;amt.value=r2(Math.min(c.free,due));}});
+        return h('label',{class:'paycand'},r,h('span',{class:'pcm'},h('b',{},fmtDate(c.m.date)),h('span',{class:'mini mut'},`${c.m.ref||c.m.name||'Bank entry'}`),!c.same?h('span',{class:'mini slwarn'},'No party named on this entry'):null),h('span',{class:'pca'},money2(c.free),h('span',{class:'mini mut'},'unapplied')));}));
+      const amt=h('input',{type:'number',step:'0.01',min:'0','aria-label':'Amount to apply',class:'num',style:'width:8rem'});
+      const ok=h('button',{class:'btn primary sm',type:'button',onclick:async()=>{er.textContent='';if(!pick){er.textContent='Choose the bank entry.';return;}ok.disabled=true;try{const a=await matchBankToInv(inv,pick,+amt.value||pick.free);S._payT=null;typeof revToast==='function'&&revToast(`${money2(a)} applied to ${inv.number} from the bank.`);done&&done();}catch(e){er.textContent=e.message;ok.disabled=false;}}},'Apply to invoice');
+      body.append(list,h('div',{class:'row',style:'align-items:flex-end'},h('label',{class:'field'},'Amount to apply',amt),ok,close));}
+  }else{
+    const P={mode:'transfer',date:today(),amount:due,acc:S.accounts['1010']?'1010':(cashCodes().find(c=>!isCashAcc(c))||cashCodes()[0]||''),ref:'',cdate:today(),drawn:''};
+    const W_=isC&&typeof whtFor==='function'?whtFor(inv):null;if(W_) P.wht=r2(P.amount*W_.rate/100);
+    const accSel=h('select',{'aria-label':isC?'Received into':'Paid from',onchange:e=>P.acc=e.target.value});
+    const fillAcc=()=>{const L=cashCodes().filter(c=>P.mode==='cash'?isCashAcc(c):!isCashAcc(c));const use=L.length?L:cashCodes();accSel.textContent='';use.forEach(c=>accSel.append(h('option',{value:c},`${c} ${aname(c)}`)));if(!use.includes(P.acc)) P.acc=use[0]||'';accSel.value=P.acc;};
+    const extra=h('div',{class:'row payextra'});const refL=h('span',{});const refIn=h('input',{type:'text','aria-label':'Reference',maxlength:'60',oninput:e=>P.ref=e.target.value.trim()});
+    const drawEx=()=>{extra.textContent='';refL.textContent=P.mode==='cheque'?'Cheque number':P.mode==='cash'?'Cash receipt number':P.mode==='card'?'Card slip or approval code':P.mode==='transfer'?'Transfer reference':'Reference';refIn.placeholder=P.mode==='cheque'?'e.g. 004512':P.mode==='cash'?'e.g. CR-0107':'e.g. FT2610170045';
+      if(P.mode==='cheque') extra.append(h('label',{class:'field'},'Cheque date',h('input',{type:'date',value:P.cdate,onchange:e=>P.cdate=e.target.value})),h('label',{class:'field'},'Drawn on (bank)',h('input',{type:'text',placeholder:'e.g. Emirates NBD',value:P.drawn,oninput:e=>P.drawn=e.target.value.trim()})));};
+    const modes=h('div',{class:'paymodes',role:'radiogroup','aria-label':'Payment method'},PAY_MODES.map(([k,l])=>h('label',{class:'paymode'},h('input',{type:'radio',name:'paymode-'+inv.id,value:k,checked:P.mode===k,onchange:()=>{P.mode=k;fillAcc();drawEx();}}),h('span',{},l))));
+    const ok=h('button',{class:'btn primary sm',type:'button',onclick:async()=>{er.textContent='';if(!P.date){er.textContent='Enter the date.';return;}if(!(+P.amount>0)){er.textContent='Enter the amount.';return;}if(!P.ref){er.textContent=`Enter the ${refL.textContent.toLowerCase()}: a payment is only marked with its evidence.`;refIn.focus();return;}if(!P.acc){er.textContent='Add a bank or cash account first.';return;}
+      ok.disabled=true;ok.textContent='Recording…';try{const r=await recordPayment(inv,P);S._payT=null;typeof revToast==='function'&&revToast(r&&r.state==='to_approve'?'Payment sent for approval.':`${inv.number} marked as paid by ${payModeName(P.mode).toLowerCase()}.`);done&&done(r);}catch(e){er.textContent=e.message;ok.disabled=false;ok.textContent=isC?'Record receipt':'Record payment';}}},isC?'Record receipt':'Record payment');
+    body.append(modes,h('div',{class:'row'},h('label',{class:'field'},'Date',h('input',{type:'date',value:P.date,onchange:e=>P.date=e.target.value})),h('label',{class:'field'},'Amount',h('input',{type:'number',step:'0.01',min:'0',value:P.amount,class:'num',style:'width:8rem',oninput:e=>P.amount=e.target.value})),
+        W_?h('label',{class:'field',title:`${W_.rate}% income tax withheld at source (full and final)`},'Final tax withheld',h('input',{type:'number',step:'0.01',value:P.wht,style:'width:7rem',oninput:e=>P.wht=e.target.value})):null,h('label',{class:'field'},isC?'Received into':'Paid from',accSel)),
+      h('div',{class:'row'},h('label',{class:'field',style:'flex:1;min-width:12rem'},refL,refIn)),extra,h('div',{class:'row'},ok,close));fillAcc();drawEx();}
+  return box;}
+// lists: the "Mark as paid" button opens the panel; settled ones say how
+{const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const b=td.querySelector('button');
+    if(b&&/Mark as paid/.test(b.textContent)){b.onclick=()=>{td.textContent='';td.append(payPanel(inv,()=>setTimeout(redraw,400),()=>redraw()));};}
+    else if(invDue(inv,true)<=0.01){const m=(S.moves||[]).filter(x=>x.state==='posted'&&(x.settles||[]).some(s=>s.invoice_id===inv.id)).pop();const s=td.querySelector('span');if(m&&s){s.textContent=m.source==='bank_statement'?'Matched from the bank':m.payment?`Paid by ${payModeName(m.payment.mode).toLowerCase()} ${m.payment.ref||''}`:s.textContent;}}}catch(e){}return td;};}
+// an invoice's own payment form uses the same panel
+paymentForm=function(inv,onDone){return payPanel(inv,r=>onDone&&onDone(true,r),null);};
+// quick paid from anywhere else must say how it was paid
+{const _qp=quickPaid;quickPaid=async function(inv,opt){opt=opt||{};if(!opt.mode) throw new Error('Choose how it was paid (bank match, cash, cheque, transfer or card) with its reference.');return recordPayment(inv,{mode:opt.mode,ref:opt.ref,date:opt.date||today(),amount:opt.amount||invDue(inv,true),acc:opt.bank||cashCodes()[0],wht:opt.wht,cdate:opt.cdate,drawn:opt.drawn});};}
 
 
 // test hook (local development only)
