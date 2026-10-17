@@ -1687,6 +1687,7 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .lgop td{font-style:italic;color:var(--muted)}.lgop td.lgb{font-style:normal;color:var(--ink)}
 .lgtab tfoot tr.lgcl td{border-top:1px solid var(--line-2)}
 .lgrowx{cursor:pointer}.lgrowx:hover td{background:var(--sunk)}
+.tbrep{min-width:15rem}.tbparty td{font-size:.86rem}.tbind{padding-left:1.4rem;display:inline-block;color:var(--muted)}.tbind::before{content:"└ ";color:var(--line-2)}
 
 </style>
 
@@ -12433,7 +12434,8 @@ BUILD.tbal=()=>{const el=h('section',{class:'stack tbscreen'});
     const vw=h('div',{class:'seg',role:'tablist','aria-label':'Layout'},[['acc','By account'],['fs','Grouped as in the statements']].map(([k,l])=>h('button',{type:'button',role:'tab','aria-selected':String(P.view===k),onclick:()=>{P.view=k;refresh();}},l)));
     const st=closed?h('span',{class:'tbst ok'},`Closed · locked to ${fmtDate(lk)}`):h('span',{class:'tbst warn'},lk?`Not closed yet · books locked to ${fmtDate(lk)}`:'Not closed yet');
     const sub=h('div',{class:'seg tbsub',role:'tablist','aria-label':'Trial balance view'},[['bal','Balances'],['map','Mapping']].map(([k,l])=>h('button',{type:'button',role:'tab','aria-selected':String((P.sub||'bal')===k),onclick:()=>{P.sub=k;refresh();}},l)));
-    top.append(sub,h('div',{class:'expper'},mode,pick,st),P.sub==='map'?h('span'):vw);
+    const rep=h('select',{'aria-label':'Report','class':'tbrep',onchange:e=>{P.rep=e.target.value;refresh();}},[['main','Trial balance: main ledgers'],['sub','Trial balance: by sub-ledger'],['tx','Transactions for the period (no balances)']].map(([k,l])=>h('option',{value:k},l)));rep.value=P.rep||'main';
+    top.append(sub,h('div',{class:'expper'},P.sub==='map'?null:rep,mode,pick,st),P.sub==='map'||(P.rep&&P.rep!=='main')?h('span'):vw);
     if(S.entity==='all') body.append(h('div',{class:'banner info'},'Showing the group. Choose one company to change how its accounts are grouped.'));
     const D=tbData(a,b);const map=curMap();const caps=fsCaptions(fsBasis().framework||'ifrs');const capName=k=>(caps.find(c=>c[0]===k)||[k,'',k])[2];
     const accs=Object.values(S.accounts).filter(x=>!x.group&&(!x.deprecated||D[x.id])).sort((x,y)=>x.id<y.id?-1:1).filter(x=>{const v=D[x.id];return P.zero||(v&&(Math.abs(v.op)>0.004||v.d||v.c));});
@@ -12476,8 +12478,9 @@ BUILD.tbal=()=>{const el=h('section',{class:'stack tbscreen'});
       const all=h('input',{type:'checkbox','aria-label':'Select all',disabled:!can,onchange:e=>{L.forEach(x=>e.target.checked?sel.add(x.id):sel.delete(x.id));tb.querySelectorAll('td.ck input').forEach(c=>c.checked=e.target.checked);}});
       tw.append(h('table',{class:'exptab tbtab'},h('thead',{},h('tr',{},h('th',{class:'ck'},all),h('th',{},'Code'),h('th',{},'Account'),h('th',{class:'num'},'Opening'),h('th',{class:'num'},'Debit'),h('th',{class:'num'},'Credit'),h('th',{class:'num'},'Closing debit'),h('th',{class:'num'},'Closing credit'),h('th',{},'Line in the financial statements'))),tb,
         h('tfoot',{},h('tr',{},h('td',{colspan:3},'Total'),h('td',{}),h('td',{class:'num'},money2(T('d'))),h('td',{class:'num'},money2(T('c'))),h('td',{class:'num'},money2(cd)),h('td',{class:'num'},money2(cc)),h('td',{},Math.abs(cd-cc)<0.05?pill('Balanced','ok'):pill(`Out by ${money2(r2(cd-cc))}`,'bad'))))));}
+    if(P.sub!=='map'&&P.rep&&P.rep!=='main'){body.append(tbReport(P.rep,a,b,D,accs,closed));return;}
     if(P.sub==='map'){body.append(h('div',{class:'tbgrid'},tbMapBoard({D,map,caps,can,staged,refresh,save,undo,msg}),preview));return;}
-    body.append(h('div',{class:'tbgrid'},h('div',{class:'card stack'},h('div',{class:'row'},q,zr,h('span',{style:'flex:1'}),moveTo,undo,save,pr),h('div',{class:'mini tbmsg',role:'status'}),msg,tw),preview));drawTable();}
+    body.append(h('div',{class:'tbgrid'},h('div',{class:'card stack'},h('div',{class:'row'},q,zr,h('span',{style:'flex:1'}),moveTo,undo,save,...tbExportBtns(()=>tbMainExport(a,b,D,accs,map,capName)),pr),h('div',{class:'mini tbmsg',role:'status'}),msg,tw),preview));drawTable();}
   return {el,refresh};};
 
 // ---- Mapping board: each line item of the statements is a box; drag accounts between boxes (or use Move to on a chip)
@@ -12514,6 +12517,47 @@ function tbMapBoard({D,map,caps,can,staged,refresh,save,undo,msg}){const M=S.tbM
       h('div',{class:'tbcol'},h('div',{class:'tbch'},'Balance sheet'),...lines.filter(c=>c[1]==='bs').map(([k,s,l])=>box(k,s,l))));mark();}
   function mark(){const qq=norm(M.q||'');cols.querySelectorAll('.tbchip').forEach(c=>{const hit=!qq||c.dataset.q.includes(qq);c.classList.toggle('dim',!hit);c.classList.toggle('hit',!!qq&&hit);});}
   card.append(cols);drawBoxes();return card;}
+
+// ---- exports and the other trial balance reports
+function tbExportBtns(get){const xl=h('button',{class:'btn',type:'button',onclick:()=>{const e=get();exportXlsx(e.file+'.xlsx',{[e.sheet]:e.xlsx()});}},'Excel');const pdf=h('button',{class:'btn',type:'button'},'PDF');
+  pdf.onclick=async()=>{pdf.disabled=true;try{const e=get();const p=e.pdf();await saveFile(e.file+'.pdf',await pdfTable(e.title,p.sub,p.head,p.rows,p.num));}catch(er){alertNote(er.message||'The PDF could not be made.');}finally{pdf.disabled=false;}};return [xl,pdf];}
+const tbPer=(a,b)=>`${fmtDate(a)} to ${fmtDate(b)}`;const tbCo=()=>(S.settings||{}).company||'';
+const dcAmt=n=>[n>0.004?r2(n):'',n<-0.004?r2(-n):''];const dcTxt=n=>[n>0.004?money2(n):'',n<-0.004?money2(-n):''];
+function tbMainExport(a,b,D,accs,map,capName){const R=accs.map(x=>({x,v:D[x.id]||{op:0,d:0,c:0,cl:0}}));const T=k=>r2(R.reduce((t,r)=>t+(r.v[k]||0),0));const cd=r2(R.reduce((t,r)=>t+Math.max(0,r.v.cl),0)),cc=r2(R.reduce((t,r)=>t+Math.max(0,-r.v.cl),0));
+  const head=['Code','Account','Opening Dr','Opening Cr','Debit','Credit','Closing Dr','Closing Cr','Statement line'];
+  return {file:fileSlug(`trial-balance-${b}`),sheet:'Trial balance',title:'Trial balance',
+    xlsx:()=>[[tbCo()],['Trial balance: main ledgers'],[tbPer(a,b)+`, ${S.baseCur}`],[],head,...R.map(r=>[r.x.id,r.x.name,...dcAmt(r.v.op),r.v.d||'',r.v.c||'',...dcAmt(r.v.cl),capName(map[r.x.id]||fsMapAccount(r.x))]),['','Total',...dcAmt(T('op')),T('d'),T('c'),cd,cc,'']],
+    pdf:()=>({sub:`${tbCo()} · ${tbPer(a,b)} · ${S.baseCur}`,head:head.slice(0,8),num:[2,3,4,5,6,7],rows:[...R.map(r=>[r.x.id,r.x.name,...dcTxt(r.v.op),r.v.d?money2(r.v.d):'',r.v.c?money2(r.v.c):'',...dcTxt(r.v.cl)]),{b:true,c:['','Total',...dcTxt(T('op')),money2(T('d')),money2(T('c')),money2(cd),money2(cc)]}]})};}
+// trial balance broken down by sub-ledger: each main ledger with a line per party
+function tbSubRows(a,b,D,accs){const ctrl=new Set(typeof slAccounts==='function'&&S.entity!=='all'?slAccounts():[]);const out=[];
+  accs.forEach(x=>{const v=D[x.id]||{op:0,d:0,c:0,cl:0};if(!ctrl.has(x.id)){out.push({k:'acc',x,v});return;}
+    const P=slSummary(x.id,a,b).filter(p=>Math.abs(p.op)>0.004||p.n||Math.abs(p.cl)>0.004).sort((p,q)=>(p.party?0:1)-(q.party?0:1)||p.party.localeCompare(q.party));
+    out.push({k:'main',x,v});P.forEach(p=>out.push({k:'party',x,party:p.party,v:{op:p.op,d:p.d,c:p.c,cl:p.cl}}));});return out;}
+function tbTxRows(a,b){const out=[];for(const m of posted()){if(m.date<a||m.date>b) continue;(m.lines||[]).forEach(l=>{if(!(+l.debit||0)&&!(+l.credit||0)) return;out.push({m,l,acc:S.accounts[l.account]||{id:l.account,name:''},party:(typeof slParty==='function'?slParty(m,l):(l.partner||m.partner||''))});});}
+  return out.sort((x,y)=>x.m.date<y.m.date?-1:x.m.date>y.m.date?1:String(x.m.name||'').localeCompare(String(y.m.name||'')));}
+function tbReport(kind,a,b,D,accs,closed){const card=h('div',{class:'card stack'});let exp;
+  if(kind==='sub'){const R=tbSubRows(a,b,D,accs);const leaf=R.filter(r=>r.k!=='main');const cd=r2(leaf.reduce((t,r)=>t+Math.max(0,r.v.cl),0)),cc=r2(leaf.reduce((t,r)=>t+Math.max(0,-r.v.cl),0));const T=k=>r2(leaf.reduce((t,r)=>t+(r.v[k]||0),0));
+    const nm=r=>r.k==='party'?(r.party||'Not assigned to a party'):`${r.x.id} ${r.x.name}`;
+    const tb=h('tbody',{},R.map(r=>h('tr',{class:r.k==='main'?'tbcap':r.k==='party'?'tbparty':''},h('td',{},r.k==='party'?h('span',{class:'tbind'},nm(r)):nm(r)),h('td',{class:'num'},r.v.op?lgDC(r.v.op):''),h('td',{class:'num'},r.v.d?money2(r.v.d):''),h('td',{class:'num'},r.v.c?money2(r.v.c):''),...dcTxt(r.v.cl).map(x=>h('td',{class:'num'},x)))));
+    card.append(h('div',{class:'row'},h('div',{style:'flex:1'},h('h3',{style:'margin:0'},'Trial balance by sub-ledger'),h('p',{class:'mini mut',style:'margin:.15rem 0 0'},`Main ledgers with sub-ledgers are shown with a line for each party · ${tbPer(a,b)}`)),...tbExportBtns(()=>exp)),
+      h('div',{class:'tablewrap'},h('table',{class:'exptab tbtab'},h('thead',{},h('tr',{},h('th',{},'Ledger / sub-ledger'),h('th',{class:'num'},'Opening'),h('th',{class:'num'},'Debit'),h('th',{class:'num'},'Credit'),h('th',{class:'num'},'Closing Dr'),h('th',{class:'num'},'Closing Cr'))),tb,
+        h('tfoot',{},h('tr',{},h('td',{},'Total'),h('td',{class:'num'},lgDC(T('op'))),h('td',{class:'num'},money2(T('d'))),h('td',{class:'num'},money2(T('c'))),h('td',{class:'num'},money2(cd)),h('td',{class:'num'},money2(cc))),h('tr',{},h('td',{colspan:6},Math.abs(cd-cc)<0.05?pill('Balanced','ok'):pill(`Out by ${money2(r2(cd-cc))}`,'bad')))))));
+    const head=['Ledger / sub-ledger','Opening Dr','Opening Cr','Debit','Credit','Closing Dr','Closing Cr'];
+    exp={file:fileSlug(`trial-balance-sub-ledgers-${b}`),sheet:'TB by sub-ledger',title:'Trial balance by sub-ledger',
+      xlsx:()=>[[tbCo()],['Trial balance by sub-ledger'],[tbPer(a,b)+`, ${S.baseCur}`],[],['Code','Ledger','Sub-ledger (party)',...head.slice(1)],...R.map(r=>[r.x.id,r.x.name,r.k==='party'?(r.party||'Not assigned'):r.k==='main'?'(main ledger total)':'',...dcAmt(r.v.op),r.v.d||'',r.v.c||'',...dcAmt(r.v.cl)]),['','Total','',...dcAmt(T('op')),T('d'),T('c'),cd,cc]],
+      pdf:()=>({sub:`${tbCo()} · ${tbPer(a,b)} · ${S.baseCur}`,head,num:[1,2,3,4,5,6],rows:[...R.map(r=>r.k==='main'?{g:true,c:[nm(r),...dcTxt(r.v.op),money2(r.v.d),money2(r.v.c),...dcTxt(r.v.cl)]}:[r.k==='party'?'    '+nm(r):nm(r),...dcTxt(r.v.op),r.v.d?money2(r.v.d):'',r.v.c?money2(r.v.c):'',...dcTxt(r.v.cl)]),{b:true,c:['Total',...dcTxt(T('op')),money2(T('d')),money2(T('c')),money2(cd),money2(cc)]}]})};
+    return card;}
+  // transactions for the period, without balances
+  const R=tbTxRows(a,b);const TD=r2(R.reduce((t,r)=>t+(+r.l.debit||0),0)),TC=r2(R.reduce((t,r)=>t+(+r.l.credit||0),0));const F=S.tbTx||(S.tbTx={q:''});
+  const tw=h('div',{class:'tablewrap'});const draw=()=>{const qq=norm(F.q||'');const L=R.filter(r=>!qq||norm([r.m.name,r.m.ref,r.l.label,r.acc.id,r.acc.name,r.party].join(' ')).includes(qq));tw.textContent='';
+    tw.append(h('table',{class:'exptab tbtab'},h('thead',{},h('tr',{},h('th',{},'Date'),h('th',{},'Entry'),h('th',{},'Account'),h('th',{},'Sub-ledger'),h('th',{},'Description'),h('th',{class:'num'},'Debit'),h('th',{class:'num'},'Credit'))),
+      h('tbody',{},L.slice(0,1500).map(r=>h('tr',{},h('td',{class:'nowrap'},fmtDate(r.m.date)),h('td',{class:'code mini'},r.m.name||''),h('td',{},h('span',{class:'code mini'},r.acc.id),' ',r.acc.name),h('td',{},r.party||''),h('td',{},r.l.label||r.m.ref||''),h('td',{class:'num'},+r.l.debit?money2(+r.l.debit):''),h('td',{class:'num'},+r.l.credit?money2(+r.l.credit):'')))),
+      h('tfoot',{},h('tr',{},h('td',{colspan:5},`Total of ${L.length} lines`),h('td',{class:'num'},money2(r2(L.reduce((t,r)=>t+(+r.l.debit||0),0)))),h('td',{class:'num'},money2(r2(L.reduce((t,r)=>t+(+r.l.credit||0),0))))))),L.length>1500?h('p',{class:'mini mut'},`Showing the first 1,500 of ${L.length}. The Excel file has them all.`):null);};
+  card.append(h('div',{class:'row'},h('div',{style:'flex:1'},h('h3',{style:'margin:0'},'Transactions for the period'),h('p',{class:'mini mut',style:'margin:.15rem 0 0'},`Every posted line, debit and credit, without balances · ${tbPer(a,b)} · ${R.length} lines`)),h('input',{type:'search',placeholder:'Search','aria-label':'Search transactions',value:F.q,oninput:e=>{F.q=e.target.value;draw();}}),...tbExportBtns(()=>exp)),tw);draw();
+  exp={file:fileSlug(`transactions-${a}-${b}`),sheet:'Transactions',title:'Transactions for the period',
+    xlsx:()=>[[tbCo()],['Transactions for the period'],[tbPer(a,b)+`, ${S.baseCur}`],[],['Date','Entry','Journal','Account code','Account','Sub-ledger (party)','Description','Debit','Credit'],...R.map(r=>[r.m.date,r.m.name||'',r.m.journal||'',r.acc.id,r.acc.name,r.party||'',r.l.label||r.m.ref||'',+r.l.debit||'',+r.l.credit||'']),['','','','','','','Total',TD,TC]],
+    pdf:()=>({sub:`${tbCo()} · ${tbPer(a,b)} · ${S.baseCur}`,head:['Date','Entry','Account','Sub-ledger','Description','Debit','Credit'],num:[5,6],rows:[...R.map(r=>[fmtDate(r.m.date),r.m.name||'',`${r.acc.id} ${r.acc.name}`,r.party||'',r.l.label||r.m.ref||'',+r.l.debit?money2(+r.l.debit):'',+r.l.credit?money2(+r.l.credit):'']),{b:true,c:['','','','','Total',money2(TD),money2(TC)]}]})};
+  return card;}
 
 // ===== Top bar, left side: home, company name and the modules icon only. "Companies" shows only for people with more than one company =====
 function coCount(){const es=document.getElementById('ent-sel');if(es) return [...es.options].filter(o=>o.value&&o.value!=='all').length;return Object.keys(S.ent||{}).length;}
