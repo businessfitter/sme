@@ -20,7 +20,8 @@ create table if not exists public.platform_config (
 insert into public.platform_config (key, value) values
   ('mode', 'saas'),              -- 'saas' or 'single'
   ('trial_days', '14'),
-  ('open_access', 'true'),        -- 'true': no trial, no plan limits (set to 'false' when plans start)
+  ('open_access', 'true'),
+  ('signup_approval', 'true'),    -- 'true': new sign-ups wait for a platform admin to approve them        -- 'true': no trial, no plan limits (set to 'false' when plans start)
   ('max_orgs_per_user', '3'),    -- companies one person may create (stops abuse of free trials)
   ('ai_calls_per_minute', '30'), -- per person, across all servers
   ('support_email', '')          -- shown to customers when a trial ends or a limit is hit
@@ -79,6 +80,12 @@ create table if not exists public.profiles (
   full_name  text,
   email      text
 );
+-- New sign-ups wait for a platform admin's approval (signup_approval = 'true'); people added by a company admin do not
+alter table public.profiles add column if not exists approval text not null default 'approved';
+alter table public.profiles add column if not exists signed_up_at timestamptz default now();
+alter table public.profiles add column if not exists approved_at timestamptz;
+alter table public.profiles add column if not exists approved_by uuid;
+alter table public.profiles add column if not exists request jsonb;
 
 -- owner  = full control, the only role that can grant or remove logins
 -- staff  = works in the books (finer rights per area are set in the app)
@@ -427,8 +434,9 @@ create trigger docs_access_sync after insert or update or delete on public.docs
 create or replace function public.on_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  insert into profiles (id, full_name, email)
-  values (new.id, coalesce(nullif(new.raw_user_meta_data ->> 'full_name', ''), split_part(new.email, '@', 1)), lower(new.email))
+  insert into profiles (id, full_name, email, approval, signed_up_at)
+  values (new.id, coalesce(nullif(new.raw_user_meta_data ->> 'full_name', ''), split_part(new.email, '@', 1)), lower(new.email),
+          case when coalesce(cfg('signup_approval'), 'true') = 'true' and coalesce(new.raw_user_meta_data ->> 'created_by', '') = '' then 'pending' else 'approved' end, now())
   on conflict (id) do nothing;
   return new;
 end $$;
@@ -514,6 +522,9 @@ begin
     end if;
   end if;
 
+  if not single and not is_platform_admin() and coalesce((select approval from profiles where id = auth.uid()), 'approved') <> 'approved' then
+    raise exception 'Your sign-up is waiting for approval. You will get an email once it is approved.' using errcode = '42501';
+  end if;
   insert into orgs (name, plan, status, trial_ends_at, created_by)
   values (btrim(p_name),
           -- no trial for now: every new workspace is open with no limits until plans are introduced
@@ -1850,3 +1861,43 @@ on conflict (org_id) do update set docs = excluded.docs, bytes = excluded.bytes;
 update public.orgs set plan = 'dedicated', status = 'active', trial_ends_at = null
  where coalesce((select value from public.platform_config where key = 'open_access'), 'true') = 'true'
    and (status = 'trial' or plan = 'trial');
+
+-- Sign-up approval: the person's own status, and the platform admin's list and decision
+create or replace function public.my_approval() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('approval', coalesce(p.approval, 'approved'), 'signed_up_at', p.signed_up_at, 'admin', is_platform_admin(), 'request', p.request)
+    from profiles p where p.id = auth.uid()
+$$;
+create or replace function public.admin_signups() returns table (id uuid, full_name text, email text, approval text, signed_up_at timestamptz, approved_at timestamptz, workspaces bigint, request jsonb)
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not is_platform_admin() then raise exception 'Platform admins only.' using errcode = '42501'; end if;
+  return query select p.id, p.full_name, p.email, p.approval, p.signed_up_at, p.approved_at, (select count(*) from members m where m.user_id = p.id), p.request
+    from profiles p where p.approval <> 'approved' or p.signed_up_at > now() - interval '30 days' order by (p.approval = 'pending') desc, p.signed_up_at desc nulls last limit 500;
+end $$;
+create or replace function public.admin_decide_signup(p_user uuid, p_approve boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not is_platform_admin() then raise exception 'Platform admins only.' using errcode = '42501'; end if;
+  update profiles set approval = case when p_approve then 'approved' else 'rejected' end, approved_at = now(), approved_by = auth.uid() where id = p_user;
+end $$;
+-- invited by a company: joining that company approves the person
+create or replace function public.approve_on_join() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'active' then update profiles set approval = 'approved', approved_at = coalesce(approved_at, now()) where id = new.user_id and approval = 'pending'; end if;
+  return new;
+end $$;
+drop trigger if exists members_approve_on_join on public.members;
+create trigger members_approve_on_join after insert or update of status on public.members for each row execute function public.approve_on_join();
+revoke all on function public.admin_signups() from public, anon;
+revoke all on function public.admin_decide_signup(uuid, boolean) from public, anon;
+grant execute on function public.my_approval(), public.admin_signups(), public.admin_decide_signup(uuid, boolean) to authenticated;
+-- the person describes what they need; the platform team sets the product up to match
+create or replace function public.submit_request(p_request jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Sign in first.' using errcode = '42501'; end if;
+  update profiles set request = coalesce(p_request, '{}'::jsonb) || jsonb_build_object('sent_at', now()) where id = auth.uid();
+end $$;
+grant execute on function public.submit_request(jsonb) to authenticated;

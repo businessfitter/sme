@@ -60,11 +60,19 @@ dialog h2{margin:0 0 .2rem;font-size:1.15rem;font-weight:500}
 .center{min-height:70vh;display:grid;place-items:center;text-align:center}
 .msg{min-height:1.2rem;color:var(--pink);font-size:.85rem;margin-top:.6rem}
 @media (max-width:640px){.grid{grid-template-columns:1fr}}
+.rqhead{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.seg{display:inline-flex;border:1px solid var(--line,#E3E6EA);border-radius:10px;overflow:hidden}.seg button{border:0;background:none;padding:.5rem .85rem;font:inherit;font-size:.85rem;cursor:pointer;color:inherit}.seg button[aria-pressed=true]{background:#0E1B33;color:#fff}
+.rqlist{display:grid;gap:.9rem}.rq{border:1px solid var(--line,#E3E6EA);border-radius:14px;padding:1.1rem 1.2rem;background:var(--panel)}
+.rqtop{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}.rq h2{margin:0 0 .2rem;font-size:1.1rem}.rqst{display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;font-size:.82rem}
+.st{padding:.18rem .6rem;border-radius:999px;font-size:.78rem;font-weight:500}.st.pending{background:#FFF4DB;color:#8A5A00}.st.approved{background:#E3F5EF;color:#0B6B4B}.st.rejected{background:#FBE7EE;color:#9A2F5A}
+.rqdl{display:grid;grid-template-columns:7rem 1fr;gap:.35rem .9rem;margin:.9rem 0 0;font-size:.9rem}.rqdl dt{color:var(--muted)}.rqdl dd{margin:0}.chip{display:inline-block;padding:.12rem .55rem;border-radius:999px;background:var(--sunk);font-size:.78rem;margin:0 .2rem .25rem 0}
+.rqact{display:flex;gap:.5rem;align-items:center;margin-top:1rem}.rqact .msg{margin:0}
+@media (max-width:640px){.rqdl{grid-template-columns:1fr}.rqst{align-items:flex-start}}
 </style>
 </head>
 <body>
 <header><span class="brand"><img src="/brand/app-icon.svg" alt=""><span id="appname">Orzio</span> · Platform admin</span>
-<nav id="nav" hidden><button type="button" data-v="companies" aria-current="page">Customers</button><button type="button" data-v="plans">Plans</button><button type="button" data-v="packs">Industry packs</button><button type="button" data-v="support">Support</button><button type="button" data-v="settings">Settings</button></nav>
+<nav id="nav" hidden><button type="button" data-v="requests" aria-current="page">Requests <span id="rq-n"></span></button><button type="button" data-v="companies">Customers</button><button type="button" data-v="plans">Plans</button><button type="button" data-v="packs">Industry packs</button><button type="button" data-v="support">Support</button><button type="button" data-v="settings">Settings</button></nav>
 <a href="/app">Open the app →</a></header>
 <main id="main"><div class="center"><p class="muted">Loading…</p></div></main>
 
@@ -83,7 +91,7 @@ $('#appname').textContent = cfg.appName || 'Orzio';
 if (!cfg.url || !window.supabase) { $('#main').innerHTML = '<div class="center"><p>Supabase is not configured on the server.</p></div>'; return; }
 const sb = window.supabase.createClient(cfg.url, cfg.anon, { auth: { persistSession: true, autoRefreshToken: true } });
 
-let orgs = [], plans = [], view = 'companies', q = '', fStatus = '';
+let orgs = [], plans = [], view = 'requests', q = '', fStatus = '';
 
 (async () => {
   const { data } = await sb.auth.getSession();
@@ -96,6 +104,7 @@ let orgs = [], plans = [], view = 'companies', q = '', fStatus = '';
   $('#nav').hidden = false;
   $('#nav').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; view = b.dataset.v; [...$('#nav').children].forEach((x) => x === b ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current')); render(); };
   await reload(); render();
+  sb.rpc('admin_signups').then((r) => { const n = (r.data || []).filter((x) => x.approval === 'pending').length; $('#rq-n').textContent = n ? '(' + n + ')' : ''; });
 })();
 
 async function reload() {
@@ -104,7 +113,35 @@ async function reload() {
   orgs = o.data || []; plans = p.data || [];
 }
 
-function render() { if (view === 'companies') companies(); else if (view === 'plans') plansView(); else if (view === 'support') support(); else if (view === 'packs') packsView(); else settings(); }
+function render() { if (view === 'requests') requestsView(); else if (view === 'companies') companies(); else if (view === 'plans') plansView(); else if (view === 'support') support(); else if (view === 'packs') packsView(); else settings(); }
+
+// Requests: new sign-ups describe what they need; the platform team sets them up, then approves
+let rqFilter = 'pending';
+async function requestsView() {
+  const r = await sb.rpc('admin_signups');
+  if (r.error) { $('#main').innerHTML = `<p class="msg">${esc(r.error.message)}. Run the latest supabase/migrations/0001_init.sql in Supabase.</p>`; return; }
+  const all = r.data || [], n = (k) => all.filter((x) => x.approval === k).length;
+  $('#rq-n').textContent = n('pending') ? '(' + n('pending') + ')' : '';
+  const rows = all.filter((x) => rqFilter === 'all' || x.approval === rqFilter);
+  const mods = (q) => ((q && q.modules) || []).map((m) => `<span class="chip">${esc(m)}</span>`).join(' ');
+  $('#main').innerHTML = `<div class="rqhead"><div><h1 style="margin:0">Requests</h1><p class="muted" style="margin:.2rem 0 0">New people tell us what they need. Set up their workspace to match, then approve so they can sign in.</p></div>
+<div class="seg">${[['pending', 'Waiting', n('pending')], ['approved', 'Approved', n('approved')], ['rejected', 'Declined', n('rejected')], ['all', 'All', all.length]].map(([k, l, c]) => `<button type="button" data-f="${k}" aria-pressed="${rqFilter === k}">${l} (${c})</button>`).join('')}</div></div>
+${rows.length ? `<div class="rqlist">${rows.map((x) => { const q = x.request || {}; return `<article class="rq" data-id="${esc(x.id)}">
+<div class="rqtop"><div><h2>${esc(q.company || '(no company yet)')}</h2><div class="muted">${esc(x.full_name || '')} · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a>${q.phone ? ' · ' + esc(q.phone) : ''}</div></div>
+<div class="rqst"><span class="st ${esc(x.approval)}">${x.approval === 'pending' ? 'Waiting' : x.approval === 'approved' ? 'Approved' : 'Declined'}</span><span class="muted">Signed up ${ago(x.signed_up_at)}</span></div></div>
+${q.sent_at ? `<dl class="rqdl"><dt>Industry</dt><dd>${esc(q.industry || '—')}</dd><dt>Country</dt><dd>${esc(q.country || '—')}</dd><dt>People</dt><dd>${esc(q.users || '—')}</dd><dt>Companies</dt><dd>${esc(q.entities || '—')}</dd><dt>Modules</dt><dd>${mods(q) || '—'}</dd>${q.notes ? `<dt>Needs</dt><dd style="white-space:pre-wrap">${esc(q.notes)}</dd>` : ''}</dl>` : '<p class="muted">Signed up but has not sent their requirements yet.</p>'}
+<div class="rqact">${x.approval !== 'approved' ? '<button type="button" class="btn primary" data-a="1">Approve</button>' : ''}${x.approval !== 'rejected' ? '<button type="button" class="btn" data-a="0">Decline</button>' : ''}<span class="msg"></span></div></article>`; }).join('')}</div>` : `<div class="center" style="min-height:30vh"><p class="muted">${rqFilter === 'pending' ? 'No one is waiting.' : 'Nothing here.'}</p></div>`}`;
+  $('#main').querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { rqFilter = b.dataset.f; requestsView(); });
+  $('#main').querySelectorAll('[data-a]').forEach((b) => b.onclick = async () => {
+    const card = b.closest('.rq'), id = card.dataset.id, yes = b.dataset.a === '1', m = card.querySelector('.msg');
+    if (!yes && !confirm('Decline this request? The person will be told by email.')) return;
+    card.querySelectorAll('button').forEach((x) => x.disabled = true);
+    const d = await sb.rpc('admin_decide_signup', { p_user: id, p_approve: yes });
+    if (d.error) { m.textContent = d.error.message; card.querySelectorAll('button').forEach((x) => x.disabled = false); return; }
+    try { const { data: s } = await sb.auth.getSession(); await fetch('/api/signup', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + s.session.access_token }, body: JSON.stringify({ action: 'decided', uid: id }) }); } catch (e) { /* email is a courtesy */ }
+    requestsView();
+  });
+}
 
 // Support: tickets your customers' IT teams escalated from their Help desk
 let tickets = [], tFilter = 'open';

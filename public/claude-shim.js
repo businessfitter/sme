@@ -181,8 +181,8 @@
     opts = opts || {};
     const email = (session && session.user.email) || '';
     const create = info.can_create_org ? `
-<form id="sb-f"><label for="sb-c">Workspace name — usually your business name</label><input id="sb-c" autocomplete="organization" maxlength="120" required placeholder="e.g. Al Noor Trading">
-<button type="submit" id="sb-go">${info.mode === 'single' ? 'Set up the workspace' : 'Start free trial'}</button></form>${legalLine('continuing')}` : '';
+<form id="sb-f"><label for="sb-c">Workspace name — usually your business name</label><input id="sb-c" autocomplete="organization" maxlength="120" required placeholder="e.g. Al Noor Trading" value="${esc(opts.name || '')}">
+<button type="submit" id="sb-go">Set up the workspace</button></form>${legalLine('continuing')}` : '';
     const wrap = screen(`<h1>${opts.another ? 'Add another workspace' : info.can_create_org ? 'Set up your workspace' : 'Waiting for access'}</h1>
 <p>${info.can_create_org
       ? (info.mode === 'single' ? 'Name the business this installation is for. You will be its owner.' : 'A workspace holds one business: its books, team and settings, private to you. Add its legal entities and branches inside it later.')
@@ -225,6 +225,58 @@ ${info.can_create_org && info.mode !== 'single' ? '<button class="sw" type="butt
     wrap.querySelector('#sb-so').onclick = async () => { await sb.auth.signOut(); setCookie(null); location.reload(); };
   }
 
+  // ---------- new sign-up: tell us what you need, then wait for the Orzio team to set it up ----------
+  const REQ_MODS = ['Accounting and finance', 'Banking and reconciliation', 'Sales and invoicing', 'Purchasing', 'Inventory and warehouses', 'HR and payroll', 'Tax and compliance', 'Projects', 'Point of sale', 'CRM', 'Documents', 'Reports and dashboards'];
+  const REQ_CSS = `#sb-auth .c.wide{width:min(38rem,100%)}#sb-auth .rq2{display:grid;grid-template-columns:1fr 1fr;gap:0 .8rem}#sb-auth select,#sb-auth textarea{width:100%;box-sizing:border-box;padding:.7rem .85rem;border-radius:12px;border:1px solid #E4E7EE;font:inherit;background:#fff}#sb-auth textarea{min-height:5.5rem;resize:vertical}
+#sb-auth .mods{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.2rem}#sb-auth .mods label{margin:0;display:inline-flex;align-items:center;gap:.4rem;padding:.42rem .7rem;border:1px solid #E4E7EE;border-radius:999px;font-size:.84rem;color:#2B3340;cursor:pointer}#sb-auth .mods input{margin:0;accent-color:#0F9488}#sb-auth .mods label:has(input:checked){border-color:#0F9488;background:#ECF8F6;color:#0B5F57}
+#sb-auth .steps{display:grid;gap:.55rem;margin:1rem 0 .2rem}#sb-auth .steps div{display:flex;gap:.7rem;align-items:flex-start;font-size:.9rem;color:#2B3340}#sb-auth .steps b{flex:none;width:1.6rem;height:1.6rem;border-radius:50%;display:grid;place-items:center;background:#F0F2F5;color:#5B6472;font-size:.8rem}#sb-auth .steps .done b{background:#0F9488;color:#fff}#sb-auth .steps .now b{background:#0E1B33;color:#fff}
+#sb-auth dl{display:grid;grid-template-columns:auto 1fr;gap:.3rem .9rem;margin:0;font-size:.86rem}#sb-auth dt{color:#5B6472}#sb-auth dd{margin:0;color:#0E1B33}
+@media (max-width:560px){#sb-auth .rq2{grid-template-columns:1fr}}`;
+  function requestScreen(ap) {
+    const r = (ap && ap.request) || null, email = (session && session.user.email) || '';
+    const rejected = ap && ap.approval === 'rejected';
+    const signOut = async () => { await sb.auth.signOut(); setCookie(null); location.reload(); };
+    if (rejected || (r && !requestScreen.edit)) {
+      const wrap = screen(`<style>${REQ_CSS}</style>${rejected
+        ? `<h1>We can't set this up yet</h1><p>Thank you for your interest. The Orzio team reviewed your request and can't set up a workspace for it at the moment. Reply to our email or write to us if anything has changed.</p>`
+        : `<h1>Your request is with our team</h1><p>Orzio is set up for each business to match how it works. We'll review what you need, prepare your workspace and email <b>${esc(email)}</b> when it's ready.</p>
+<div class="steps"><div class="done"><b>✓</b><span>Request sent</span></div><div class="now"><b>2</b><span>The Orzio team reviews it and sets up your modules, chart of accounts and settings</span></div><div><b>3</b><span>You sign in and start working</span></div></div>
+<div class="box"><dl><dt>Company</dt><dd>${esc(r.company || '—')}</dd><dt>Industry</dt><dd>${esc(r.industry || '—')}</dd><dt>Country</dt><dd>${esc(r.country || '—')}</dd><dt>People</dt><dd>${esc(r.users || '—')}</dd><dt>Modules</dt><dd>${esc((r.modules || []).join(', ') || '—')}</dd></dl></div>`}
+<div class="row">${rejected ? '' : '<button class="alt" type="button" id="rq-ed">Change my request</button><button class="alt" type="button" id="rq-rf">Check again</button>'}<button class="alt" type="button" id="rq-so">Sign out</button></div>`);
+      wrap.querySelector('#rq-so').onclick = signOut;
+      const ed = wrap.querySelector('#rq-ed'); if (ed) ed.onclick = () => { wrap.remove(); requestScreen.edit = true; requestScreen(ap); };
+      const rf = wrap.querySelector('#rq-rf'); if (rf) rf.onclick = () => location.reload();
+      return;
+    }
+    const v = r || {}, name = (profile && profile.full_name) || '';
+    const wrap = screen(`<style>${REQ_CSS}</style><h1>Tell us about your business</h1><p>Orzio is set up for each business. Tell us what you need and our team will prepare your workspace to match, then email you when it's ready.</p>
+<form id="rq-f"><div class="rq2"><div><label for="rq-co">Company name</label><input id="rq-co" required maxlength="120" autocomplete="organization" value="${esc(v.company || '')}"></div>
+<div><label for="rq-ph">Phone</label><input id="rq-ph" type="tel" maxlength="40" autocomplete="tel" value="${esc(v.phone || '')}"></div>
+<div><label for="rq-in">Industry</label><input id="rq-in" required maxlength="80" placeholder="e.g. Software services, Trading, Clinic" value="${esc(v.industry || '')}"></div>
+<div><label for="rq-cn">Country</label><input id="rq-cn" required maxlength="60" autocomplete="country-name" value="${esc(v.country || '')}"></div>
+<div><label for="rq-us">People who will use it</label><select id="rq-us">${['1–5', '6–20', '21–50', '51–200', 'More than 200'].map((x) => `<option${v.users === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
+<div><label for="rq-en">Companies or branches</label><select id="rq-en">${['One company', '2–5 companies', 'More than 5 companies'].map((x) => `<option${v.entities === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div></div>
+<label>Modules you need</label><div class="mods" role="group" aria-label="Modules you need">${REQ_MODS.map((m) => `<label><input type="checkbox" value="${esc(m)}"${(v.modules || []).includes(m) ? ' checked' : ''}>${esc(m)}</label>`).join('')}</div>
+<label for="rq-nt">What do you need Orzio to do?</label><textarea id="rq-nt" maxlength="3000" placeholder="How you work today, systems you use, reports you need, anything specific to your business">${esc(v.notes || '')}</textarea>
+<button type="submit" id="rq-go">Send request</button></form><div class="msg" id="rq-m" role="status"></div>
+<div class="row">${r ? '<button class="alt" type="button" id="rq-bk">Back</button>' : ''}<button class="alt" type="button" id="rq-so">Sign out</button></div>`);
+    wrap.querySelector('.c').classList.add('wide');
+    const $ = (id) => wrap.querySelector('#' + id);
+    $('rq-so').onclick = signOut;
+    if ($('rq-bk')) $('rq-bk').onclick = () => { wrap.remove(); requestScreen.edit = false; requestScreen(ap); };
+    $('rq-f').onsubmit = async (e) => {
+      e.preventDefault(); $('rq-m').textContent = '';
+      const mods = [...wrap.querySelectorAll('.mods input:checked')].map((x) => x.value);
+      if (!mods.length) { $('rq-m').textContent = 'Choose at least one module.'; return; }
+      const req = { company: $('rq-co').value.trim(), phone: $('rq-ph').value.trim(), industry: $('rq-in').value.trim(), country: $('rq-cn').value.trim(), users: $('rq-us').value, entities: $('rq-en').value, modules: mods, notes: $('rq-nt').value.trim(), name };
+      $('rq-go').disabled = true; $('rq-go').textContent = 'Sending…';
+      const x = await sb.rpc('submit_request', { p_request: req });
+      if (x.error) { $('rq-go').disabled = false; $('rq-go').textContent = 'Send request'; $('rq-m').textContent = x.error.message; return; }
+      try { const { data: s } = await sb.auth.getSession(); await fetch('/api/signup', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + ((s && s.session && s.session.access_token) || '') }, body: JSON.stringify({ action: 'notify' }) }); } catch (er) { /* the admin page still lists it */ }
+      wrap.remove(); requestScreen.edit = false; requestScreen({ ...ap, request: { ...req, sent_at: new Date().toISOString() } });
+    };
+  }
+
   const ready = (async () => {
     const { data } = await sb.auth.getSession();
     session = data.session; setCookie(session);
@@ -245,7 +297,14 @@ ${info.can_create_org && info.mode !== 'single' ? '<button class="sw" type="butt
       else if (invites.some((x) => x.id === ho.org_id)) { await whenDom(); inviteScreen(); await new Promise(() => {}); }
       else { await whenDom(); const w = screen(`<h1>No access to ${esc(ho.name || 'this workspace')}</h1><p>You are signed in as ${esc((profile && profile.email) || '')}, but this workspace hasn't given you access. Ask its owner to add you, or sign in with another account.</p><button class="b" id="sx-noacc">Sign out</button>`); const bt = document.getElementById('sx-noacc'); if (bt) bt.onclick = async () => { await sb.auth.signOut(); setCookie(null); location.reload(); }; await new Promise(() => {}); }
     }
-    if (!orgs.length) { await whenDom(); invites.length ? inviteScreen() : companyScreen(); await new Promise(() => {}); }
+    if (!orgs.length) {
+      let ap = null; if (!invites.length) { try { ap = (await sb.rpc('my_approval')).data; } catch (e) { ap = null; } }
+      await whenDom();
+      if (invites.length) inviteScreen();
+      else if (ap && ap.approval && ap.approval !== 'approved' && !ap.admin) requestScreen(ap);
+      else companyScreen({ name: ap && ap.request && ap.request.company });
+      await new Promise(() => {});
+    }
     const qs = new URLSearchParams(location.search);
     if (qs.get('workspace')) { store.set('sme-org', qs.get('workspace')); qs.delete('workspace'); history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs : '') + location.hash); }
     const want = store.get('sme-org');
