@@ -13034,6 +13034,20 @@ settledFor=function(id,withPending){let s=0;for(const m of (withPending?postedOr
 {const _mp=moveParts;moveParts=function(m){const P=_mp(m);if(!m.reversal_of) return P;const o=S.moves.find(x=>x.id===m.reversal_of);if(!o) return P;const OP=_mp(o);
   return P.map((parts,k)=>parts.length===1&&!parts[0].party&&OP[k]?OP[k].map(x=>({party:x.party,d:x.c,c:x.d})):parts);};}
 
+// ===== Sales: a Dashboard tab for the overview; Invoices is just the list of invoices =====
+TABS.push(['sdash','Sales dashboard']);
+ICONS.sdash='<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="4.5" rx="1.5"/><rect x="13.5" y="11" width="7" height="9.5" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/>';
+{const t=TABS.find(x=>x[0]==='sales');if(t) t[1]='Invoices';}
+(function(){const A=APPS.find(a=>a.k==='sales');if(A&&!A.tabs.includes('sdash')) A.tabs.unshift('sdash');(A&&A.groups||[]).forEach(g=>{if(g[1].includes('sales')&&!g[1].includes('sdash')) g[1].unshift('sdash');});
+  const m=ACCESS_MODULES.find(x=>x[0]==='sales');if(m&&!m[2].includes('sdash')) m[2].unshift('sdash');})();
+function salesPart(c){if(c.classList.contains('pagehead')||c.classList.contains('allguard')) return 'both';if(c.classList.contains('kpis')||c.classList.contains('grid2')) return 'dash';
+  const hd=(c.querySelector(':scope > h3, :scope > .cardhead h3, :scope > .row h3, h3')||{}).textContent||'';if(/^\s*Invoices\b/.test(hd)) return 'list';if(c.matches('.card')&&c.hidden!==undefined&&!hd.trim()) return 'both';return 'dash';}
+function salesMode(el,mode){const ap=()=>{[...el.children].forEach(c=>{const p=salesPart(c);c.classList.toggle('bkhide',p!=='both'&&p!==mode);});const h1=el.querySelector('.pagehead h1');if(h1) h1.textContent=mode==='dash'?'Sales dashboard':'Invoices';
+    const lede=el.querySelector('.pagehead .lede');if(lede) lede.textContent=mode==='dash'?'Receivables, collections, ageing, follow-ups and your customers at a glance.':'Every customer invoice and credit note. Open one to see it, record its payment or send it.';};
+  new MutationObserver(ap).observe(el,{childList:true});ap();}
+{const _s=BUILD.sales;BUILD.sales=(...a)=>{const r=_s(...a);try{salesMode(r.el,'list');}catch(e){}return r;};
+  BUILD.sdash=(...a)=>{const r=_s(...a);try{salesMode(r.el,'dash');}catch(e){}return r;};}
+
 
 // test hook (local development only)
 if(location.hostname==='localhost'){window.__dbg=c=>eval(c);}
