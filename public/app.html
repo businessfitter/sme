@@ -13212,7 +13212,7 @@ function receiptMenu(inv,anchorTd,redraw){const pays=invPaysOf(inv);if(!pays.len
 {const _bm=invBankMap;invBankMap=function(inv){const el=_bm(inv);try{if(el&&invPaysOf(inv).length){el.querySelector('b')&&el.querySelector('b').after(h('button',{class:'btn sm',type:'button',style:'margin-left:.6rem',onclick:e=>{e.stopPropagation();receiptMenu(inv);}},'Receipts'));}}catch(e){}return el;};}
 
 // overpaid invoices say so on the list; the extra sits as a credit in the customer's sub-ledger
-const invOverpaid=inv=>r2(S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.reversal_of&&m.overpaid&&m.overpaid.invoice_id===inv.id).reduce((t,m)=>t+(+m.overpaid.amount||0),0));
+let invOverpaid=inv=>r2(S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.reversal_of&&m.overpaid&&m.overpaid.invoice_id===inv.id).reduce((t,m)=>t+(+m.overpaid.amount||0),0));
 {const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const o=invOverpaid(inv);if(o>0.009){const s=h('span',{class:'pill acc invover',title:`${money2(o)} more than the invoice was received. It is kept as a credit on ${inv.partner}’s account and is used against their next invoice.`},`Overpaid ${money2(o)} · on account`);const lbl=td.querySelector(':scope > span.mini');if(lbl) lbl.replaceWith(s);else td.append(s);}}catch(e){}return td;};}
 
 // ===== Banking → Statements: remove every bank statement entry (to upload again and match by hand); no automatic applying of payments =====
