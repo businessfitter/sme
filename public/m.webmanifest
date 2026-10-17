@@ -1,0 +1,54 @@
+{
+  "id": "/m",
+  "name": "Orzio mobile",
+  "short_name": "Orzio",
+  "description": "Snap receipts, add entries, approve and see your numbers.",
+  "start_url": "/m?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E1B33",
+  "theme_color": "#0E1B33",
+  "categories": [
+    "business",
+    "finance",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/brand/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Snap a receipt",
+      "url": "/m?source=app#mobile",
+      "icons": [
+        {
+          "src": "/brand/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

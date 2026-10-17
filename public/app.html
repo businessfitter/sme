@@ -1510,6 +1510,42 @@ table.revtab td.revtype{position:relative}
 .acchead{display:flex;flex-direction:column;gap:.1rem;margin-bottom:.5rem}
 table.acct th.c{text-align:center;vertical-align:bottom}table.acct th.c div{font-size:.72rem;margin-bottom:.25rem}table.acct td.c{text-align:center}
 table.acct tr.off td:first-child{color:var(--ink2,#98A2B3)}
+/* ===== mobile app (/m) ===== */
+html.mobile body{background:var(--bg,#F4F5F7)}
+section.mapp{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:var(--bg,#F4F5F7);font-size:16px}
+.mhead{display:flex;align-items:center;gap:.7rem;padding:calc(env(safe-area-inset-top) + .7rem) 1rem .7rem;background:var(--panel,#fff);border-bottom:1px solid var(--line,#E4E7EE)}
+.mlogo{width:2.4rem;height:2.4rem;border-radius:10px;background:var(--acc,#1D4ED8);color:#fff;display:grid;place-items:center;font-weight:600;overflow:hidden;flex:none}.mlogo img{width:100%;height:100%;object-fit:contain;background:#fff}
+.mcowrap{display:flex;flex-direction:column;flex:1;min-width:0}.mco{border:0;background:none;font:inherit;font-weight:600;font-size:1rem;padding:0;max-width:100%;color:inherit}
+.mwait{display:flex;flex-direction:column;align-items:center;border:0;background:var(--bg2,#F2F4F7);border-radius:10px;padding:.3rem .6rem;font:inherit;color:inherit}.mwait b{font-size:1.05rem}
+.mbody{flex:1;overflow:auto;padding:1rem 1rem calc(5.5rem + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:.9rem;-webkit-overflow-scrolling:touch}
+.mnav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);background:var(--panel,#fff);border-top:1px solid var(--line,#E4E7EE);padding:.35rem .2rem calc(.35rem + env(safe-area-inset-bottom));z-index:61}
+.mnb{position:relative;display:flex;flex-direction:column;align-items:center;gap:.15rem;border:0;background:none;font:inherit;font-size:.72rem;color:var(--ink2,#667085);padding:.35rem 0;min-height:3rem}.mnb.on{color:var(--acc,#1D4ED8);font-weight:600}
+.mbadge{position:absolute;top:.1rem;left:55%;min-width:1.1rem;height:1.1rem;border-radius:999px;background:#D92D20;color:#fff;font-size:.68rem;font-style:normal;display:grid;place-items:center;padding:0 .25rem}
+.mhello h1{font-size:1.5rem;margin:0;letter-spacing:-.02em}.mhello p{margin:.15rem 0 0}
+.mkgrid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.mk{background:var(--panel,#fff);border:1px solid var(--line,#E4E7EE);border-radius:14px;padding:.8rem;display:flex;flex-direction:column;gap:.2rem;min-width:0}.mkl{font-size:.78rem;color:var(--ink2,#667085)}.mkv{font-size:1.15rem;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mkd{font-size:.74rem;color:var(--ink2,#667085)}
+.mk.warn .mkv{color:#B42318}.mk.acc .mkv{color:var(--acc,#1D4ED8)}
+.mquick{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.mbig{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;min-height:3.2rem;border:0;border-radius:14px;background:var(--acc,#1D4ED8);color:#fff;font:inherit;font-weight:600;font-size:1rem}.mbig.alt{background:var(--panel,#fff);color:inherit;border:1px solid var(--line,#E4E7EE)}.mbig:disabled{opacity:.6}
+.mcard{background:var(--panel,#fff);border:1px solid var(--line,#E4E7EE);border-radius:16px;padding:1rem;display:flex;flex-direction:column;gap:.6rem}.mcard h2,.mcard h3{margin:0}
+.mh2{font-size:1.25rem;margin:.2rem 0 0;letter-spacing:-.01em}
+.mlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}.mlist li{display:flex;justify-content:space-between;gap:.8rem;padding:.6rem 0;border-top:1px solid var(--line,#EEF0F3)}.mlist li:first-child{border-top:0}.mlist li div{display:flex;flex-direction:column;min-width:0}.mlist b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mamt{font-weight:600;white-space:nowrap}.mamt.in{color:#067647}
+.mcap{align-items:center;text-align:center;padding:2rem 1.2rem}.mcapico{width:4rem;height:4rem;border-radius:50%;background:var(--acc-bg,#EFF4FF);color:var(--acc,#1D4ED8);display:grid;place-items:center}.mcapico svg{width:30px;height:30px}
+.mlink{border:0;background:none;color:var(--acc,#1D4ED8);font:inherit;padding:.4rem;align-self:center}.mback{align-self:flex-start;padding:0}
+.mprev{width:100%;max-height:16rem;object-fit:contain;border-radius:14px;background:#000}
+.mread{flex-direction:row;align-items:center}.mspin{width:1.2rem;height:1.2rem;border-radius:50%;border:2.5px solid var(--line,#D0D5DD);border-top-color:var(--acc,#1D4ED8);animation:mspin .8s linear infinite}@keyframes mspin{to{transform:rotate(360deg)}}
+.mform .mf{display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;color:var(--ink2,#475467)}.mform input,.mform select{font:inherit;font-size:1rem;color:var(--ink,#101828);padding:.7rem .75rem;border:1px solid var(--line,#D0D5DD);border-radius:10px;background:var(--panel,#fff);width:100%;box-sizing:border-box}
+.mrow{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.mnote{padding:.7rem .8rem;border-radius:12px;background:var(--bg2,#F2F4F7);font-size:.9rem}.mnote.ok{background:#ECFDF3;color:#067647}.mnote.warn{background:#FFFAEB;color:#B54708}
+.mtiles{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}.mtile{display:flex;flex-direction:column;align-items:flex-start;gap:.3rem;text-align:left;padding:1rem;border:1px solid var(--line,#E4E7EE);border-radius:16px;background:var(--panel,#fff);font:inherit;color:inherit;min-height:6rem}
+.mappr .mapt{display:flex;justify-content:space-between;gap:.8rem}.mappr .mapt div{display:flex;flex-direction:column;min-width:0}.mwhy{color:var(--ink2,#475467)}
+.macts{display:flex;justify-content:flex-end;gap:.6rem}.mok,.mno{width:3rem;height:3rem;border-radius:50%;display:grid;place-items:center;border:1px solid}.mok{background:#ECFDF3;color:#067647;border-color:#ABEFC6}.mno{background:#FEF3F2;color:#B42318;border-color:#FECDCA}
+.mappr.yes{opacity:.65}.mappr.nope{opacity:.45}.mdone{align-self:flex-end;font-weight:600;font-size:.9rem}
+.mmenu button{text-align:left;border:0;border-top:1px solid var(--line,#EEF0F3);background:none;font:inherit;padding:.9rem .2rem;color:inherit}.mmenu button:first-child{border-top:0}
+.mver{text-align:center}
+@media (prefers-reduced-motion:reduce){.mspin{animation:none}}
+.mform select{height:auto;min-height:3rem;line-height:1.3;padding:.6rem 2.2rem .6rem .75rem}.mco{height:auto;line-height:1.3}
 
 </style>
 
@@ -11841,6 +11877,110 @@ function coAddrCard(eid){const box=h('div',{class:'card stack coaddr'});const ms
 {const _sw=switchEntity;switchEntity=function(...a){const r=_sw.apply(this,a);setTimeout(()=>{try{if(S.entity&&S.entity!=='all') coAddrEnsure(S.entity);}catch(e){}},2500);return r;};}
 // companies carry the addresses now; the workspace no longer takes one automatically
 wsAddrEnsure=async function(){};
+
+// ===== Orzio on the phone: /m opens a handy mobile app — receipts by camera, quick entries, approvals and a dashboard =====
+const M_ON=(()=>{try{return /^\/m\/?$/.test(location.pathname)||sessionStorage.getItem('orzio-m')==='1'||/[?&]m=1\b/.test(location.search);}catch(e){return false;}})();
+if(M_ON){try{sessionStorage.setItem('orzio-m','1');}catch(e){}document.documentElement.classList.add('mobile');try{const l=document.querySelector('link[rel=manifest]');if(l) l.href='/m.webmanifest';}catch(e){}}
+TABS.push(['mobile','Orzio mobile']);try{if(!NO_SIDE.includes('mobile')) NO_SIDE.push('mobile');}catch(e){}
+{const _ra=roleAllows;roleAllows=t=>t==='mobile'?true:_ra(t);}
+// in mobile mode every navigation stays in the mobile app
+{const _st=showTab;showTab=function(t,...a){if(M_ON&&t!=='mobile'&&!S._mFull) return _st.call(this,'mobile',...a);return _st.call(this,t,...a);};}
+const MI={home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>',
+  add:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',ok:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'};
+const mIco=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MI[k]}</svg>`;
+const mCash=()=>{try{return r2(balanceOf(cashCodes(),today()));}catch(e){return 0;}};
+function mMonthTotals(){const m=today().slice(0,7);let inc=0,exp=0;(S.moves||[]).filter(x=>x.state==='posted'&&String(x.date||'').startsWith(m)).forEach(x=>(x.lines||[]).forEach(l=>{const t=typeOf(l.account)||'';if(t.startsWith('income')) inc+=(+l.credit||0)-(+l.debit||0);else if(t.startsWith('expense')) exp+=(+l.debit||0)-(+l.credit||0);}));return {inc:r2(inc),exp:r2(exp)};}
+function mWaiting(){return (S.moves||[]).filter(m=>m.state==='to_approve').sort((a,b)=>a.date<b.date?1:-1);}
+BUILD.mobile=()=>{const el=h('section',{class:'mapp'});const body=h('div',{class:'mbody'});const nav=h('nav',{class:'mnav','aria-label':'Mobile menu'});const head=h('header',{class:'mhead'});el.append(head,body,nav);
+  const go=k=>{S.mTab=k;refresh();window.scrollTo(0,0);body.scrollTop=0;};
+  function drawHead(){head.textContent='';const ents=Object.entries(S.ent||{}).filter(([k])=>k!=='all');const e=S.ent[S.entity]||{};
+    const sel=h('select',{class:'mco','aria-label':'Company'},ents.length?null:h('option',{value:''},'No company yet'),ents.map(([id,x])=>h('option',{value:id},x.name)));sel.value=S.entity&&S.entity!=='all'?S.entity:'';
+    sel.onchange=()=>{if(sel.value){switchEntity(sel.value);setTimeout(()=>showTab('mobile'),50);}};
+    const logo=(e.brand&&e.brand.logo&&e.brand.logo.url)?h('img',{src:e.brand.logo.url,alt:''}):h('span',{},String(e.name||'O').slice(0,1).toUpperCase());
+    head.append(h('div',{class:'mlogo'},logo),h('div',{class:'mcowrap'},h('span',{class:'mini mut'},'Company'),sel),h('button',{type:'button',class:'mwait',onclick:()=>go('approve'),'aria-label':'Waiting for approval'},h('b',{},String(mWaiting().length)),h('span',{class:'mini'},'to approve')));}
+  function drawNav(){nav.textContent='';[['home','Home'],['capture','Receipt'],['add','Add'],['approve','Approve'],['more','More']].forEach(([k,l])=>{const b=h('button',{type:'button',class:'mnb'+((S.mTab||'home')===k?' on':''),onclick:()=>go(k),'aria-label':l});b.innerHTML=mIco(k==='capture'?'cam':k==='approve'?'ok':k)+`<span>${l}</span>`;if(k==='approve'){const n=mWaiting().length;if(n) b.append(h('i',{class:'mbadge'},String(n)));}nav.append(b);});}
+  function needCo(){if(S.entity&&S.entity!=='all'&&S.ent[S.entity]) return false;body.append(h('div',{class:'mcard'},h('h2',{},'Choose a company'),h('p',{class:'mut'},'Pick the company at the top to start.')));return true;}
+  // ---- home
+  function home(){if(needCo()) return;const t=mMonthTotals();const open=openInvoices('customer');const rec=r2(open.reduce((s,i)=>s+invDue(i,true),0));const od=open.filter(i=>i.due<today());const odAmt=r2(od.reduce((s,i)=>s+invDue(i,true),0));
+    const k=(l,v,d,c)=>h('div',{class:'mk '+(c||'')},h('span',{class:'mkl'},l),h('b',{class:'mkv'},v),d?h('span',{class:'mkd'},d):null);
+    body.append(h('div',{class:'mhello'},h('h1',{},(()=>{const hr=new Date().getHours();const g=hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';const n=String((S.names||{})[S.me]||'').split(' ')[0];return n&&!/^you$/i.test(n)?`${g}, ${n}`:g;})()),h('p',{class:'mut'},fmtDate(today()))),
+      h('div',{class:'mkgrid'},k('Cash and bank',mc(mCash()),'Today'),k('To collect',mc(rec),`${open.length} open invoices`),k('Overdue',mc(odAmt),`${od.length} invoices`,od.length?'warn':''),k('Waiting for you',String(mWaiting().length),'Entries to approve',mWaiting().length?'acc':''),k(`Sales, ${mLabel(today().slice(0,7))}`,mc(t.inc),''),k(`Expenses, ${mLabel(today().slice(0,7))}`,mc(t.exp),'')),
+      h('div',{class:'mquick'},h('button',{type:'button',class:'mbig',onclick:()=>go('capture')},h('span',{html:''}),'Snap a receipt'),h('button',{type:'button',class:'mbig alt',onclick:()=>go('add')},'Add an entry')));
+    body.querySelector('.mbig span').outerHTML=mIco('cam');
+    const recent=(S.moves||[]).filter(m=>m.state==='posted').sort((a,b)=>(a.date<b.date?1:a.date>b.date?-1:0)).slice(0,6);
+    body.append(h('div',{class:'mcard'},h('h3',{},'Latest entries'),recent.length?h('ul',{class:'mlist'},recent.map(m=>h('li',{},h('div',{},h('b',{},m.ref||m.name||'Entry'),h('span',{class:'mini mut'},`${fmtDate(m.date)} · ${m.journal||''}`)),h('span',{class:'mamt'},money2(moveTotal(m)))))):h('p',{class:'mut'},'Nothing posted yet.')));}
+  // ---- receipt by camera: the agent reads it, you check and submit
+  const R=S.mR||(S.mR={});
+  function capture(){if(needCo()) return;const cam=h('input',{type:'file',accept:'image/*,application/pdf',capture:'environment',hidden:true});const pick=h('input',{type:'file',accept:'image/*,application/pdf',hidden:true});
+    const onFile=async f=>{if(!f) return;R.file=f;R.preview=f.type.startsWith('image/')?URL.createObjectURL(f):null;R.x=null;R.err='';R.reading=true;refresh();
+      try{let img=f;if(!f.type.startsWith('image/')){const u=await receiptToDataUrl(f);img=dataUrlBlob(u);}
+        if(!sample) throw new Error('The receipt agent needs the AI service.');
+        const kinds=docKinds('expense');const x=await sample.json(`You are the Expense agent for ${S.settings.company} (${(COUNTRIES[S.settings.country]||{}).name||''}, ${S.baseCur}${S.settings.vat_rate?`, VAT ${S.settings.vat_rate}%`:''}). Read this receipt or bill. Return ONLY JSON {"vendor":string|null,"date":"YYYY-MM-DD"|null,"total":number|null,"vat":number|null,"currency":string|null,"description":string (short, what was bought),"kind":one of ${JSON.stringify(kinds.map(k=>k[0]))}}. VAT only if the receipt shows it.`,{images:[img],modelTier:'quick'});
+        const kd=kinds.find(k=>k[0]===x.kind)||kinds[0]||[null,''];R.x={vendor:x.vendor||'',date:/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')?x.date:today(),total:+x.total||0,vat:+x.vat||0,desc:x.description||'',account:kd[1]||'',paid:cashCodes()[0]||''};}
+      catch(e){R.err=(e&&e.message)||'The receipt could not be read. Fill it in below.';R.x=R.x||{vendor:'',date:today(),total:0,vat:0,desc:'',account:(docKinds('expense')[0]||[])[1]||'',paid:cashCodes()[0]||''};}
+      finally{R.reading=false;refresh();}};
+    cam.onchange=()=>onFile(cam.files&&cam.files[0]);pick.onchange=()=>onFile(pick.files&&pick.files[0]);
+    if(!R.file){body.append(cam,pick,h('div',{class:'mcard mcap'},h('div',{class:'mcapico',html:''}),h('h2',{},'Snap a receipt'),h('p',{class:'mut'},'The expense agent reads the supplier, date, amount and VAT. You check it and submit.'),
+        h('button',{type:'button',class:'mbig',onclick:()=>cam.click()},'Open the camera'),h('button',{type:'button',class:'mlink',onclick:()=>pick.click()},'Choose a photo or PDF instead')));body.querySelector('.mcapico').innerHTML=mIco('cam');return;}
+    if(R.preview) body.append(h('img',{class:'mprev',src:R.preview,alt:'Receipt'}));else body.append(h('div',{class:'mcard'},h('b',{},R.file.name)));
+    if(R.reading){body.append(h('div',{class:'mcard mread'},h('span',{class:'mspin','aria-hidden':'true'}),'The expense agent is reading the receipt…'));return;}
+    if(R.err) body.append(h('div',{class:'mnote warn'},R.err));
+    const X=R.x;const f=(l,inp)=>h('label',{class:'mf'},h('span',{},l),inp);
+    const kinds=docKinds('expense');const acc=h('select',{onchange:e=>X.account=e.target.value},kinds.map(([l,c])=>h('option',{value:c},l)));acc.value=X.account;
+    const paid=h('select',{onchange:e=>X.paid=e.target.value},cashCodes().map(c=>h('option',{value:c},`${aname(c)}`)),h('option',{value:'__unpaid'},'Not paid yet (supplier bill)'));paid.value=X.paid;
+    const msg=h('div',{class:'mnote',hidden:true});const sub=h('button',{type:'button',class:'mbig'},'Submit');
+    sub.onclick=async()=>{msg.hidden=true;const tot=r2(+X.total),vat=r2(+X.vat||0);if(!(tot>0)){msg.textContent='Enter the amount.';msg.hidden=false;return;}if(!X.account){msg.textContent='Choose the type of expense.';msg.hidden=false;return;}
+      sub.disabled=true;sub.textContent='Submitting…';
+      try{let fileRec=null;try{const loc=await storeFile(R.file,{title:`Receipt · ${X.vendor||'supplier'} · ${X.date}`,folder:'Invoices and receipts',source:'mobile'});await db.doc('files/'+loc.id).update({module:'accounting',sub:'Receipts'});fileRec={file_id:loc.id,url:loc.url};}catch(e){}
+        const vatAcc=vat>0&&S.accounts['1400']?'1400':null;const net=vatAcc?r2(tot-vat):tot;const unpaid=X.paid==='__unpaid';const cr=unpaid?'2000':X.paid;
+        const lines=[{account:X.account,label:X.desc||X.vendor||'Expense',debit:net,credit:0},...(vatAcc?[{account:vatAcc,label:'VAT on '+(X.vendor||'receipt'),debit:vat,credit:0}]:[]),{account:cr,label:X.vendor||'Receipt',debit:0,credit:tot}];
+        const r=await submitMove({journal:unpaid?'PUR':'BNK1',date:X.date,ref:`Receipt ${X.vendor||''}`.trim(),partner:X.vendor||null,lines,source:'receipt',attachment:fileRec,created_via:'mobile'},{reason:'Receipt from the mobile app'});
+        S.mR={};S.mDone=r&&r.state==='to_approve'?'Submitted. It is waiting for approval.':'Saved and posted.';refresh();}
+      catch(e){msg.textContent=e.message||'Could not submit it.';msg.hidden=false;sub.disabled=false;sub.textContent='Submit';}};
+    body.append(h('div',{class:'mcard mform'},h('h3',{},'Check and submit'),f('Supplier',h('input',{type:'text',value:X.vendor,oninput:e=>X.vendor=e.target.value})),f('Date',h('input',{type:'date',value:X.date,onchange:e=>X.date=e.target.value})),
+      h('div',{class:'mrow'},f('Total paid',h('input',{type:'number',inputmode:'decimal',step:'0.01',value:X.total||'',oninput:e=>X.total=e.target.value})),f('VAT included',h('input',{type:'number',inputmode:'decimal',step:'0.01',value:X.vat||'',oninput:e=>X.vat=e.target.value}))),
+      f('What was it',h('input',{type:'text',value:X.desc,oninput:e=>X.desc=e.target.value})),f('Type of expense',acc),f('Paid from',paid),msg,sub,h('button',{type:'button',class:'mlink',onclick:()=>{S.mR={};refresh();}},'Retake')));}
+  // ---- quick entries
+  function add(){if(needCo()) return;const Q=S.mQ||(S.mQ={k:null});
+    if(!Q.k){body.append(h('h2',{class:'mh2'},'Add an entry'),h('div',{class:'mtiles'},[['expense','Expense paid','Fuel, meals, supplies paid now'],['received','Money received','From a customer, into the bank'],['paid','Payment to a supplier','Pays their open bills'],['petty','Petty cash top-up','From the bank to petty cash']].map(([k,t,d])=>h('button',{type:'button',class:'mtile',onclick:()=>{S.mQ={k,date:today(),amount:'',party:'',account:'',bank:cashCodes()[0]||'',note:''};refresh();}},h('b',{},t),h('span',{class:'mini mut'},d)))));return;}
+    const f=(l,inp)=>h('label',{class:'mf'},h('span',{},l),inp);const banks=()=>h('select',{onchange:e=>Q.bank=e.target.value},cashCodes().map(c=>h('option',{value:c},aname(c))));
+    const msg=h('div',{class:'mnote',hidden:true});const save=h('button',{type:'button',class:'mbig'},'Save');const fields=[];
+    fields.push(f('Date',h('input',{type:'date',value:Q.date,onchange:e=>Q.date=e.target.value})),f('Amount',h('input',{type:'number',inputmode:'decimal',step:'0.01',value:Q.amount,oninput:e=>Q.amount=e.target.value})));
+    const parties=kind=>(S.raw.partners||[]).filter(p=>p.kind===kind&&p.entity===S.entity&&!['deleted','rejected','blocked'].includes(p.status)).map(p=>p.name).sort();
+    if(Q.k==='expense'){const a=h('select',{onchange:e=>Q.account=e.target.value},docKinds('expense').map(([l,c])=>h('option',{value:c},l)));Q.account=Q.account||a.value;a.value=Q.account;const b=banks();b.value=Q.bank;fields.push(f('Type of expense',a),f('Paid from',b),f('Note',h('input',{type:'text',value:Q.note,oninput:e=>Q.note=e.target.value})));}
+    if(Q.k==='received'||Q.k==='paid'){const kind=Q.k==='received'?'customer':'supplier';const ps=h('select',{onchange:e=>Q.party=e.target.value},h('option',{value:''},kind==='customer'?'Choose the customer':'Choose the supplier'),parties(kind).map(n=>h('option',{value:n},n)));ps.value=Q.party;const b=banks();b.value=Q.bank;fields.push(f(kind==='customer'?'Customer':'Supplier',ps),f(Q.k==='received'?'Into':'Paid from',b));}
+    if(Q.k==='petty'){const pc=cashCodes();const from=banks();from.value=Q.bank;const to=h('select',{onchange:e=>Q.account=e.target.value},pc.map(c=>h('option',{value:c},aname(c))));Q.account=Q.account||pc.find(c=>/petty|cash/i.test(aname(c))&&c!==Q.bank)||pc[0];to.value=Q.account;fields.push(f('From',from),f('To',to));}
+    save.onclick=async()=>{msg.hidden=true;const amt=r2(+Q.amount);if(!(amt>0)){msg.textContent='Enter the amount.';msg.hidden=false;return;}save.disabled=true;
+      try{let mv;if(Q.k==='expense') mv={journal:'BNK1',date:Q.date,ref:Q.note||aname(Q.account),lines:[{account:Q.account,label:Q.note||'Expense',debit:amt,credit:0},{account:Q.bank,label:Q.note||'Expense',debit:0,credit:amt}],source:'payment'};
+        else if(Q.k==='received'||Q.k==='paid'){if(!Q.party) throw new Error('Choose the '+(Q.k==='received'?'customer.':'supplier.'));const isC=Q.k==='received';const st=txSettles(isC?'customer':'supplier',Q.party,amt);
+          mv={journal:'BNK1',date:Q.date,ref:`${isC?'Receipt from':'Payment to'} ${Q.party}`,partner:Q.party,settles:st,lines:isC?[{account:Q.bank,label:Q.party,debit:amt,credit:0},{account:'1100',label:Q.party,debit:0,credit:amt}]:[{account:'2000',label:Q.party,debit:amt,credit:0},{account:Q.bank,label:Q.party,debit:0,credit:amt}],source:'payment'};}
+        else mv={journal:'BNK1',date:Q.date,ref:'Petty cash top-up',lines:[{account:Q.account,label:'Petty cash top-up',debit:amt,credit:0},{account:Q.bank,label:'Petty cash top-up',debit:0,credit:amt}],source:'payment'};
+        mv.created_via='mobile';const r=await submitMove(mv,{reason:'Entered on the mobile app'});S.mQ={k:null};S.mDone=r&&r.state==='to_approve'?'Saved. It is waiting for approval.':'Saved and posted.';refresh();}
+      catch(e){msg.textContent=e.message||'Could not save it.';msg.hidden=false;save.disabled=false;}};
+    const title={expense:'Expense paid',received:'Money received',paid:'Payment to a supplier',petty:'Petty cash top-up'}[Q.k];
+    body.append(h('div',{class:'mcard mform'},h('button',{type:'button',class:'mlink mback',onclick:()=>{S.mQ={k:null};refresh();}},'‹ Back'),h('h3',{},title),...fields,msg,save));}
+  // ---- approvals with a tick and a cross
+  function approve(){if(needCo()) return;const w=mWaiting();body.append(h('h2',{class:'mh2'},'Waiting for approval'));
+    if(!w.length){body.append(h('div',{class:'mcard'},h('p',{class:'mut'},'Nothing is waiting. Well done.')));return;}
+    w.slice(0,60).forEach(m=>{const cash=new Set(cashCodes());const bl=(m.lines||[]).find(l=>cash.has(l.account));const inflow=bl&&(+bl.debit||0)>0;const other=(m.lines||[]).filter(l=>!cash.has(l.account));
+      const card=h('div',{class:'mcard mappr'});const err=h('div',{class:'mnote',hidden:true});
+      const ok=h('button',{type:'button',class:'mok','aria-label':'Approve'});ok.innerHTML=mIco('ok');const no=h('button',{type:'button',class:'mno','aria-label':'Reject'});no.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      const done=(t,c)=>{card.classList.add(c);card.querySelector('.macts').replaceWith(h('span',{class:'mdone'},t));};
+      ok.onclick=async()=>{ok.disabled=no.disabled=true;try{await approveMove(m,m.lines);done('Approved','yes');}catch(e){err.textContent=e.message;err.hidden=false;ok.disabled=no.disabled=false;}};
+      no.onclick=async()=>{ok.disabled=no.disabled=true;try{await rejectMove(m);done('Rejected','nope');}catch(e){err.textContent=e.message;err.hidden=false;ok.disabled=no.disabled=false;}};
+      card.append(h('div',{class:'mapt'},h('div',{},h('b',{},m.ref||'Entry'),h('span',{class:'mini mut'},`${fmtDate(m.date)}${m.partner?' · '+m.partner:''}`)),h('span',{class:'mamt '+(inflow?'in':'')},(bl?(inflow?'+':'−'):'')+money2(moveTotal(m)))),
+        other.length?h('div',{class:'mini mut'},other.map(l=>`${l.account} ${aname(l.account)}`).join(' · ')):null,m.reasoning?h('div',{class:'mini mwhy'},m.reasoning):null,err,h('div',{class:'macts'},no,ok));body.append(card);});}
+  // ---- more
+  function more(){body.append(h('h2',{class:'mh2'},'More'),h('div',{class:'mcard mmenu'},
+      h('button',{type:'button',onclick:()=>{S._mFull=true;try{sessionStorage.removeItem('orzio-m');}catch(e){}location.href=location.origin+'/app';}},'Open the full Orzio'),
+      h('button',{type:'button',onclick:()=>{const t=h('div',{class:'mnote'},/iPhone|iPad/.test(navigator.userAgent)?'In Safari, tap Share, then Add to Home Screen.':'In Chrome, tap the ⋮ menu, then Install app or Add to Home screen.');body.append(t);}},'Add Orzio to my home screen'),
+      h('button',{type:'button',onclick:async()=>{try{const p=await window.claude.use('platform');if(p&&p.signOut) await p.signOut();}catch(e){}try{document.getElementById('tbout')&&document.getElementById('tbout').click();}catch(e){}}},'Sign out')),
+      h('p',{class:'mini mut mver'},'Orzio mobile'));}
+  function refresh(){drawHead();drawNav();body.textContent='';if(S.mDone){const n=h('div',{class:'mnote ok'},S.mDone);body.append(n);S.mDone=null;setTimeout(()=>n.remove(),3500);}
+    const k=S.mTab||'home';if(k==='capture') capture();else if(k==='add') add();else if(k==='approve') approve();else if(k==='more') more();else home();}
+  return {el,refresh};};
+// open the mobile app once the app is ready
+if(M_ON){const t0=Date.now();const iv=setInterval(()=>{try{if(typeof S!=='undefined'&&S.me&&document.getElementById('main')){clearInterval(iv);showTab('mobile');}else if(Date.now()-t0>30000) clearInterval(iv);}catch(e){}},300);}
 
 
 // test hook (local development only)
