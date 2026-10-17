@@ -1623,6 +1623,17 @@ html body.tb2 .topbar :focus-visible{outline:2px solid #818CF8!important;outline
 .expacc button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0 .3rem}.expacc button:hover{color:var(--bad)}
 .expjv .lines select{min-width:14rem}
 @media (max-width:760px){.expsplit{grid-template-columns:1fr}.expctl{flex-direction:column;align-items:stretch}.expbarc{display:none}}
+/* ===== Close and report → Trial balance ===== */
+.tbctl{display:flex;flex-wrap:wrap;gap:.8rem 1.2rem;align-items:center;justify-content:space-between;padding:.75rem 1rem}
+.tbst{font-size:.8rem;font-weight:500;padding:.25rem .65rem;border-radius:999px}.tbst.ok{background:var(--ok-soft);color:var(--ok)}.tbst.warn{background:var(--warn-soft);color:var(--warn)}
+.tbgrid{display:grid;grid-template-columns:minmax(0,1fr) 19rem;gap:1rem;align-items:start}
+.tbpv{position:sticky;top:4.5rem}.tbpv h3{margin:0}.tbpv .exptab td{padding:.4rem .2rem}.tbpvb td{font-weight:700;border-top:1px solid var(--line-2)}
+.tbtab td.ck,.tbtab th.ck{width:1.6rem}.tbtab td{vertical-align:middle}.tbline select{max-width:17rem;font-size:.84rem;padding:.3rem .4rem}
+.tbline select.chg{border-color:var(--warn);background:var(--warn-soft)}.tbchg td{background:color-mix(in srgb,var(--warn-soft) 45%,transparent)}
+.tbcap td{background:var(--sunk);font-weight:600;font-size:.85rem}
+.tbov{font-size:.68rem;font-weight:600;color:var(--accent,#2457C5);border:1px solid currentColor;border-radius:999px;padding:0 .4rem;margin-left:.45rem;vertical-align:middle}
+.tbzero{display:inline-flex;gap:.4rem;align-items:center;font-size:.85rem;color:var(--muted)}
+@media (max-width:1100px){.tbgrid{grid-template-columns:1fr}.tbpv{position:static}}
 
 </style>
 
@@ -12324,6 +12335,83 @@ function expJV(done){const box=h('div',{class:'stack expjv'});const cash=Object.
     h('div',{class:'row'},h('label',{class:'field'},'Date',h('input',{type:'date',value:d.date,onchange:e=>{d.date=e.target.value;}})),h('label',{class:'field',style:'flex:1;min-width:12rem'},'Reference',h('input',{type:'text',placeholder:'Invoice or receipt number',oninput:e=>{d.ref=e.target.value;}})),
       h('label',{class:'field',style:'flex:1;min-width:12rem'},'Supplier or payee',h('input',{type:'text',list:'expjv-sup',oninput:e=>{d.partner=e.target.value.trim();}}),dl)),
     linesBox,tot,h('div',{class:'row'},h('label',{class:'field',style:'flex:1;min-width:14rem'},'Paid from or owed to',from),h('label',{class:'field'},'Receipt (optional)',fileIn)),msg,h('div',{class:'row'},save,cancel));drawLines();return box;}
+
+// ===== Close and report → Trial balance after the month-end close, with the statement grouping changed right here =====
+TABS.push(['tbal','Trial balance']);
+ICONS.tbal='<path d="M12 4v16M5 8h14"/><path d="M5 8l-2.5 6a2.5 2.5 0 0 0 5 0zM19 8l-2.5 6a2.5 2.5 0 0 0 5 0z"/><path d="M8 20h8"/>';
+(function(){const C=APPS.find(a=>a.k==='accounting');if(C&&!C.tabs.includes('tbal')){const i=C.tabs.indexOf('close');C.tabs.splice(i>=0?i+1:C.tabs.length,0,'tbal');const g=(C.groups||[]).find(x=>x[1].includes('close'));if(g&&!g[1].includes('tbal')) g[1].splice(g[1].indexOf('close')+1,0,'tbal');}
+  const rep=ACCESS_MODULES.find(m=>m[0]==='reports');if(rep&&!rep[2].includes('tbal')) rep[2].splice(1,0,'tbal');})();
+
+const TB_PL=['rev','cor','sell','admin','dep','oth','fin','tax'];
+const TB_HINT={rev:'Revenue',cor:'Direct costs, above gross profit',sell:'Selling, marketing and distribution',admin:'Administrative and general',dep:'Depreciation and amortisation',oth:'Other income',fin:'Finance costs',tax:'Income tax'};
+function tbLineOpts(a,cur){const caps=fsCaptions(fsBasis().framework||'ifrs').filter(c=>c[3]!=='calc');const pl=/^(income|expense)/.test(a.type||'');
+  const list=caps.filter(c=>pl?c[1]==='pl':c[1]==='bs');return list.map(([k,,l])=>h('option',{value:k,selected:k===cur},pl&&TB_HINT[k]&&TB_HINT[k]!==l?`${l} · ${TB_HINT[k]}`:l));}
+// opening, movement and closing for each account. Income and expenses start from the financial year start.
+function tbData(from,to){const fy=fyStartOf(to);const o={};const get=k=>o[k]||(o[k]={op:0,d:0,c:0});
+  for(const m of posted()){if(m.date>to) continue;for(const l of m.lines||[]){const a=S.accounts[l.account];if(!a) continue;const pl=/^(income|expense)/.test(a.type||'');const x=get(l.account);const n=(+l.debit||0)-(+l.credit||0);
+    if(m.date<from){if(!pl||m.date>=fy) x.op+=n;}else{if(pl&&m.date<fy) continue;x.d+=+l.debit||0;x.c+=+l.credit||0;}}}
+  Object.values(o).forEach(x=>{x.op=r2(x.op);x.d=r2(x.d);x.c=r2(x.c);x.cl=r2(x.op+x.d-x.c);});return o;}
+
+BUILD.tbal=()=>{const el=h('section',{class:'stack tbscreen'});
+  const P=S.tbP||(S.tbP={mode:'month',m:null,from:null,to:null,view:'acc',zero:false,q:''});const staged=S.tbStage||(S.tbStage={});const sel=new Set();
+  el.append(h('div',{class:'pagehead'},h('div',{},h('h1',{},'Trial balance'),h('p',{class:'lede'},'Balances after the month-end close. Choose the line each account sits in on the financial statements: which costs come before gross profit, which are selling and marketing, which are administrative.'))));
+  const top=h('div',{class:'card tbctl'}),body=h('div',{class:'stack nopertable'});el.append(top,body);
+  const lastClosed=()=>{const lk=(S.settings||{}).lock_date;return lk?lk.slice(0,7):addMonths(today().slice(0,7),-1);};
+  function range(){if(P.mode==='asat'){const d=P.to||today();return [fyStartOf(d),d];}if(P.mode==='range'){const a=P.from||today().slice(0,8)+'01',b=P.to||today();return a<=b?[a,b]:[b,a];}const m=P.m||lastClosed();return [m+'-01',lastDay(m)];}
+  const curMap=()=>{const f=fsFormatFor(fsBasis().framework||'ifrs');return {...f.map,...staged};};
+  function refresh(){top.textContent='';body.textContent='';if(allGuard(el,'see the trial balance')) return;const nd=needData();if(nd){body.append(nd);return;}
+    const [a,b]=range();const lk=(S.settings||{}).lock_date;const closed=lk&&lk>=b;
+    const mode=h('select',{'aria-label':'Period type',onchange:e=>{P.mode=e.target.value;refresh();}},[['month','Month'],['asat','As at'],['range','Range']].map(([k,l])=>h('option',{value:k},l)));mode.value=P.mode;
+    const pick=P.mode==='month'?h('input',{type:'month','aria-label':'Month',value:P.m||lastClosed(),onchange:e=>{P.m=e.target.value;refresh();}})
+      :P.mode==='asat'?h('input',{type:'date','aria-label':'As at',value:b,onchange:e=>{P.to=e.target.value;refresh();}})
+      :h('span',{class:'exprange'},h('input',{type:'date','aria-label':'From',value:a,onchange:e=>{P.from=e.target.value;refresh();}}),h('span',{class:'mini mut'},'to'),h('input',{type:'date','aria-label':'To',value:b,onchange:e=>{P.to=e.target.value;refresh();}}));
+    const vw=h('div',{class:'seg',role:'tablist','aria-label':'Layout'},[['acc','By account'],['fs','Grouped as in the statements']].map(([k,l])=>h('button',{type:'button',role:'tab','aria-selected':String(P.view===k),onclick:()=>{P.view=k;refresh();}},l)));
+    const st=closed?h('span',{class:'tbst ok'},`Closed · locked to ${fmtDate(lk)}`):h('span',{class:'tbst warn'},lk?`Not closed yet · books locked to ${fmtDate(lk)}`:'Not closed yet');
+    top.append(h('div',{class:'expper'},mode,pick,st),vw);
+    if(S.entity==='all') body.append(h('div',{class:'banner info'},'Showing the group. Choose one company to change how its accounts are grouped.'));
+    const D=tbData(a,b);const map=curMap();const caps=fsCaptions(fsBasis().framework||'ifrs');const capName=k=>(caps.find(c=>c[0]===k)||[k,'',k])[2];
+    const accs=Object.values(S.accounts).filter(x=>!x.group&&(!x.deprecated||D[x.id])).sort((x,y)=>x.id<y.id?-1:1).filter(x=>{const v=D[x.id];return P.zero||(v&&(Math.abs(v.op)>0.004||v.d||v.c));});
+    const can=S.canEdit&&S.entity!=='all';const nStaged=Object.keys(staged).length;
+    // profit and loss preview with the grouping as it stands (including unsaved changes)
+    const cap={};accs.forEach(x=>{const k=map[x.id]||fsMapAccount(x);cap[k]=r2((cap[k]||0)+(D[x.id]?D[x.id].cl:0));});
+    const g=k=>-(cap[k]||0);const gp=g('rev')+g('cor'),op=gp+g('sell')+g('admin')+g('dep')+g('oth'),pbt=op+g('fin'),np=pbt+g('tax');
+    const pv=(l,v,b)=>h('tr',{class:b?'tbpvb':''},h('td',{},l),h('td',{class:'num'},money2(r2(v))));
+    const preview=h('div',{class:'card tbpv'},h('h3',{},'Profit and loss with this grouping'),h('p',{class:'mini mut'},`${fmtDate(a)} – ${fmtDate(b)}${nStaged?' · includes changes not saved yet':''}`),
+      h('table',{class:'exptab'},h('tbody',{},pv(capName('rev'),g('rev')),pv(capName('cor'),g('cor')),pv('Gross profit',gp,1),h('tr',{},h('td',{class:'mini mut',colspan:2},gp&&g('rev')?`Gross margin ${(gp/g('rev')*100).toFixed(1)}%`:'')),pv(capName('sell'),g('sell')),pv(capName('admin'),g('admin')),pv(capName('dep'),g('dep')),pv(capName('oth'),g('oth')),pv('Operating profit',op,1),pv(capName('fin'),g('fin')),pv('Profit before tax',pbt,1),pv(capName('tax'),g('tax')),pv('Profit for the period',np,1))));
+    // actions for the grouping
+    const msg=h('span',{class:'mini',role:'status'});
+    const moveTo=h('select',{'aria-label':'Move selected accounts to',disabled:!can},h('option',{value:''},'Move selected to…'),...caps.filter(c=>c[3]!=='calc').map(([k,s,l])=>h('option',{value:k},`${s==='pl'?'P&L':'Balance sheet'}: ${l}${TB_HINT[k]&&s==='pl'&&TB_HINT[k]!==l?' · '+TB_HINT[k]:''}`)));
+    moveTo.onchange=()=>{const k=moveTo.value;if(!k) return;let bad=0;sel.forEach(id=>{const ac=S.accounts[id];const pl=/^(income|expense)/.test(ac.type||'');const cpl=(caps.find(c=>c[0]===k)||[])[1]==='pl';if(pl!==cpl){bad++;return;}staged[id]=k;});sel.clear();refresh();if(bad) setTimeout(()=>{const m=el.querySelector('.tbmsg');if(m) m.textContent=`${bad} not moved: profit and loss accounts stay in the profit and loss, balance sheet accounts in the balance sheet.`;},0);};
+    const save=h('button',{class:'btn primary',type:'button',disabled:!can||!nStaged},nStaged?`Save grouping (${nStaged})`:'Save grouping');
+    const undo=h('button',{class:'btn ghost',type:'button',disabled:!nStaged,onclick:()=>{Object.keys(staged).forEach(k=>delete staged[k]);refresh();}},'Undo changes');
+    save.onclick=async()=>{save.disabled=true;try{const fsf=entDoc().fs_format||{};const ov={...(fsf.overrides||{})};Object.entries(staged).forEach(([id,k])=>{if(k===fsMapAccount(S.accounts[id])) delete ov[id];else ov[id]=k;});
+      // keep expense groups in step: an account moved to another line leaves a group that sits on a different line
+      const eg=(entDoc().exp_groups||[]).map(x=>({...x,accounts:(x.accounts||[]).filter(id=>!(staged[id]&&staged[id]!==x.line))}));
+      await saveEnt({fs_format:{...fsf,overrides:ov,sig:null},...(entDoc().exp_groups?{exp_groups:eg}:{})});if(typeof fsSyncFormat==='function') await fsSyncFormat(true);
+      const n=Object.keys(staged).length;Object.keys(staged).forEach(k=>delete staged[k]);refresh();typeof revToast==='function'&&revToast(`Grouping saved for ${n} ${n===1?'account':'accounts'}. The financial statements use it now.`);}
+      catch(e){msg.textContent=e.message;save.disabled=false;}};
+    const q=h('input',{type:'search',placeholder:'Search account','aria-label':'Search accounts',value:P.q,oninput:e=>{P.q=e.target.value;drawTable();}});
+    const zr=h('label',{class:'tbzero'},h('input',{type:'checkbox',checked:P.zero,onchange:e=>{P.zero=e.target.checked;refresh();}}),'Show accounts with no balance');
+    const pr=h('button',{class:'btn ghost',type:'button',onclick:()=>{const w=window.open('','_blank');if(!w) return;w.document.write(`<title>Trial balance</title><style>body{font:13px system-ui;padding:24px}table{border-collapse:collapse;width:100%}td,th{padding:5px 8px;border-bottom:1px solid #ddd;text-align:left}.num{text-align:right}select,input,button{display:none}.tbcap td{font-weight:600;background:#f3f4f6}tfoot td{font-weight:700}</style><h2>${esc(S.settings.company||'')} – Trial balance</h2><p>${esc(fmtDate(a))} – ${esc(fmtDate(b))}</p>`+tw.querySelector('table').outerHTML.replace(/<select[\s\S]*?<\/select>/g,m=>{const s=/selected[^>]*>([^<]*)/.exec(m);return s?s[1]:'';}));w.document.close();w.print();}},'Print');
+    const tw=h('div',{class:'tablewrap'});
+    function row(x){const v=D[x.id]||{op:0,d:0,c:0,cl:0};const cur=map[x.id]||fsMapAccount(x);const def=fsMapAccount(x);const ch=!!staged[x.id];const ovr=cur!==def;
+      const s=h('select',{'aria-label':'Statement line for '+x.name,disabled:!can,class:ch?'chg':'',onchange:e=>{staged[x.id]=e.target.value;refresh();}},tbLineOpts(x,cur));
+      const ck=h('input',{type:'checkbox','aria-label':'Select '+x.name,disabled:!can,checked:sel.has(x.id),onchange:e=>{e.target.checked?sel.add(x.id):sel.delete(x.id);}});
+      return h('tr',{class:(ch?'tbchg ':'')+(x.deprecated?'mut':'')},h('td',{class:'ck'},ck),h('td',{},h('span',{class:'code mini'},x.id)),h('td',{},x.name,ovr?h('span',{class:'tbov',title:'Moved from its usual line: '+capName(def)},'regrouped'):null),
+        h('td',{class:'num'},v.op?dc(v.op):''),h('td',{class:'num'},v.d?money2(v.d):''),h('td',{class:'num'},v.c?money2(v.c):''),h('td',{class:'num'},v.cl>0.004?money2(v.cl):''),h('td',{class:'num'},v.cl<-0.004?money2(-v.cl):''),h('td',{class:'tbline'},s));}
+    const dc=n=>n>0?money2(n)+' Dr':money2(-n)+' Cr';
+    function drawTable(){tw.textContent='';const qq=norm(P.q||'');const L=accs.filter(x=>!qq||norm(x.id+' '+x.name).includes(qq));const tb=h('tbody');
+      if(P.view==='fs'){caps.filter(c=>c[3]!=='calc').forEach(([k,s,l])=>{const G=L.filter(x=>(map[x.id]||fsMapAccount(x))===k);if(!G.length) return;const sum=f=>r2(G.reduce((t,x)=>t+f(D[x.id]||{op:0,d:0,c:0,cl:0}),0));
+          tb.append(h('tr',{class:'tbcap'},h('td',{}),h('td',{colspan:2},`${s==='pl'?'Profit and loss':'Balance sheet'} · ${l}`,TB_HINT[k]&&s==='pl'&&TB_HINT[k]!==l?h('span',{class:'mini mut'},' · '+TB_HINT[k]):null),h('td',{class:'num'},sum(x=>x.op)?dc(sum(x=>x.op)):''),h('td',{class:'num'},money2(sum(x=>x.d))),h('td',{class:'num'},money2(sum(x=>x.c))),h('td',{class:'num'},sum(x=>x.cl)>0?money2(sum(x=>x.cl)):''),h('td',{class:'num'},sum(x=>x.cl)<0?money2(-sum(x=>x.cl)):''),h('td',{})));
+          G.forEach(x=>tb.append(row(x)));});}
+      else L.forEach(x=>tb.append(row(x)));
+      if(!L.length) tb.append(h('tr',{},h('td',{colspan:9},emptyNote('No balances for this period.'))));
+      const T=k=>r2(L.reduce((t,x)=>t+((D[x.id]||{})[k]||0),0));const cd=r2(L.reduce((t,x)=>t+Math.max(0,(D[x.id]||{}).cl||0),0)),cc=r2(L.reduce((t,x)=>t+Math.max(0,-((D[x.id]||{}).cl||0)),0));
+      const all=h('input',{type:'checkbox','aria-label':'Select all',disabled:!can,onchange:e=>{L.forEach(x=>e.target.checked?sel.add(x.id):sel.delete(x.id));tb.querySelectorAll('td.ck input').forEach(c=>c.checked=e.target.checked);}});
+      tw.append(h('table',{class:'exptab tbtab'},h('thead',{},h('tr',{},h('th',{class:'ck'},all),h('th',{},'Code'),h('th',{},'Account'),h('th',{class:'num'},'Opening'),h('th',{class:'num'},'Debit'),h('th',{class:'num'},'Credit'),h('th',{class:'num'},'Closing debit'),h('th',{class:'num'},'Closing credit'),h('th',{},'Line in the financial statements'))),tb,
+        h('tfoot',{},h('tr',{},h('td',{colspan:3},'Total'),h('td',{}),h('td',{class:'num'},money2(T('d'))),h('td',{class:'num'},money2(T('c'))),h('td',{class:'num'},money2(cd)),h('td',{class:'num'},money2(cc)),h('td',{},Math.abs(cd-cc)<0.05?pill('Balanced','ok'):pill(`Out by ${money2(r2(cd-cc))}`,'bad'))))));}
+    body.append(h('div',{class:'tbgrid'},h('div',{class:'card stack'},h('div',{class:'row'},q,zr,h('span',{style:'flex:1'}),moveTo,undo,save,pr),h('div',{class:'mini tbmsg',role:'status'}),msg,tw),preview));drawTable();}
+  return {el,refresh};};
 
 
 // test hook (local development only)
