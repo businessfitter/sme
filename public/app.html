@@ -13011,6 +13011,19 @@ partyLines=function(kind,partner){const C=ctrlAccts(kind);const p=norm(partner);
     out.push({date:m.date,ref,desc,charge:isC?dr:cr,pay:isC?cr:dr,move:m.id});});});}
   return out.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(b.charge-a.charge));};
 
+// ===== After an action inside an opened row (invoice, entry, statement…), the row closes again so the list stays tidy =====
+(function(){let armedAt=0;const NOTOGGLE=/^(cancel|close|back|keep it|no|show|hide|more|less|add a line|preview)\b/i;
+  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('button');if(!b||b.disabled) return;
+    if(b.getAttribute('role')==='tab'||b.closest('.seg,[role=tablist]')) return;if(NOTOGGLE.test((b.textContent||'').trim())) return;
+    if(b.closest('tr.detail, details[open], .paypanel, .bkmatchrow, .txpop, .mmov, .qpay')) armedAt=Date.now();},true);
+  function collapse(){if(!armedAt||Date.now()-armedAt>20000) return;armedAt=0;
+    const keep={};Object.keys(S.open||{}).forEach(k=>{if(/^pack-latest$/.test(k)) keep[k]=S.open[k];});S.open=keep;S._payT=null;
+    setTimeout(()=>{try{const sec=document.querySelector('#main > section:not([hidden])');if(!sec) return;sec.querySelectorAll('details[open]').forEach(d=>{if(!d.closest('.mmov')) d.open=false;});
+      if(sec.querySelector('tr.detail')&&typeof showTab==='function'&&S.tab){const y=window.scrollY;showTab(S.tab);window.scrollTo(0,y);}}catch(x){}},450);}
+  const wrapRef=r=>{if(!r||r._cw) return r;['set','update','delete'].forEach(f=>{const o=r[f];if(typeof o!=='function') return;r[f]=async function(...a){const x=await o.apply(this,a);try{collapse();}catch(e){}return x;};});r._cw=1;return r;};
+  const hook=()=>{if(!db||db._cw) return !!db;const d0=db.doc.bind(db);db.doc=(...a)=>wrapRef(d0(...a));const c0=db.collection.bind(db);db.collection=(...a)=>{const c=c0(...a);if(c&&!c._cw){const cd=c.doc.bind(c);c.doc=(...b)=>wrapRef(cd(...b));c._cw=1;}return c;};db._cw=1;return true;};
+  const t=setInterval(()=>{try{if(hook()) clearInterval(t);}catch(e){}},300);})();
+
 
 // test hook (local development only)
 if(location.hostname==='localhost'){window.__dbg=c=>eval(c);}
