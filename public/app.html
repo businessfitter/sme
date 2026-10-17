@@ -1724,6 +1724,7 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .icobn{position:absolute;top:-.35rem;right:-.35rem;min-width:1rem;height:1rem;border-radius:999px;background:var(--accent,#2457C5);color:#fff;font-size:.62rem;font-weight:700;display:grid;place-items:center;padding:0 .2rem}
 .rcrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.6rem;align-items:center;padding:.6rem 0;border-top:1px solid var(--line)}
 .pwover{color:var(--warn)!important}.invover{margin-left:.3rem}
+.bkpurge{border-color:color-mix(in srgb,var(--bad) 35%,var(--line))}.bkpurgestats{display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;font-size:.86rem;color:var(--muted)}.bkpurgestats b{color:var(--ink);margin-right:.2rem}
 
 </style>
 
@@ -12910,7 +12911,7 @@ function posOn(){if(S.entity==='all') return Object.keys(S.ent||{}).some(e=>spOf
 
 // ===== Banking in tabs: upload and review, statements, transactions (matched to invoices), reconcile, what the agent has learned =====
 const BK_TABS=[['review','Upload and review'],['stmts','Statements'],['tx','Transactions'],['rec','Reconcile'],['learn','Agent learning']];
-function bkPart(c){if(c.classList.contains('bkmem')) return 'learn';if(c.classList.contains('bkstmts')) return 'stmts';if(c.classList.contains('bktx')) return 'tx';if(c.classList.contains('bktabs')||c.classList.contains('pagehead')||c.classList.contains('allguard')) return null;
+function bkPart(c){if(c.classList.contains('bkmem')) return 'learn';if(c.classList.contains('bkstmts')||c.classList.contains('bkpurge')) return 'stmts';if(c.classList.contains('bktx')) return 'tx';if(c.classList.contains('bktabs')||c.classList.contains('pagehead')||c.classList.contains('allguard')) return null;
   if(/^\s*Reconcile/.test(c.textContent||'')&&c.classList.contains('card')) return 'rec';return 'review';}
 {const _b=BUILD.bank;BUILD.bank=(...a)=>{const r=_b(...a);const seg=h('div',{class:'seg bktabs',role:'tablist','aria-label':'Banking'});const txBox=h('div',{class:'stack bktx'});
   const head=r.el.querySelector('.pagehead');if(head) head.after(seg);else r.el.prepend(seg);r.el.append(txBox);
@@ -13184,6 +13185,34 @@ function receiptMenu(inv,anchorTd,redraw){const pays=invPaysOf(inv);if(!pays.len
 // overpaid invoices say so on the list; the extra sits as a credit in the customer's sub-ledger
 const invOverpaid=inv=>r2(S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.reversal_of&&m.overpaid&&m.overpaid.invoice_id===inv.id).reduce((t,m)=>t+(+m.overpaid.amount||0),0));
 {const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const o=invOverpaid(inv);if(o>0.009){const s=h('span',{class:'pill acc invover',title:`${money2(o)} more than the invoice was received. It is kept as a credit on ${inv.partner}’s account and is used against their next invoice.`},`Overpaid ${money2(o)} · on account`);const lbl=td.querySelector(':scope > span.mini');if(lbl) lbl.replaceWith(s);else td.append(s);}}catch(e){}return td;};}
+
+// ===== Banking → Statements: remove every bank statement entry (to upload again and match by hand); no automatic applying of payments =====
+// payments are applied to invoices only when a person matches them, unless switched on again
+{const _aa=autoApplyCredits;autoApplyCredits=async function(...a){if(!(entDoc().auto_apply_credits===true)) return 0;return _aa.apply(this,a);};}
+function bankPurgeSet(){const base=S.moves.filter(m=>m.source==='bank_statement'&&m.state!=='cancelled');const ids=new Set(base.map(m=>m.id));
+  const linked=S.moves.filter(m=>m.state!=='cancelled'&&!ids.has(m.id)&&((m.bank_match_of&&ids.has(m.bank_match_of))||(m.alloc_from&&ids.has(m.alloc_from))||(m.reversal_of&&ids.has(m.reversal_of))||m.source==='allocation'&&String(m.created_by||'').startsWith('agent')));
+  return {base,linked,stmts:(S.statements||[]).slice()};}
+async function bankPurge(progress){const {base,linked,stmts}=bankPurgeSet();const all=[...linked,...base];let n=0;const at=nowISO();
+  for(const m of all){const up={state:'cancelled',removed_reason:'Bank statements removed to upload again',audit:[...(m.audit||[]),{at,by:S.me,action:'Removed: bank statement entries cleared to upload again'}]};
+    await db.doc('moves/'+m.id).update(up);Object.assign(m,up);n++;progress&&progress(n,all.length+stmts.length);}
+  for(const s of stmts){try{if(s.file&&s.file.file_id){try{await db.doc('files/'+s.file.file_id).update({deleted_at:at,deleted_by:S.me,delete_reason:'Bank statements removed to upload again'});}catch(e){}}await db.doc('statements/'+s.id).delete();}catch(e){}n++;progress&&progress(n,all.length+stmts.length);}
+  S.statements=[];S.rules=S.rules||[];return {entries:all.length,statements:stmts.length};}
+function bankPurgeCard(){const canDo=S.entity!=='all'&&S.canWrite&&(S.isOwner||['admin','ceo','cfo'].includes(S.role)||(typeof can==='function'&&can('bank','delete')));
+  const {base,linked,stmts}=bankPurgeSet();const matched=base.filter(m=>(m.settles||[]).length).length+linked.filter(m=>(m.settles||[]).length).length;
+  const card=h('div',{class:'card stack bkpurge'});const msg=h('div',{class:'mini',role:'status'});
+  card.append(h('div',{},h('h3',{style:'margin:0'},'Start banking again'),h('p',{class:'mini mut',style:'margin:.25rem 0 0'},'Remove every entry made from bank statements, the invoice matches made from them and the payments the system applied automatically. Invoices go back to unpaid, and you can upload the statements again and match them yourself. Removed entries stay in the audit trail as cancelled.')),
+    h('div',{class:'bkpurgestats'},h('span',{},h('b',{},String(base.length)),' bank statement entries'),h('span',{},h('b',{},String(linked.length)),' matches and automatic applications'),h('span',{},h('b',{},String(matched)),' of them settle invoices'),h('span',{},h('b',{},String(stmts.length)),' statements')),msg);
+  if(!canDo){card.append(h('p',{class:'mini mut'},'Only the owner or an admin of this company can do this.'));return card;}
+  if(!base.length&&!stmts.length){card.append(h('p',{class:'mini mut'},'There are no bank statement entries to remove.'));return card;}
+  const go=h('button',{class:'btn danger',type:'button'},'Remove all bank statement entries');
+  go.onclick=()=>{const inp=h('input',{type:'text','aria-label':'Type REMOVE to confirm',placeholder:'Type REMOVE',autocomplete:'off',style:'max-width:10rem'});
+    const yes=h('button',{class:'btn danger',type:'button',disabled:true},`Remove ${base.length+linked.length} entries`);inp.oninput=()=>{yes.disabled=inp.value.trim().toUpperCase()!=='REMOVE';};
+    const no=h('button',{class:'btn ghost',type:'button',onclick:()=>box.replaceWith(go)},'Keep them');
+    yes.onclick=async()=>{yes.disabled=no.disabled=inp.disabled=true;try{const r=await bankPurge((i,t)=>{yes.textContent=`Removing ${i} of ${t}…`;});msg.textContent=`Done: ${r.entries} entries and ${r.statements} statements removed. Upload your statements again in Upload and review.`;box.remove();typeof revToast==='function'&&revToast('Bank statement entries removed.');S.bkTab='review';}catch(e){msg.textContent=e.message;yes.disabled=no.disabled=inp.disabled=false;yes.textContent='Try again';}};
+    const box=h('div',{class:'banner bad stack'},h('b',{},'This cancels every entry above and clears the statements.'),h('div',{class:'row'},inp,yes,no));go.replaceWith(box);setTimeout(()=>inp.focus(),0);};
+  card.append(h('div',{class:'row'},go));return card;}
+{const _b=BUILD.bank;BUILD.bank=(...a)=>{const r=_b(...a);const rf=r.refresh;const put=()=>{try{const old=r.el.querySelector(':scope > .bkpurge');const c=bankPurgeCard();if(old) old.replaceWith(c);else r.el.append(c);c.classList.toggle('bkhide',(S.bkTab||'review')!=='stmts');}catch(e){}};
+  r.refresh=function(...x){const y=rf.apply(this,x);put();return y;};put();return r;};}
 
 
 // test hook (local development only)
