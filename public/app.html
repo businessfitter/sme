@@ -1700,6 +1700,15 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .paycand:has(input:checked){border-color:var(--ok);background:color-mix(in srgb,var(--ok-soft) 70%,var(--panel))}
 .pcm{display:flex;flex-direction:column;min-width:0}.pcm .mini{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pca{display:flex;flex-direction:column;align-items:flex-end;font-weight:600}
 .payextra:empty{display:none}
+/* ===== Customer statement ===== */
+.csthead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.8rem;align-items:flex-start}
+.cstsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,9.5rem),1fr));gap:.6rem}
+.cstk{display:flex;flex-direction:column;gap:.15rem;padding:.7rem .85rem;border-radius:10px;background:var(--sunk)}.cstk span{font-size:.78rem;color:var(--muted)}.cstk b{font-size:1.05rem}
+.cstk.main{background:var(--accent,#2457C5);color:#fff}.cstk.main span{color:rgba(255,255,255,.85)}
+.csttab thead th{background:var(--sunk)}
+.cstage{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,7.5rem),1fr));gap:.4rem}
+.cstab{display:flex;flex-direction:column;gap:.1rem;padding:.5rem .65rem;border-radius:8px;border:1px solid var(--line)}.cstab span{font-size:.74rem;color:var(--muted)}.cstab b{font-size:.95rem}
+.cstab.late b{color:var(--bad)}.cstab.main{background:var(--sunk);border-color:var(--line-2)}
 
 </style>
 
@@ -6755,7 +6764,7 @@ BUILD.sreports=()=>{const el=h('section',{class:'stack'});const body=h('div',{cl
       body.append(h('div',{class:'card'},h('div',{class:'cardhead'},h('h3',{},'Aged receivables'),h('button',{class:'btn sm',type:'button',onclick:()=>exportXlsx(`aging-${today()}.xlsx`,{Aging:[['Customer','Not yet due','1–30','31–60','61–90','Over 90','Total'],...rows]})},'Excel')),h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},['Customer','Not yet due','1–30 days','31–60 days','61–90 days','Over 90 days','Total'].map((x,i)=>h('th',{class:i?'num':''},x)))),h('tbody',{},rows.map(r=>h('tr',{class:'click',onclick:()=>{D.cust=r[0];S.srTab='statement';refresh();}},h('td',{},r[0]),...r.slice(1).map((v,i)=>h('td',{class:'num'+(i>=2&&v>0.01?' badt':'')},money2(v))))),h('tr',{class:'total'},h('td',{},'Total'),...tot.map(v=>h('td',{class:'num'},money2(v)))))))));}
     else if(sub==='statement'){const cs=h('select',{onchange:e=>{D.cust=e.target.value;refresh();}},h('option',{value:''},'Choose a customer'),custs.map(c=>h('option',{value:c},c)));cs.value=D.cust;body.append(h('div',{class:'row'},fld('Customer',cs),fld('From',h('input',{type:'date',value:D.from,onchange:e=>{D.from=e.target.value;refresh();}})),fld('To',h('input',{type:'date',value:D.to,onchange:e=>{D.to=e.target.value;refresh();}}))));
       if(!D.cust) return;const R=custLedger(D.cust,D.from,D.to);const t=[['Date','Reference','Details','Invoiced','Paid','Balance'],['','','Opening balance','','',money2(R.open)],...R.tx.map(x=>[x.date,x.ref,x.desc,x.charge?money2(x.charge):'',x.pay?money2(x.pay):'',money2(x.bal)]),['','','Closing balance','','',money2(R.close)]];const em=(S.raw.partners||[]).find(p=>p.kind==='customer'&&norm(p.name)===norm(D.cust));const m=h('p',{class:'note'});
-      body.append(h('div',{class:'card stack'},h('div',{class:'row'},h('button',{class:'btn sm',type:'button',onclick:()=>deliverDoc('pdf',`Statement of account: ${D.cust}`,`${fmtDate(D.from)} to ${fmtDate(D.to)}. Amounts in ${S.baseCur}.`,t,fileSlug(`statement-${D.cust}-${D.to}`))},'PDF'),h('button',{class:'btn sm',type:'button',onclick:()=>exportXlsx(fileSlug(`statement-${D.cust}-${D.to}`)+'.xlsx',{Statement:t})},'Excel'),em&&(em.billing_email||em.email)?h('button',{class:'btn sm',type:'button',onclick:async()=>{const how=await sendMail(em.billing_email||em.email,`Statement of account from ${entDoc().name}`,`Dear ${D.cust},\n\nYour balance on ${fmtDate(D.to)} is ${S.baseCur} ${money2(R.close)}. The full statement is in your customer portal.`,`${location.origin}/`,'Open your customer portal','statement');m.textContent=how==='sent'?'Emailed.':'Your email program opened.';}},'Email'):null),m,
+      body.append(custStatementView(D.cust,D.from,D.to,R,em));if(0)body.append(h('div',{class:'card stack'},h('div',{class:'row'},h('button',{class:'btn sm',type:'button',onclick:()=>deliverDoc('pdf',`Statement of account: ${D.cust}`,`${fmtDate(D.from)} to ${fmtDate(D.to)}. Amounts in ${S.baseCur}.`,t,fileSlug(`statement-${D.cust}-${D.to}`))},'PDF'),h('button',{class:'btn sm',type:'button',onclick:()=>exportXlsx(fileSlug(`statement-${D.cust}-${D.to}`)+'.xlsx',{Statement:t})},'Excel'),em&&(em.billing_email||em.email)?h('button',{class:'btn sm',type:'button',onclick:async()=>{const how=await sendMail(em.billing_email||em.email,`Statement of account from ${entDoc().name}`,`Dear ${D.cust},\n\nYour balance on ${fmtDate(D.to)} is ${S.baseCur} ${money2(R.close)}. The full statement is in your customer portal.`,`${location.origin}/`,'Open your customer portal','statement');m.textContent=how==='sent'?'Emailed.':'Your email program opened.';}},'Email'):null),m,
         h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},t[0].map((x,i)=>h('th',{class:i>=3?'num':''},x)))),h('tbody',{},t.slice(1).map((r,j)=>h('tr',{class:j===0||j===t.length-2?'sub':''},r.map((x,i)=>h('td',{class:i>=3?'num':''},String(x))))))))));}
     else if(sub==='terms'){const P=(S.raw.partners||[]).filter(p=>p.kind==='customer'&&p.entity===S.entity);body.append(h('div',{class:'card'},h('div',{class:'tablewrap'},h('table',{},h('thead',{},h('tr',{},h('th',{},'Customer'),h('th',{},'Payment terms'),h('th',{class:'num'},'Credit limit'),h('th',{},'Email for invoices'),h('th',{class:'num'},'Balance'))),h('tbody',{},custs.map(c=>{const p=P.find(x=>norm(x.name)===norm(c))||{};const bal=S.invoices.filter(i=>i.kind==='customer'&&i.partner===c).reduce((s,i)=>s+invDue(i),0);
       return h('tr',{},h('td',{},c),h('td',{},p.terms?`${p.terms} days`:'Standard'),h('td',{class:'num'},p.credit_limit?money2(+p.credit_limit):'—'),h('td',{class:'mini'},p.billing_email||p.email||h('span',{class:'mut'},'missing (reminders need it)')),h('td',{class:'num'+(p.credit_limit&&bal>+p.credit_limit?' badt':'')},money2(bal)));}))))));}
@@ -12805,6 +12814,77 @@ function payPanel(inv,done,cancel){const isC=inv.kind==='customer';const due=inv
 paymentForm=function(inv,onDone){return payPanel(inv,r=>onDone&&onDone(true,r),null);};
 // quick paid from anywhere else must say how it was paid
 {const _qp=quickPaid;quickPaid=async function(inv,opt){opt=opt||{};if(!opt.mode) throw new Error('Choose how it was paid (bank match, cash, cheque, transfer or card) with its reference.');return recordPayment(inv,{mode:opt.mode,ref:opt.ref,date:opt.date||today(),amount:opt.amount||invDue(inv,true),acc:opt.bank||cashCodes()[0],wht:opt.wht,cdate:opt.cdate,drawn:opt.drawn});};}
+
+// ===== PDFs carry the company logo; customer statements get a proper letterhead layout =====
+const _logoCache={};
+async function coLogo(eid){eid=eid||S.entity;if(eid==='all') return null;if(_logoCache[eid]!==undefined) return _logoCache[eid];let L=null;
+  try{const B=brandFor(eid);L=await logoData(B);if(!L&&typeof wsLogo==='function'){const w=wsLogo();if(w&&w.url) L=await logoData({logo:w});}
+    if(L){const img=new Image();await new Promise(r=>{img.onload=r;img.onerror=r;img.src=L.url;});L.w=img.naturalWidth||1;L.h=img.naturalHeight||1;}}catch(e){L=null;}
+  _logoCache[eid]=L;setTimeout(()=>{delete _logoCache[eid];},60000);return L;}
+function drawLogo(d,L,x,y,maxW,maxH,align){if(!L) return 0;const r=Math.min(maxW/L.w,maxH/L.h);const w=L.w*r,hh=L.h*r;try{d.addImage(L.url,L.fmt,align==='right'?x-w:x,y,w,hh);}catch(e){return 0;}return w;}
+// stamp the logo in the top-right corner of every page of the general PDFs (tables, letters)
+let _pdfLogo=null;
+function hookJsPdf(){const J=window.jspdf;if(!J||J._orzioLogo) return;const Orig=J.jsPDF;
+  const Wrap=function(...a){const d=new Orig(...a);const out=d.output.bind(d);d.output=function(...x){const L=_pdfLogo;if(L&&!d._logoDone){d._logoDone=1;const n=d.getNumberOfPages();const W=d.internal.pageSize.getWidth();for(let i=1;i<=n;i++){d.setPage(i);drawLogo(d,L,W-34,14,120,36,'right');}}return out(...x);};return d;};
+  Object.setPrototypeOf(Wrap,Orig);Wrap.prototype=Orig.prototype;Wrap.API=Orig.API;try{J.jsPDF=Wrap;}catch(e){}J._orzioLogo=1;}
+{const _pt=pdfTable;pdfTable=async function(...a){await loadScript(JSPDF_URL,()=>window.jspdf);hookJsPdf();_pdfLogo=await coLogo();try{return await _pt.apply(this,a);}finally{_pdfLogo=null;}};}
+{const _mp=makePdf;makePdf=async function(...a){await loadScript(JSPDF_URL,()=>window.jspdf);hookJsPdf();_pdfLogo=await coLogo();try{return await _mp.apply(this,a);}finally{_pdfLogo=null;}};}
+
+// ---- customer statement: letterhead, customer and summary boxes, debit / credit columns, aging and how to pay
+function custAging(name,asof){const B={cur:0,b30:0,b60:0,b90:0,over:0};S.invoices.filter(i=>i.kind==='customer'&&norm(i.partner)===norm(name)&&i.status!=='cancelled'&&i.doc_type!=='credit_note'&&i.date<=asof).forEach(i=>{const due=invDue(i);if(due<=0.009) return;const late=Math.floor((Date.parse(asof)-Date.parse(i.due||i.date))/864e5);
+    if(late<=0) B.cur+=due;else if(late<=30) B.b30+=due;else if(late<=60) B.b60+=due;else if(late<=90) B.b90+=due;else B.over+=due;});Object.keys(B).forEach(k=>B[k]=r2(B[k]));return B;}
+function custInfo(name){const p=(S.raw.partners||[]).find(x=>x.kind==='customer'&&(!x.entity||x.entity===S.entity)&&norm(x.name)===norm(name))||{};return {name,address:p.address||'',trn:p.trn||p.vat||'',email:p.billing_email||p.email||'',phone:p.phone||''};}
+async function custStatementPdf(name,from,to){await loadScript(JSPDF_URL,()=>window.jspdf);const {jsPDF}=window.jspdf;const d=new jsPDF({unit:'pt',format:'a4'});_pdfLogo=null;
+  const e=S.ent[S.entity]||{};const B=brandFor();const [cr,cg,cb]=hexRgb(B.color);const L=await coLogo();const W=595,H=842,M=44;const R=custLedger(name,from,to);const A=custAging(name,to);const C=custInfo(name);
+  const inv=r2(R.tx.reduce((t,x)=>t+(+x.charge||0),0)),paid=r2(R.tx.reduce((t,x)=>t+(+x.pay||0),0));
+  const grey=()=>d.setTextColor(95,104,116),ink=()=>d.setTextColor(30,36,44);
+  const letterhead=first=>{d.setFillColor(cr,cg,cb);d.rect(0,0,W,6,'F');let y=30;const lw=drawLogo(d,L,M,y-8,110,44);
+    const tx=lw?M+lw+14:M;const nw=W-tx-M-180;d.setFont('helvetica','bold');d.setFontSize(13);ink();const nl=d.splitTextToSize(e.name||'',nw).slice(0,2);nl.forEach((s,i)=>d.text(s,tx,y+6+i*14));y+=(nl.length-1)*14;d.setFont('helvetica','normal');d.setFontSize(8.5);grey();
+    const info=[e.address,[e.trn?'TRN '+e.trn:'',e.license&&e.license.number?'Licence '+e.license.number:''].filter(Boolean).join('   '),[e.email,e.phone].filter(Boolean).join('   ')].filter(Boolean);let iy=y+19;info.forEach(l=>{d.splitTextToSize(String(l),W-tx-M-180).slice(0,2).forEach(s=>{d.text(s,tx,iy);iy+=11;});});
+    d.setFont('helvetica','bold');d.setFontSize(18);d.setTextColor(cr,cg,cb);d.text('Statement of account',W-M,30+8,{align:'right'});d.setFont('helvetica','normal');d.setFontSize(9);grey();d.text(`${fmtDate(from)} to ${fmtDate(to)}`,W-M,30+22,{align:'right'});
+    const by=Math.max(iy,y+50)+10;d.setDrawColor(227,230,234);d.line(M,by,W-M,by);return by+16;};
+  let y=letterhead(true);
+  // customer box and summary box
+  const bw=(W-2*M-14)/2;d.setFillColor(246,248,250);d.roundedRect(M,y,bw,86,6,6,'F');d.roundedRect(M+bw+14,y,bw,86,6,6,'F');
+  d.setFontSize(8);grey();d.text('STATEMENT FOR',M+12,y+16);d.setFont('helvetica','bold');d.setFontSize(11);ink();d.text(d.splitTextToSize(C.name,bw-24)[0],M+12,y+32);d.setFont('helvetica','normal');d.setFontSize(8.5);grey();
+  let cy=y+46;[C.address,C.trn?'TRN '+C.trn:'',C.email].filter(Boolean).forEach(l=>{d.splitTextToSize(String(l),bw-24).slice(0,2).forEach(s=>{if(cy<y+82){d.text(s,M+12,cy);cy+=11;}});});
+  const sx=M+bw+26;const kv=(k,v,yy,b)=>{d.setFont('helvetica','normal');d.setFontSize(8.5);grey();d.text(k,sx,yy);d.setFont('helvetica',b?'bold':'normal');d.setFontSize(b?11:9);ink();d.text(v,M+2*bw+2,yy,{align:'right'});};
+  kv('Statement date',fmtDate(to),y+18);kv('Currency',S.baseCur,y+33);kv('Opening balance',money2(R.open),y+48);d.setDrawColor(215,220,226);d.line(sx,y+58,M+2*bw+2,y+58);kv(R.close>=0?'Balance due':'Balance in your favour',money2(Math.abs(R.close)),y+75,true);
+  y+=104;
+  // table
+  const cols=[{t:'Date',w:62},{t:'Reference',w:78},{t:'Details',w:0},{t:'Debit (invoiced)',w:84,n:1},{t:'Credit (paid)',w:84,n:1},{t:'Balance',w:84,n:1}];const fixed=cols.reduce((s,c)=>s+c.w,0);cols[2].w=W-2*M-fixed;
+  const head=()=>{d.setFillColor(cr,cg,cb);d.rect(M,y,W-2*M,20,'F');d.setTextColor(255,255,255);d.setFont('helvetica','bold');d.setFontSize(8.5);let x=M;cols.forEach(c=>{c.n?d.text(c.t,x+c.w-6,y+13,{align:'right'}):d.text(c.t,x+6,y+13);x+=c.w;});y+=20;};
+  const row=(v,opt={})=>{if(y>H-150){d.addPage();y=letterhead(false);head();}if(opt.fill){d.setFillColor(246,248,250);d.rect(M,y,W-2*M,18,'F');}else if(opt.zebra){d.setFillColor(251,252,253);d.rect(M,y,W-2*M,18,'F');}
+    d.setFont('helvetica',opt.bold?'bold':'normal');d.setFontSize(8.5);ink();let x=M;v.forEach((t,i)=>{const c=cols[i];const s=d.splitTextToSize(String(t==null?'':t),c.w-12)[0]||'';c.n?d.text(s,x+c.w-6,y+12,{align:'right'}):d.text(s,x+6,y+12);x+=c.w;});d.setDrawColor(235,238,242);d.line(M,y+18,W-M,y+18);y+=18;};
+  head();row(['',`${fmtDate(from)}`.replace(/.*/,''),'Opening balance','','',money2(R.open)],{fill:1,bold:1});
+  R.tx.forEach((t,i)=>row([fmtDate(t.date),t.ref||'',t.desc||'',t.charge?money2(t.charge):'',t.pay?money2(t.pay):'',money2(t.bal)],{zebra:i%2}));
+  if(!R.tx.length) row(['','','No transactions in this period','','','']);
+  row(['','','Totals for the period',money2(inv),money2(paid),''],{fill:1,bold:1});row(['','','Closing balance','','',money2(R.close)],{fill:1,bold:1});
+  // aging band
+  if(y>H-150){d.addPage();y=letterhead(false);}y+=18;const ag=[['Current',A.cur],['1–30 days',A.b30],['31–60 days',A.b60],['61–90 days',A.b90],['Over 90 days',A.over],['Total due',r2(A.cur+A.b30+A.b60+A.b90+A.over)]];const aw=(W-2*M)/ag.length;
+  d.setFont('helvetica','bold');d.setFontSize(9);ink();d.text('Ageing of the amount due',M,y);y+=8;ag.forEach(([k,v],i)=>{const x=M+i*aw;i===ag.length-1?d.setFillColor(cr,cg,cb):d.setFillColor(246,248,250);d.rect(x+1,y,aw-2,38,'F');d.setFont('helvetica','normal');d.setFontSize(7.5);i===ag.length-1?d.setTextColor(255,255,255):grey();d.text(k,x+8,y+13);d.setFont('helvetica','bold');d.setFontSize(10);i===ag.length-1?d.setTextColor(255,255,255):(v>0.009&&i>=2?d.setTextColor(179,38,30):ink());d.text(money2(v),x+aw-8,y+30,{align:'right'});});y+=58;
+  // how to pay
+  const pay=[B.bank?`Bank: ${B.bank}`:'',B.iban?`IBAN: ${B.iban}`:'',B.swift?`SWIFT: ${B.swift}`:''].filter(Boolean);
+  if(pay.length||B.note){d.setFont('helvetica','bold');d.setFontSize(9);ink();d.text('How to pay',M,y);y+=13;d.setFont('helvetica','normal');d.setFontSize(8.5);grey();pay.forEach(l=>{d.text(l,M,y);y+=11;});if(B.note){d.splitTextToSize(B.note,W-2*M).slice(0,3).forEach(l=>{d.text(l,M,y);y+=11;});}}
+  y+=6;d.setFontSize(8);grey();d.splitTextToSize(`Please check this statement and tell us within 14 days of any difference. ${R.close>0.009?`Please pay the balance due of ${S.baseCur} ${money2(R.close)}.`:''}`,W-2*M).forEach(l=>{if(y<H-40){d.text(l,M,y);y+=11;}});
+  const n=d.getNumberOfPages();for(let i=1;i<=n;i++){d.setPage(i);d.setFontSize(7.5);d.setTextColor(140);d.text(`${e.name||''} · Statement of account for ${C.name} · Page ${i} of ${n}`,M,H-20);d.text(B.footer||'',W-M,H-20,{align:'right'});}
+  return d.output('blob');}
+// on screen: the same layout as the PDF
+function custStatementView(name,from,to,R,em){const A=custAging(name,to);const C=custInfo(name);const inv=r2(R.tx.reduce((t,x)=>t+(+x.charge||0),0)),paid=r2(R.tx.reduce((t,x)=>t+(+x.pay||0),0));const m=h('p',{class:'note',role:'status'});
+  const file=fileSlug(`statement-${name}-${to}`);const xrows=[['Date','Reference','Details','Debit (invoiced)','Credit (paid)','Balance'],['','','Opening balance','','',R.open],...R.tx.map(x=>[x.date,x.ref,x.desc,x.charge||'',x.pay||'',r2(x.bal)]),['','','Totals for the period',inv,paid,''],['','','Closing balance','','',R.close]];
+  const pdfB=h('button',{class:'btn primary sm',type:'button',onclick:async()=>{pdfB.disabled=true;try{await saveFile(file+'.pdf',await custStatementPdf(name,from,to));}catch(e){m.textContent=e.message;}finally{pdfB.disabled=false;}}},'PDF');
+  const xlB=h('button',{class:'btn sm',type:'button',onclick:()=>exportXlsx(file+'.xlsx',{Statement:[[entDoc().name||''],[`Statement of account: ${name}`],[`${fmtDate(from)} to ${fmtDate(to)}, ${S.baseCur}`],[],...xrows,[],['Ageing','Current','1–30','31–60','61–90','Over 90'],['',A.cur,A.b30,A.b60,A.b90,A.over]]})},'Excel');
+  const emB=em&&(em.billing_email||em.email)?h('button',{class:'btn sm',type:'button',onclick:async()=>{const how=await sendMail(em.billing_email||em.email,`Statement of account from ${entDoc().name}`,`Dear ${name},\n\nYour balance on ${fmtDate(to)} is ${S.baseCur} ${money2(R.close)}. The full statement is in your customer portal.`,`${location.origin}/`,'Open your customer portal','statement');m.textContent=how==='sent'?'Emailed.':'Your email program opened.';}},'Email'):null;
+  const tot=r2(A.cur+A.b30+A.b60+A.b90+A.over);
+  return h('div',{class:'card stack cst nopertable'},
+    h('div',{class:'csthead'},h('div',{},h('div',{class:'mini mut'},'Statement for'),h('h3',{style:'margin:.1rem 0'},name),h('div',{class:'mini mut'},[C.address,C.trn?'TRN '+C.trn:'',C.email].filter(Boolean).join(' · ')||' ')),h('div',{class:'row'},pdfB,xlB,emB)),m,
+    h('div',{class:'cstsum'},[['Opening balance',R.open],['Invoiced (debit)',inv],['Paid (credit)',paid],[R.close>=0?'Balance due':'In their favour',Math.abs(R.close),1]].map(([k,v,b])=>h('div',{class:'cstk'+(b?' main':'')},h('span',{},k),h('b',{},money2(v))))),
+    h('div',{class:'tablewrap'},h('table',{class:'exptab csttab'},h('thead',{},h('tr',{},['Date','Reference','Details','Debit (invoiced)','Credit (paid)','Balance'].map((x,i)=>h('th',{class:i>=3?'num':''},x)))),
+      h('tbody',{},h('tr',{class:'lgop'},h('td',{},fmtDate(from)),h('td',{}),h('td',{},'Opening balance'),h('td',{}),h('td',{}),h('td',{class:'num lgb'},money2(R.open))),R.tx.map(x=>h('tr',{},h('td',{class:'nowrap'},fmtDate(x.date)),h('td',{class:'code mini'},x.ref||''),h('td',{},x.desc||''),h('td',{class:'num'},x.charge?money2(x.charge):''),h('td',{class:'num'},x.pay?money2(x.pay):''),h('td',{class:'num lgb'},money2(x.bal))))),
+      h('tfoot',{},h('tr',{},h('td',{colspan:3},'Totals for the period'),h('td',{class:'num'},money2(inv)),h('td',{class:'num'},money2(paid)),h('td',{})),h('tr',{class:'lgcl'},h('td',{colspan:3},`Closing balance at ${fmtDate(to)}`),h('td',{}),h('td',{}),h('td',{class:'num'},money2(R.close)))))),
+    h('div',{},h('div',{class:'mini mut',style:'margin-bottom:.35rem'},'Ageing of the amount due'),h('div',{class:'cstage'},[['Current',A.cur],['1–30 days',A.b30],['31–60 days',A.b60],['61–90 days',A.b90],['Over 90 days',A.over],['Total due',tot,1]].map(([k,v,b],i)=>h('div',{class:'cstab'+(b?' main':'')+(!b&&i>=2&&v>0.009?' late':'')},h('span',{},k),h('b',{},money2(v)))))));}
+// the customer portal's statement PDF uses the same layout when it is the company's own customer
+{const _sf=statementFile;statementFile=async function(P,from,to,fmt){if(fmt!=='excel'&&P&&P.kind==='customer'&&S.entity!=='all'&&S.invoices.some(i=>i.kind==='customer'&&norm(i.partner)===norm(P.partner))){return saveFile(fileSlug(`statement-${P.partner}-${to}`)+'.pdf',await custStatementPdf(P.partner,from,to));}return _sf.apply(this,arguments);};}
 
 
 // test hook (local development only)
