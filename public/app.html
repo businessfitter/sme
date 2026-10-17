@@ -1656,6 +1656,7 @@ html body.tb2 .topbar :focus-visible{outline:2px solid #818CF8!important;outline
 /* slim top bar: no workspace pill, breadcrumb or workspace settings */
 header.topbar #sx-co,header.topbar #tn-app,header.topbar #tn-wsset{display:none!important}
 body.onecompany header.topbar #tn-ws{display:none!important}
+.acctpanel{max-width:44rem}.acctrow{display:flex;gap:1rem;align-items:center;justify-content:space-between;padding:.7rem 0;border-top:1px solid var(--line)}
 
 </style>
 
@@ -11930,8 +11931,8 @@ BUILD.logins=()=>{const el=h('section',{class:'stack'});const body=h('div',{clas
 // company settings: a tab bar with Company details and Logins and access
 {const _b=BUILD.coset;BUILD.coset=(...a)=>{const r=_b(...a);const seg=h('div',{class:'seg cosetseg',role:'tablist'});let tab=S.cosetTab||'company';const accBox=h('div',{class:'stack',hidden:true});
   const head=r.el.querySelector('.pagehead');if(head) head.after(seg,accBox);else r.el.prepend(seg,accBox);
-  const draw=()=>{seg.textContent='';[['company','Company details'],['logins','Logins and access']].forEach(([k,l])=>seg.append(h('button',{type:'button',role:'tab','aria-selected':String(tab===k),onclick:()=>{tab=S.cosetTab=k;draw();}},l)));
-    [...r.el.children].forEach(c=>{if(c===seg||c===accBox||c===head) return;c.hidden=tab!=='company';});accBox.hidden=tab!=='logins';if(tab==='logins'){accBox.textContent='';accBox.append(loginsPanel());}};
+  const draw=()=>{seg.textContent='';[['company','Company details'],['logins','Logins and access'],['account','My account']].forEach(([k,l])=>seg.append(h('button',{type:'button',role:'tab','aria-selected':String(tab===k),onclick:()=>{tab=S.cosetTab=k;draw();}},l)));
+    [...r.el.children].forEach(c=>{if(c===seg||c===accBox||c===head) return;c.hidden=tab!=='company';});accBox.hidden=tab==='company';if(tab==='logins'){accBox.textContent='';accBox.append(loginsPanel());}if(tab==='account'){accBox.textContent='';accBox.append(accountPanel());}};
   const rf=r.refresh;r.refresh=function(...x){const y=rf.apply(this,x);try{draw();}catch(e){}return y;};draw();return r;};}
 // module settings no longer carry Logins and access
 try{for(const k of Object.keys(MS_SECTIONS)){const g=MS_SECTIONS[k]&&MS_SECTIONS[k].group;if(Array.isArray(g)){let i;while((i=g.indexOf('access'))>=0) g.splice(i,1);}}}catch(e){}
@@ -12478,6 +12479,13 @@ function tbSlim(){const many=coCount()>1;document.body.classList.toggle('onecomp
 {const _r=refreshHeader;refreshHeader=function(...a){const r=_r.apply(this,a);try{tbSlim();}catch(e){}return r;};}
 {const _s=showTab;showTab=function(...a){const r=_s.apply(this,a);try{tbSlim();}catch(e){}return r;};}
 setTimeout(()=>{try{tbSlim();}catch(e){}},1500);
+// "My account" in Company settings: what used to sit behind the workspace button
+function accountPanel(){const adm=typeof wsIsAdmin==='function'&&wsIsAdmin();
+  const item=(t,d,btn,fn)=>h('div',{class:'acctrow'},h('div',{},h('b',{},t),h('div',{class:'mini mut'},d)),h('button',{class:'btn',type:'button',onclick:fn},btn));
+  return h('div',{class:'card stack acctpanel'},h('h3',{style:'margin:0'},'My account'),
+    item('Password','Change the password you sign in with.','Change password',()=>{S.wsSec='password';showTab('wsset');}),
+    adm?item('Add another company','Set up another legal entity or business. With more than one company, a Companies button appears in the top bar.','Add a company',()=>showTab('wshome')):null,
+    adm?item('Workspace settings','Company admins, the workspace logo and address.','Open',()=>{S.wsSec='profile';showTab('wsset');}):null);}
 
 
 // test hook (local development only)
