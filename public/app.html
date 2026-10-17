@@ -13477,6 +13477,13 @@ invOverpaid=inv=>r2(S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.rev
 // invoices paid (partly) from another invoice's excess say so
 {const _po=invPaidOn;invPaidOn=function(inv){const el=_po(inv);try{const al=S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&m.alloc_src_inv&&(m.settles||[]).some(s=>s.invoice_id===inv.id));if(al.length) el.append(h('span',{class:'mini paidfrom'},`applied from ${[...new Set(al.map(m=>m.alloc_src_inv))].join(', ')}`));}catch(e){}return el;};}
 {const _bm=invBankMap;invBankMap=function(inv){const el=_bm(inv);try{if(el){S.moves.filter(m=>m.alloc_src_inv&&(m.settles||[]).some(s=>s.invoice_id===inv.id)).forEach(m=>{const tr=[...el.querySelectorAll('tbody tr')].find(r=>r.textContent.includes(m.name||'§'));if(tr&&tr.cells[1]) tr.cells[1].firstChild.textContent=`Excess applied from ${m.alloc_src_inv}`;});}}catch(e){}return el;};}
+// removing a payment from an invoice: it leaves the books. A bank line goes back to Not identified; any other payment goes back to Waiting for approval with its invoice link cleared; excess it applied elsewhere is undone.
+invRemovePayment=async function(inv,m){const at=nowISO();
+  for(const a of S.moves.filter(x=>x.alloc_from===m.id&&x.state!=='cancelled')){await db.doc('moves/'+a.id).update({state:'cancelled',removed_reason:'Payment removed',audit:[...(a.audit||[]),{at,by:S.me,action:'Removed: the payment it came from was removed'}]});a.state='cancelled';}
+  if(m.source==='bank_statement') return bankBackToUnidentified(m,`Payment removed from ${inv.number}: back to not identified`);
+  if(m.bank_match_of){const o=S.moves.find(x=>x.id===m.bank_match_of);await db.doc('moves/'+m.id).update({state:'cancelled',removed_reason:'Payment removed',audit:[...(m.audit||[]),{at,by:S.me,action:`Removed from ${inv.number}`}]});m.state='cancelled';if(o&&o.source==='bank_statement') await bankBackToUnidentified(o,`Payment removed from ${inv.number}: back to not identified`);return;}
+  const up={state:'to_approve',name:null,settles:[],removed_settles:m.settles||[],overpaid:null,audit:[...(m.audit||[]),{at,by:S.me,action:`Payment removed from ${inv.number}: out of the books, waiting for approval or rejection`}]};
+  await db.doc('moves/'+m.id).update(up);Object.assign(m,up);};
 
 
 // test hook (local development only)
