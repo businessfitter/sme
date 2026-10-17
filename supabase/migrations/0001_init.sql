@@ -20,6 +20,7 @@ create table if not exists public.platform_config (
 insert into public.platform_config (key, value) values
   ('mode', 'saas'),              -- 'saas' or 'single'
   ('trial_days', '14'),
+  ('open_access', 'true'),        -- 'true': no trial, no plan limits (set to 'false' when plans start)
   ('max_orgs_per_user', '3'),    -- companies one person may create (stops abuse of free trials)
   ('ai_calls_per_minute', '30'), -- per person, across all servers
   ('support_email', '')          -- shown to customers when a trial ends or a limit is hit
@@ -515,9 +516,10 @@ begin
 
   insert into orgs (name, plan, status, trial_ends_at, created_by)
   values (btrim(p_name),
-          case when single then 'dedicated' else 'trial' end,
-          case when single then 'active' else 'trial' end,
-          case when single then null else now() + make_interval(days => coalesce(cfg('trial_days')::int, 14)) end,
+          -- no trial for now: every new workspace is open with no limits until plans are introduced
+          case when single or coalesce(cfg('open_access'), 'true') = 'true' then 'dedicated' else 'trial' end,
+          case when single or coalesce(cfg('open_access'), 'true') = 'true' then 'active' else 'trial' end,
+          case when single or coalesce(cfg('open_access'), 'true') = 'true' then null else now() + make_interval(days => coalesce(cfg('trial_days')::int, 14)) end,
           auth.uid())
   returning id into oid;
   insert into members (org_id, user_id, role) values (oid, auth.uid(), 'owner');
@@ -1843,3 +1845,8 @@ on conflict (org_id) do update set docs = excluded.docs, bytes = excluded.bytes;
 --   insert into public.platform_admins (user_id)
 --   select id from auth.users where email = 'you@example.com';
 -- ============================================================================
+
+-- Open access (no trial, no limits) while plans are being prepared: lift existing trial workspaces
+update public.orgs set plan = 'dedicated', status = 'active', trial_ends_at = null
+ where coalesce((select value from public.platform_config where key = 'open_access'), 'true') = 'true'
+   and (status = 'trial' or plan = 'trial');
