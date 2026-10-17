@@ -13262,13 +13262,13 @@ function bkRowInfo(m){const c=bkCash(m);const ctr=bkCounter(m);const done=bkMatc
 var BK_ST={m_wait:['Matched · approve','acc'],i_wait:['Ready · approve','acc'],u_wait:['Not identified','warn'],approved_m:['Approved · matched','ok'],approved:['Approved','ok']};
 bankTxView=function(redraw){const F=S.bkL||(S.bkL={from:fyStartOf(today()),to:today(),f:'wait',dir:'',q:''});const sel=S.bkSel||(S.bkSel=new Set());const box=h('div',{class:'stack bklist'});
   const all=S.moves.filter(m=>m.source==='bank_statement'&&!m.reversal_of&&['to_approve','posted'].includes(m.state)&&m.date>=F.from&&m.date<=F.to).map(bkRowInfo).sort((a,b)=>a.m.date<b.m.date?1:a.m.date>b.m.date?-1:0);
-  const cnt=k=>all.filter(x=>k==='wait'?x.m.state==='to_approve':k==='m_wait'?/^m_wait/.test(x.st):k==='u_wait'||k==='i_wait'?x.st===k:k==='approved'?x.m.state==='posted':true).length;
+  const cnt=k=>all.filter(x=>k==='wait'?(x.m.state==='to_approve'||x.st==='match_wait'):k==='m_wait'?/^m_wait/.test(x.st):k==='u_wait'||k==='i_wait'?x.st===k:k==='approved'?x.m.state==='posted':true).length;
   const chips=h('div',{class:'bkchips'},[['wait','To approve'],['m_wait','Matched'],['i_wait','Ready'],['u_wait','Not identified'],['approved','Approved'],['all','All']].map(([k,l])=>h('button',{type:'button',class:'bkchip'+(F.f===k?' on':'')+(k==='u_wait'&&cnt(k)?' warn':''),onclick:()=>{F.f=k;sel.clear();redraw();}},h('span',{},l),h('b',{},String(cnt(k))))));
   const ctl=h('div',{class:'bkctl'},h('input',{type:'date','aria-label':'From',value:F.from,onchange:e=>{F.from=e.target.value||F.from;redraw();}}),h('span',{class:'mini mut'},'to'),h('input',{type:'date','aria-label':'To',value:F.to,onchange:e=>{F.to=e.target.value||F.to;redraw();}}),
     (()=>{const s=h('select',{'aria-label':'Direction',onchange:e=>{F.dir=e.target.value;redraw();}},[['','In and out'],['in','Money in'],['out','Money out']].map(([k,l])=>h('option',{value:k},l)));s.value=F.dir;return s;})(),
     h('input',{type:'search',placeholder:'Search description, party, invoice','aria-label':'Search',value:F.q,class:'bkq',oninput:e=>{F.q=e.target.value;draw();}}));
   const bulk=h('div',{class:'bkbulk'});const tw=h('div',{class:'tablewrap'});const msg=h('div',{class:'mini err',role:'status'});
-  const list=()=>{const qq=norm(F.q||'');return all.filter(x=>(F.f==='all'||(F.f==='wait'?x.m.state==='to_approve':F.f==='approved'?x.m.state==='posted':F.f==='m_wait'?/^m_wait/.test(x.st):x.st===F.f))&&(!F.dir||(F.dir==='in')===x.c.inflow)&&(!qq||norm([x.m.ref,x.m.partner,x.m.name,...x.inv,...x.ctr.map(l=>aname(l.account))].join(' ')).includes(qq)));};
+  const list=()=>{const qq=norm(F.q||'');return all.filter(x=>(F.f==='all'||(F.f==='wait'?(x.m.state==='to_approve'||x.st==='match_wait'):F.f==='approved'?x.m.state==='posted':F.f==='m_wait'?/^m_wait/.test(x.st):x.st===F.f))&&(!F.dir||(F.dir==='in')===x.c.inflow)&&(!qq||norm([x.m.ref,x.m.partner,x.m.name,...x.inv,...x.ctr.map(l=>aname(l.account))].join(' ')).includes(qq)));};
   function drawBulk(){const L=list().filter(x=>sel.has(x.m.id)&&x.m.state==='to_approve');bulk.textContent='';bulk.classList.toggle('on',L.length>0);if(!L.length) return;
     const ap=h('button',{class:'btn primary sm',type:'button'},`Approve ${L.length} selected`);const rj=h('button',{class:'btn ghost sm danger',type:'button'},'Reject');
     ap.onclick=async()=>{ap.disabled=rj.disabled=true;let n=0,bad=[];for(const x of L){ap.textContent=`Approving ${n+1} of ${L.length}…`;try{await approveMove(x.m,x.m.lines);n++;}catch(e){bad.push(`${x.m.ref||''}: ${e.message}`);}}sel.clear();typeof revToast==='function'&&revToast(`${n} approved and posted.`);if(bad.length) msg.textContent=bad.slice(0,3).join('; ');redraw();};
@@ -13279,6 +13279,7 @@ bankTxView=function(redraw){const F=S.bkL||(S.bkL={from:fyStartOf(today()),to:to
     L.slice(0,400).forEach(x=>{const m=x.m;const wait=m.state==='to_approve';const [sl,sk]=BK_ST[x.st]||['',''];
       const ck=wait?h('input',{type:'checkbox','aria-label':'Select '+(m.ref||''),checked:sel.has(m.id),onchange:e=>{e.target.checked?sel.add(m.id):sel.delete(m.id);drawBulk();}}):null;
       const acts=h('div',{class:'bkacts'});
+      if(!wait&&S.canWrite&&x.pend&&x.pend.length){acts.append(bkIco('ok','Approve the match',async()=>{try{await approvePendMatches(m);typeof revToast==='function'&&revToast('Match approved. The invoice is updated.');redraw();}catch(e){msg.textContent=e.message;}},'ok'));}
       if(wait&&S.canWrite){acts.append(bkIco('ok','Approve',async()=>{try{await approveMove(m,m.lines);typeof revToast==='function'&&revToast('Approved and posted.');redraw();}catch(e){msg.textContent=e.message;}},'ok'));}
       if(S.canWrite&&(wait||x.done<x.c.amt-0.009)) acts.append(bkIco('link',x.c.inflow?'Match to invoices':'Match to bills',()=>bkEdit(x,redraw,{match:true}),x.matched?'on':''));
       if(S.canWrite&&wait) acts.append(bkIco('edit','Edit',()=>bkEdit(x,redraw)));
@@ -13541,6 +13542,26 @@ async function sweepOverpayments(){if(S._ovSweep||!S.canWrite||S.entity==='all')
       const up={date:nd,document_date:m.document_date||m.date,audit:[...(m.audit||[]),{at:nowISO(),by:'engine',action:`Dated ${fmtDate(m.date)} in a locked period (books locked to ${fmtDate(lk)}), so it posts on ${fmtDate(nd)}, the first open day.`}]};
       await db.doc('moves/'+m.id).update(up);Object.assign(m,up);}}catch(e){}
   try{return await _am.apply(this,arguments);}catch(e){typeof revToast==='function'&&revToast('Not approved: '+(e.message||'refused'),'muted');throw e;}};}
+
+// ===== One integrated picture: a bank line booked to a customer (or supplier) settles their invoices (short-paid first, then oldest first) when approved; labels say exactly what happened =====
+function fifoSettlesFor(kind,party,amount){const L=openInvoices(kind).filter(i=>norm(i.partner)===norm(party)).sort((a,b)=>{const sa=invDue(a,true)<(+a.total_base||0)-0.009?0:1,sb=invDue(b,true)<(+b.total_base||0)-0.009?0:1;return sa-sb||(a.date<b.date?-1:a.date>b.date?1:0);});
+  let left=r2(amount);const out=[];L.forEach(i=>{if(left<=0.009) return;const a=r2(Math.min(left,invDue(i,true)));if(a>0){out.push({invoice_id:i.id,amount:a});left=r2(left-a);}});return {settles:out,left};}
+{const _am=approveMove;approveMove=async function(m,lines){try{if(m&&m.source==='bank_statement'&&m.state==='to_approve'&&!(m.settles||[]).length){const c=bkCash(m);const ctrl=c.inflow?'1100':'2000';const ctr=bkCounter(m);
+      if(ctr.length===1&&ctr[0].account===ctrl){const party=ctr[0].partner||m.partner;if(party){const f=fifoSettlesFor(c.inflow?'customer':'supplier',party,c.amt);if(f.settles.length){const up={settles:f.settles,partner:party,...(f.left>0.009?{overpaid:{invoice_id:f.settles[f.settles.length-1].invoice_id,amount:f.left}}:{}),audit:[...(m.audit||[]),{at:nowISO(),by:'engine',action:`Settles ${f.settles.map(s=>(S.invoices.find(i=>i.id===s.invoice_id)||{}).number).join(', ')} (short-paid first, then oldest first)`}]};await db.doc('moves/'+m.id).update(up);Object.assign(m,up);}}}}}catch(e){console.warn(e);}
+  return _am.apply(this,arguments);};}
+// labels: "Matched" only when invoices are attached; a customer with no invoice is "On account"
+{const _ri=bkRowInfo;bkRowInfo=function(m){const x=_ri(m);if(!x.inv.length&&x.ctr.length===1&&x.ctr[0].account===(x.c.inflow?'1100':'2000')&&(m.partner||x.ctr[0].partner)){x.matched=false;x.st=m.state==='to_approve'?'acct_wait':'approved_acct';}return x;};}
+BK_ST.acct_wait=['On account · approve (settles invoices oldest first)','acc'];BK_ST.approved_acct=['Approved · on account','ok'];
+// the invoice list shows a bank match waiting for approval, and an invoice settled from the bank shows the bank line
+{const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const P=S.moves.filter(m=>m.state==='to_approve'&&m.source==='bank_statement'&&!(m.settles||[]).length&&(()=>{const ctr=bkCounter(m);return ctr.length===1&&ctr[0].account==='1100'&&norm(ctr[0].partner||m.partner||'')===norm(inv.partner);})());
+    if(P.length&&invDue(inv,true)>0.01&&!td.querySelector('.invpend')) td.append(h('span',{class:'pill acc invpend',title:'A bank receipt from this customer is waiting for approval in Banking. On approval it settles their invoices, short-paid first, then oldest first.'},`Bank receipt waiting · ${money2(P.reduce((t,m)=>t+bkCash(m).amt,0))}`));}catch(e){}return td;};}
+
+// a match saved as a separate entry that is still waiting: Banking says so and approves it in place; the invoice shows it waiting
+const bkPendMatches=m=>S.moves.filter(y=>y.bank_match_of===m.id&&y.state==='to_approve');
+{const _ri=bkRowInfo;bkRowInfo=function(m){const x=_ri(m);x.pend=bkPendMatches(m);if(x.pend.length&&m.state==='posted') x.st='match_wait';return x;};}
+BK_ST.match_wait=['Matched · match waiting for approval','warn'];
+async function approvePendMatches(m){let n=0;for(const y of bkPendMatches(m)){await approveMove(y,y.lines);n++;}return n;}
+{const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const P=S.moves.filter(y=>y.bank_match_of&&y.state==='to_approve'&&(y.settles||[]).some(s=>s.invoice_id===inv.id));if(P.length&&S.canWrite){td.querySelectorAll('.invpend').forEach(z=>z.remove());const b=h('button',{type:'button',class:'pill warn invpend',title:'Approve the bank match so the invoice is settled'},`Bank match waiting · approve`);b.onclick=async e=>{e.stopPropagation();b.disabled=true;try{for(const y of P) await approveMove(y,y.lines);typeof revToast==='function'&&revToast('Bank match approved. The invoice is updated.');setTimeout(redraw,500);}catch(x){b.disabled=false;}};td.append(b);}}catch(e){}return td;};}
 
 
 // test hook (local development only)
