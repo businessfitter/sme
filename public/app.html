@@ -1664,6 +1664,7 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .txinvr{display:grid;grid-template-columns:auto 1fr 6.5rem;gap:.45rem;align-items:center;padding:.3rem .35rem;border-radius:8px;background:var(--sunk);font-size:.84rem;margin:0}
 .txinvr:has(input:checked){background:color-mix(in srgb,var(--ok-soft) 70%,var(--panel))}
 .txinvn{display:flex;flex-direction:column;min-width:0}.txinvr input.num{width:100%;padding:.25rem .35rem;text-align:right}
+.revdate{font:inherit;font-size:.84rem;padding:.25rem .35rem;border:1px solid transparent;border-radius:6px;background:transparent;color:inherit;width:8.6rem}.revdate:hover,.revdate:focus{border-color:var(--line-2);background:var(--panel)}
 
 </style>
 
@@ -2420,7 +2421,7 @@ async function processStatement(file,bank,bankName,logEl,resEl,signal){const st=
     else{const rule=bankRule((l.counterparty||'')+' '+l.description,inflow?'in':'out');const other=el.length===2?el.find(x=>x.account!==bank):null;if(rule&&S.accounts[rule.account]&&other){const ch=other.account!==rule.account;other.account=rule.account;reasoning=`Learned from your approvals${(+rule.hits||1)>1?' ('+rule.hits+' times)':''}: “${rule.match}” goes to ${rule.account} ${aname(rule.account)}.`+(ch&&reasoning?' Agent first suggested otherwise: '+reasoning:'');conf=Math.max(conf,(+rule.hits||1)>=2?0.95:0.9);}}
     if(foreign) el=convertLines(el,scur);
     const amt=moveTotal({lines:el});
-    const mv={journal:'BNK1',date:l.date,ref:l.description,partner:l.counterparty,bank:bankName,lines:el,amount:amt,currency:scur,amount_currency:foreign?l.amount:null,source:'bank_statement',statement_id:stRef.id,statement_hash:l.hash,confidence:conf,reasoning,created_by:'agent:bank',created_at:nowISO(),uploaded_by:S.me,audit:[{at:nowISO(),by:'agent:bank',action:'Proposed from '+fileName+(foreign?` (${scur} ${money2(l.amount)} converted at ${fx(scur,S.baseCur).toFixed(4)})`:'')}]};
+    const mv={journal:'BNK1',date:l.date,bank_date:l.date,ref:l.description,partner:l.counterparty,bank:bankName,lines:el,amount:amt,currency:scur,amount_currency:foreign?l.amount:null,source:'bank_statement',statement_id:stRef.id,statement_hash:l.hash,confidence:conf,reasoning,created_by:'agent:bank',created_at:nowISO(),uploaded_by:S.me,audit:[{at:nowISO(),by:'agent:bank',action:'Proposed from '+fileName+(foreign?` (${scur} ${money2(l.amount)} converted at ${fx(scur,S.baseCur).toFixed(4)})`:'')}]};
     if(settles) mv.settles=settles;if(l._sal) mv.salary_of={emp:l._sal.emp.id,month:l._sal.month||null};if(pm&&pm.wht) mv.wht={rate:whtCfg().rate,amount:pm.wht,invoices:pm.items.map(x=>x.inv.number)};const errs=validateMove(mv);const why=[];if(errs.length) why.push(errs.join(' '));if(amt>maxAuto) why.push(`amount is above the auto-post limit of ${money(maxAuto)}`);if(conf<minConf) why.push(`agent confidence ${Math.round(conf*100)}% is below ${Math.round(minConf*100)}%`);if(integrity==='mismatch') why.push('the statement balances don’t agree');if(policy().agents_need_review) why.push('your settings send every agent action for approval');
     if(!why.length){mv.state='posted';mv.name=nextName('BNK1',l.date);mv.approved_by='agent:bank';mv.approved_at=nowISO();mv.audit.push({at:nowISO(),by:'engine',action:`Auto-posted: ${money(amt)} is within ${money(maxAuto)} and confidence ${Math.round(conf*100)}% meets ${Math.round(minConf*100)}%`});nAuto++;}
     else{mv.state='to_approve';mv.name=null;mv.audit.push({at:nowISO(),by:'engine',action:'Held for review: '+why.join('; ')+'.'});nRev++;}
@@ -11639,7 +11640,9 @@ function bankReviewTable(w){const box=h('div',{class:'revwrap'});const sel=revSe
       const ap=icoBtn('ok','Approve',async()=>{ap.disabled=true;try{await approveMove(m,linesOf(m));rowDone(m,tr,true);revToast('Approved and posted.');}catch(e){msg.textContent=e.message;ap.disabled=false;}});
       const rj=icoBtn('no','Reject',async()=>{rj.disabled=true;try{await rejectMove(m);rowDone(m,tr,false);revToast('Rejected.','muted');}catch(e){msg.textContent=e.message;rj.disabled=false;}});
       const edb=icoBtn('edit','Correct the entry',()=>{const close=miniModal(`Correct: ${m.ref||'entry'}`,moveEditor(m,changed=>{close();if(changed) revToast('Saved.');}),{wide:true});});
-      tr.append(h('td',{class:'ck'},ck),h('td',{class:'nowrap'},fmtDate(m.date)),
+      const sd=m.bank_date||m.date;const dIn=h('input',{type:'date',class:'revdate','aria-label':'Entry date for '+(m.ref||'entry'),value:m.date,disabled:!S.canWrite,onchange:async e=>{const v=e.target.value;if(!/^\d{4}-\d{2}-\d{2}$/.test(v)){e.target.value=m.date;return;}try{const up={date:v,bank_date:sd};await db.doc('moves/'+m.id).update(up);Object.assign(m,up);dNote.textContent=v!==sd?'Statement '+fmtDate(sd):'';tr.classList.add('edited');}catch(er){msg.textContent=er.message;e.target.value=m.date;}}});
+      const dNote=h('div',{class:'mini mut'},m.date!==sd?'Statement '+fmtDate(sd):'');
+      tr.append(h('td',{class:'ck'},ck),h('td',{class:'nowrap'},dIn,dNote),
         h('td',{class:'revtx'},h('div',{class:'revref'},m.ref||'Entry'),h('div',{class:'mini mut'},[m.partner,m.source==='bank_statement'?(S.statements.find(s=>s.id===m.statement_id)||{}).file_name:sourceLabel(m)].filter(Boolean).join(' · '))),
         h('td',{class:'num in'},inn?money2(inn):''),h('td',{class:'num out'},out?money2(out):(!cash.length?money2(amt):'')),typ,h('td',{class:'revacc'},acc),h('td',{},match),h('td',{class:'revag'},ag),h('td',{class:'acts'},h('div',{class:'icorow'},ap,rj,edb)));
       tb.append(tr);});
