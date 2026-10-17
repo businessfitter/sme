@@ -13485,6 +13485,15 @@ invRemovePayment=async function(inv,m){const at=nowISO();
   if(m.bank_match_of){const o=S.moves.find(x=>x.id===m.bank_match_of);await db.doc('moves/'+m.id).update({state:'cancelled',removed_reason:'Payment removed',audit:[...(m.audit||[]),{at,by:S.me,action:`Removed from ${inv.number}`}]});m.state='cancelled';if(o&&o.source==='bank_statement') await bankBackToUnidentified(o,`Payment removed from ${inv.number}: back to not identified`);return;}
   const up={state:'to_approve',name:null,settles:[],removed_settles:m.settles||[],overpaid:null,audit:[...(m.audit||[]),{at,by:S.me,action:`Payment removed from ${inv.number}: out of the books, waiting for approval or rejection`}]};
   await db.doc('moves/'+m.id).update(up);Object.assign(m,up);};
+// bank lines unmatched before this change stayed approved: send them back to Not identified (unapproved, available to match)
+async function bankRestoreUnmatched(){if(S._bkUnm||!S.canWrite||S.entity==='all') return 0;S._bkUnm=true;let n=0;
+  for(const m of S.moves.filter(x=>x.source==='bank_statement'&&x.state==='posted'&&!x.reversal_of&&!(x.settles||[]).length&&!S.moves.some(y=>y.bank_match_of===x.id&&y.state!=='cancelled'))){
+    const au=m.audit||[];const iU=au.map(a=>a.action||'').map((a,i)=>/^Unmatched from|Payment removed/.test(a)?i:-1).filter(i=>i>=0).pop();if(iU==null||iU<0) continue;
+    const iA=au.map(a=>a.action||'').map((a,i)=>/^(Approved|Posted|Matched to)/.test(a)?i:-1).filter(i=>i>=0).pop();if(iA!=null&&iA>iU) continue;
+    try{await bankBackToUnidentified(m,'Unmatched earlier: back to not identified and unapproved');n++;}catch(e){}}
+  return n;}
+{const _tv=bankTxView;bankTxView=function(redraw){bankRestoreUnmatched().then(n=>{if(n){typeof revToast==='function'&&revToast(`${n} unmatched bank line${n>1?'s are':' is'} back in Not identified.`);redraw();}});return _tv.apply(this,arguments);};}
+{const _iq=invQuick;invQuick=function(inv,redraw){if(!S._bkUnm) bankRestoreUnmatched().then(n=>{if(n) setTimeout(redraw,300);});return _iq(inv,redraw);};}
 
 
 // test hook (local development only)
