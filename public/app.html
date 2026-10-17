@@ -12886,6 +12886,13 @@ function custStatementView(name,from,to,R,em){const A=custAging(name,to);const C
 // the customer portal's statement PDF uses the same layout when it is the company's own customer
 {const _sf=statementFile;statementFile=async function(P,from,to,fmt){if(fmt!=='excel'&&P&&P.kind==='customer'&&S.entity!=='all'&&S.invoices.some(i=>i.kind==='customer'&&norm(i.partner)===norm(P.partner))){return saveFile(fileSlug(`statement-${P.partner}-${to}`)+'.pdf',await custStatementPdf(P.partner,from,to));}return _sf.apply(this,arguments);};}
 
+// ===== Sales menu: no Service agreements or Customer payments for now; Sales point only once one exists; Projects only when switched on =====
+const SALES_OFF=['agreements','spay'];
+const PROJ_TABS=['projects','prj','timesheets','pjobs'];
+function projOn(){const ms=entMods();if(!ms) return (S.projects||[]).length>0;return ms.includes('projects')||ms.includes('prj');}
+function posOn(){if(S.entity==='all') return Object.keys(S.ent||{}).some(e=>spOf(e).length);return typeof spOf==='function'&&spOf(S.entity).length>0;}
+{const _ra=roleAllows;roleAllows=function(t,...a){if(SALES_OFF.includes(t)) return false;if(t==='pos'&&!posOn()) return false;if(PROJ_TABS.includes(t)&&!projOn()) return false;return _ra.call(this,t,...a);};}
+
 
 // test hook (local development only)
 if(location.hostname==='localhost'){window.__dbg=c=>eval(c);}
