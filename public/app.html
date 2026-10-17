@@ -2583,7 +2583,7 @@ Request: ${text}`;
   function refresh(){if(allGuard(el,'see and post entries')) return;newBtn.hidden=!S.canWrite;const nd=needData();list.textContent='';if(nd){list.append(nd);return;}
     const jv=jSel.value;jSel.textContent='';jSel.append(h('option',{value:''},'All journals'));Object.values(S.journals).sort((a,b)=>a.id<b.id?-1:1).forEach(j=>jSel.append(h('option',{value:j.id},j.name)));jSel.value=jv;
     const qv=norm(search.value);let ms=S.moves.slice().sort((a,b)=>(b.date+(b.name||''))<(a.date+(a.name||''))?-1:1);
-    if(stSel.value) ms=ms.filter(m=>m.state===stSel.value);if(jSel.value) ms=ms.filter(m=>m.journal===jSel.value);
+    ms=ms.filter(m=>m.state==='posted');stSel.hidden=true;if(jSel.value) ms=ms.filter(m=>m.journal===jSel.value);
     if(qv) ms=ms.filter(m=>norm([m.name,m.ref,m.partner,m.bank,...(m.lines||[]).map(l=>l.account+' '+aname(l.account))].join(' ')).includes(qv));
     if(!ms.length){list.append(emptyNote('No entries match.'));return;}
     const t=h('table',{},h('thead',{},h('tr',{},h('th',{},'Number'),h('th',{},'Date'),h('th',{},'Journal'),h('th',{},'Reference'),h('th',{class:'num'},`Amount (${S.baseCur})`),h('th',{},'Source'),h('th',{},'Status'))));const tb=h('tbody');
@@ -13278,7 +13278,7 @@ bankTxView=function(redraw){const F=S.bkL||(S.bkL={from:addDays(today(),-120),to
       if(wait&&S.canWrite){acts.append(bkIco('ok','Approve',async()=>{try{await approveMove(m,m.lines);typeof revToast==='function'&&revToast('Approved and posted.');redraw();}catch(e){msg.textContent=e.message;}},'ok'));}
       if(S.canWrite&&(wait||x.done<x.c.amt-0.009)) acts.append(bkIco('link',x.c.inflow?'Match to invoices':'Match to bills',()=>bkEdit(x,redraw,{match:true}),x.matched?'on':''));
       if(S.canWrite&&wait) acts.append(bkIco('edit','Edit',()=>bkEdit(x,redraw)));
-      if(S.canWrite&&wait) acts.append(bkIco('no','Reject',async()=>{try{await rejectMove(m);redraw();}catch(e){msg.textContent=e.message;}},'no'));
+      if(S.canWrite&&wait&&x.st!=='u_wait') acts.append(bkIco('no','Reject the proposal (back to not identified)',async()=>{try{await rejectMove(m);redraw();}catch(e){msg.textContent=e.message;}},'no'));
       const acc=x.ctr.map(l=>`${l.account} ${aname(l.account)||''}`).join(', ');
       tb.append(h('tr',{class:'bkrow'+(wait?' wait':'')+(sel.has(m.id)?' picked':''),onclick:()=>wait&&S.canWrite?bkEdit(x,redraw):miniModal(m.name||m.ref||'Entry',moveDetail(m),{wide:true})},
         h('td',{class:'ck',onclick:e=>e.stopPropagation()},ck),h('td',{class:'nowrap'},fmtDate(m.date)),
@@ -13320,6 +13320,19 @@ function bkEdit(x,redraw,{match}={}){const m=x.m;const wait=m.state==='to_approv
 
 // heading text for the new flow
 {const _b=BUILD.bank;BUILD.bank=(...a)=>{const r=_b(...a);try{const l=r.el.querySelector('.pagehead .lede');if(l) l.textContent='Upload a statement in any format. The bank agent reads every line and proposes the account and the matching invoices; nothing is posted until you approve it.';}catch(e){}return r;};}
+
+// ===== A rejected bank line is not thrown away: it goes back to "Not identified" for someone to book properly =====
+function suspenseAcc(){if(S.accounts['1990']) return '1990';const a=Object.values(S.accounts).find(x=>/suspense|unidentified|unallocated/i.test(x.name||'')&&!x.group);return a?a.id:null;}
+async function bankBackToUnidentified(m,why){const sus=suspenseAcc();const cash=new Set(cashCodes());const c=bkCash(m);
+  const keep=(m.lines||[]).filter(l=>cash.has(l.account));const lines=sus?[...keep,{account:sus,label:m.ref||'Bank line',debit:c.inflow?0:c.amt,credit:c.inflow?c.amt:0}]:(m.lines||[]);
+  const up={state:'to_approve',name:null,lines,partner:null,settles:[],tx_type:null,reasoning:null,confidence:0,audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:why||'Proposal rejected: back to not identified'}]};
+  await db.doc('moves/'+m.id).update(up);Object.assign(m,up);}
+{const _rj=rejectMove;rejectMove=async function(m){if(m&&m.source==='bank_statement'&&m.state==='to_approve') return bankBackToUnidentified(m);return _rj.apply(this,arguments);};}
+// lines rejected before this change come back too (not the ones removed on purpose with "Start banking again")
+async function bankRestoreRejected(){if(S._bkRestored||!S.canWrite||S.entity==='all') return 0;S._bkRestored=true;let n=0;
+  for(const m of S.moves.filter(x=>x.source==='bank_statement'&&x.state==='cancelled'&&!x.removed_reason&&(x.entity===S.entity||x._ent===S.entity||!x.entity))){const last=(m.audit||[]).slice(-1)[0]||{};if(!/^Rejected/.test(last.action||'')) continue;try{await bankBackToUnidentified(m,'Restored: a rejected bank line goes back to not identified');n++;}catch(e){}}
+  return n;}
+{const _tv=bankTxView;bankTxView=function(redraw){bankRestoreRejected().then(n=>{if(n) redraw();});return _tv.apply(this,arguments);};}
 
 
 // test hook (local development only)
