@@ -1751,6 +1751,7 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .bkehead{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--line)}
 .bkeinv{padding:.6rem;border-radius:10px;background:var(--sunk)}
 @media (max-width:760px){.bktab th:nth-child(6),.bktab td:nth-child(6),.bktab th:nth-child(7),.bktab td:nth-child(7){display:none}.bkref{max-width:12rem}}
+.pwok{color:var(--ok)}
 
 </style>
 
@@ -13392,6 +13393,58 @@ function bankClearCard(){const {lines,reclass}=bankMatchSet();const card=h('div'
     const box=h('div',{class:'banner bad row'},h('b',{},'Clear all of them?'),yes,no);go.replaceWith(box);};card.append(h('div',{class:'row'},go));return card;}
 {const _b=BUILD.bank;BUILD.bank=(...a)=>{const r=_b(...a);const rf=r.refresh;const put=()=>{try{const old=r.el.querySelector(':scope > .bkclear');const c=bankClearCard();if(old) old.replaceWith(c);else{const pg=r.el.querySelector(':scope > .bkpurge');pg?pg.before(c):r.el.append(c);}c.classList.toggle('bkhide',(S.bkTab||'tx')!=='stmts');}catch(e){}};
   r.refresh=function(...x){const y=rf.apply(this,x);put();return y;};put();return r;};}
+
+// ===== Foreign customers (Pakistan export proceeds): the bank receives the full remittance and withholds 1% as its own debit line the same or next day.
+// The Paid window shows Total received in bank, Tax withheld by bank, Net collection; the invoice is settled by the full remittance; the bank's tax line is reconciled. =====
+function whtBankLine(inflowMove,gross,rate){const exp=r2(gross*rate/100);const d0=inflowMove?inflowMove.date:today();const tol=Math.max(1,exp*0.03);
+  return S.moves.filter(m=>m.source==='bank_statement'&&!m.reversal_of&&(m.state==='to_approve'||(m.state==='posted'&&!m.wht_for))&&!S.moves.some(y=>y.wht_for===m.id)).map(m=>({m,c:bkCash(m)})).filter(x=>!x.c.inflow&&Math.abs(x.c.amt-exp)<=tol)
+    .filter(x=>{const dd=(Date.parse(x.m.date)-Date.parse(d0))/864e5;return dd>=0&&dd<=3;}).sort((a,b)=>(/wht|withh|tax|154|151|152|236/i.test(b.m.ref||'')-/wht|withh|tax|154|151|152|236/i.test(a.m.ref||''))||Math.abs(a.c.amt-exp)-Math.abs(b.c.amt-exp))[0]||null;}
+async function bookWhtLine(x,inv,rate,receipt){if(typeof whtEnsure==='function') await whtEnsure();const acc=whtCfg().account;const cash=new Set(cashCodes());const m=x.m;
+  const keep=(m.lines||[]).filter(l=>cash.has(l.account));const up={lines:[...keep,{account:acc,label:`Tax withheld by the bank (${rate}%) on ${inv.number}`,debit:x.c.amt,credit:0}],tx_type:'other_out',partner:null,settles:[],wht:{rate,amount:x.c.amt,invoices:[inv.number]},wht_for:receipt?receipt.id:null,reasoning:`Tax withheld by the bank (${rate}%) on the remittance for ${inv.number}`,audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:`Reconciled as the bank’s ${rate}% tax on ${inv.number}`}]};
+  if(m.state==='posted'){await submitMove({journal:'MISC',date:m.date,ref:`Reclass bank tax line ${m.name||m.ref} to tax withheld`,source:'bank_match',bank_match_of:m.id,wht:up.wht,wht_for:receipt?receipt.id:null,lines:[{account:acc,label:up.lines[1].label,debit:x.c.amt,credit:0},...bkCounter(m).map(l=>({account:l.account,label:'Reclassified to tax withheld',debit:+l.credit||0,credit:+l.debit||0}))]});return;}
+  await db.doc('moves/'+m.id).update(up);Object.assign(m,up);await approveMove(m,m.lines);}
+paidWindow=function(inv,redraw,{match}={}){const isC=inv.kind==='customer';const due=invDue(inv,true);const lines=invBankLines(inv);const W_=isC&&typeof whtFor==='function'?whtFor(inv):null;const rate=W_?+W_.rate:0;
+  const P={line:'',mode:'transfer',date:today(),gross:due,tax:r2(due*rate/100),acc:S.accounts['1010']?'1010':(cashCodes().find(c=>!isCashAcc(c))||cashCodes()[0]||''),ref:'',cdate:today(),drawn:''};
+  const er=h('div',{class:'err mini',role:'status'});const body=h('div',{class:'stack pwbody'});const fld=(l,i)=>h('label',{class:'field'},l,i);
+  const sel=h('select',{'aria-label':'Matching bank receipt',class:'pwsel'},h('option',{value:''},lines.length?'No bank entry: record it by hand':'No unidentified bank entry yet: record it by hand'),
+    lines.map((x,i)=>h('option',{value:String(i)},`${fmtDate(x.m.date)} · ${money2(x.free)} · ${(x.m.ref||'Bank entry').slice(0,60)}${x.same?' ✓':''}`)));
+  const accSel=h('select',{'aria-label':isC?'Received into':'Paid from',onchange:e=>P.acc=e.target.value});const fillAcc=()=>{const L=cashCodes().filter(c=>P.mode==='cash'?isCashAcc(c):!isCashAcc(c));const use=L.length?L:cashCodes();accSel.textContent='';use.forEach(c=>accSel.append(h('option',{value:c},`${c} ${aname(c)}`)));if(!use.includes(P.acc)) P.acc=use[0]||'';accSel.value=P.acc;};
+  const modeSel=h('select',{'aria-label':'Mode of collection',onchange:e=>{P.mode=e.target.value;fillAcc();draw();}},PAY_MODES.map(([k,l])=>h('option',{value:k},l)));
+  const grossIn=h('input',{type:'number',step:'0.01',min:'0',class:'num','aria-label':W_?'Total received in bank':'Amount received',value:P.gross,oninput:e=>{P.gross=r2(e.target.value);if(W_){P.tax=r2(P.gross*rate/100);taxIn.value=P.tax;}sum();}});
+  const taxIn=h('input',{type:'number',step:'0.01',min:'0',class:'num','aria-label':'Tax withheld by bank',value:P.tax,oninput:e=>{P.tax=r2(e.target.value);sum();}});
+  const total=h('div',{class:'pwsum'});let found=null;const whtNote=h('div',{class:'mini'});
+  const sum=()=>{const g=+P.gross||0,t=W_?(+P.tax||0):0;total.textContent='';
+    if(W_) total.append(h('span',{},`Total received in bank ${money2(g)}`),h('span',{},`− Tax withheld by bank (${rate}%) ${money2(t)}`),h('span',{},`= Net collection ${money2(r2(g-t))}`));
+    else total.append(h('span',{},`${isC?'Invoice':'Bill'} ${money2(due)}`),h('span',{},`${isC?'Received':'Paid'} ${money2(g)}`));
+    total.append(h('b',{class:g-due>0.009?'pwover':''},r2(due-g)>0.009?`Still open ${money2(r2(due-g))}`:g-due>0.009?`Overpaid ${money2(r2(g-due))}: kept on account`:'Invoice fully settled'));};
+  function draw(){body.textContent='';const x=P.line!==''?lines[+P.line]:null;
+    if(x){P.gross=x.free;grossIn.value=P.gross;grossIn.disabled=true;if(W_){P.tax=r2(P.gross*rate/100);taxIn.value=P.tax;found=whtBankLine(x.m,P.gross,rate);
+        whtNote.textContent='';whtNote.className='mini '+(found?'pwok':'mut');whtNote.append(found?`Bank’s tax line found: ${fmtDate(found.m.date)} · ${money2(found.c.amt)} · ${found.m.ref||''}. It will be booked as tax withheld.`:`The bank’s ${rate}% tax line is not in the statement yet. When it appears (same or next day) it is proposed as tax withheld for approval.`);if(found){P.tax=found.c.amt;taxIn.value=P.tax;}}
+      body.append(h('div',{class:'pwbank'},h('div',{},h('b',{},`Bank ${fmtDate(x.m.date)}`),h('div',{class:'mini mut'},x.m.ref||x.m.name||'')),h('span',{class:'pwamt'},money2(x.free))),
+        h('div',{class:'row'},fld(W_?'Total received in bank':'Amount received',grossIn),W_?fld(`Tax withheld by bank (${rate}%)`,taxIn):null),W_?whtNote:null,total);sum();return;}
+    grossIn.disabled=false;const refL=P.mode==='cheque'?'Cheque number':P.mode==='cash'?'Cash receipt number':P.mode==='card'?'Card slip / approval code':P.mode==='transfer'?'Transfer reference':'Reference';const refIn=h('input',{type:'text',maxlength:'60',value:P.ref,oninput:e=>P.ref=e.target.value.trim()});
+    const extra=h('div',{class:'row'});if(P.mode==='cheque') extra.append(fld('Cheque date',h('input',{type:'date',value:P.cdate,onchange:e=>P.cdate=e.target.value})),fld('Drawn on (bank)',h('input',{type:'text',value:P.drawn,oninput:e=>P.drawn=e.target.value.trim()})));
+    body.append(h('div',{class:'row'},fld(isC?'Bank (received into)':'Bank (paid from)',accSel),fld('Mode of collection',modeSel),fld(isC?'Date of collection':'Date paid',h('input',{type:'date',value:P.date,onchange:e=>P.date=e.target.value}))),
+      h('div',{class:'row'},fld(W_?'Total received in bank':isC?'Amount received':'Amount paid',grossIn),W_?fld(`Tax withheld by bank (${rate}%)`,taxIn):null),h('div',{class:'row'},h('label',{class:'field',style:'flex:1'},refL,refIn)),extra,total);sum();}
+  sel.onchange=()=>{P.line=sel.value;draw();};modeSel.value=P.mode;fillAcc();if(lines.length&&(match||lines[0].same)){P.line='0';sel.value='0';}
+  const ok=h('button',{class:'btn primary',type:'button'},'Paid');let close;
+  ok.onclick=async()=>{er.textContent='';const g=r2(+P.gross||0),t=W_?r2(+P.tax||0):0;if(!(g>0)){er.textContent='Enter the amount received.';return;}ok.disabled=true;ok.textContent='Saving…';
+    try{let mv;if(P.line!==''){const x=lines[+P.line];mv=await settleFromBank(inv,x,g,Math.min(g,due));if(W_){const f=whtBankLine(x.m,g,rate);if(f) await bookWhtLine(f,inv,rate,mv);else{try{await db.doc('moves/'+mv.id).update({wht_expected:{rate,amount:t,invoice:inv.number}});mv.wht_expected={rate,amount:t,invoice:inv.number};}catch(e){}}}}
+      else{if(!P.ref) throw new Error('Enter the reference (transfer, cheque or cash receipt number).');if(!P.acc) throw new Error('Add a bank or cash account first.');mv=await recordPayment(inv,{...P,amount:g,wht:t});}
+      close();typeof revToast==='function'&&revToast(mv&&mv.state==='to_approve'?'Sent for approval.':`${inv.number} marked as paid. The receipt is ready.`);setTimeout(redraw,500);}
+    catch(e){er.textContent=e.message;ok.disabled=false;ok.textContent='Paid';}};
+  const content=h('div',{class:'stack pwin'},h('div',{class:'pwhead'},h('div',{},h('b',{},`${inv.number} · ${inv.partner}`),h('div',{class:'mini mut'},`${isC?'Invoice':'Bill'} ${fmtDate(inv.date)} · due ${fmtDate(inv.due||inv.date)}${W_?` · foreign customer: the bank withholds ${rate}%`:''}`)),h('span',{class:'pwamt'},money2(due))),
+    h('label',{class:'field'},isC?'Matching receipt in the bank statement':'Matching payment in the bank statement',sel),body,er,h('div',{class:'row'},ok,h('button',{class:'btn ghost',type:'button',onclick:()=>close()},'Cancel')));
+  draw();close=miniModal(isC?'Mark as paid':'Mark bill as paid',content);};
+// the bank's tax lines that come in later: proposed as "tax withheld" for the receipt they belong to (still needs approval)
+async function proposeWhtLines(){if(S._whtProp&&Date.now()-S._whtProp<30000) return 0;S._whtProp=Date.now();if(!S.canWrite||S.entity==='all') return 0;let n=0;
+  const recs=S.moves.filter(m=>m.state==='posted'&&m.source==='bank_statement'&&!m.reversal_of&&bkCash(m).inflow&&!S.moves.some(y=>y.wht_for===m.id&&y.state!=='cancelled')&&(m.wht_expected||(m.settles||[]).some(s=>{const i=S.invoices.find(z=>z.id===s.invoice_id);return i&&whtFor(i);})));
+  for(const r of recs){const inv=S.invoices.find(i=>(r.settles||[]).some(s=>s.invoice_id===i.id))||{number:(r.wht_expected||{}).invoice||''};const rate=(r.wht_expected&&r.wht_expected.rate)||whtCfg().rate;const f=whtBankLine(r,bkCash(r).amt,rate);
+    if(!f||f.m.state!=='to_approve'||f.m.wht_for) continue;if(typeof whtEnsure==='function') await whtEnsure();const acc=whtCfg().account;const cash=new Set(cashCodes());
+    const up={lines:[...(f.m.lines||[]).filter(l=>cash.has(l.account)),{account:acc,label:`Tax withheld by the bank (${rate}%) on ${inv.number}`,debit:f.c.amt,credit:0}],tx_type:'other_out',wht:{rate,amount:f.c.amt,invoices:[inv.number]},wht_for:r.id,reasoning:`Tax withheld by the bank (${rate}%) on the remittance of ${fmtDate(r.date)} for ${inv.number}`,
+      audit:[...(f.m.audit||[]),{at:nowISO(),by:'agent:bank',action:`Proposed as the bank’s ${rate}% tax on ${r.name||r.ref}`}]};try{await db.doc('moves/'+f.m.id).update(up);Object.assign(f.m,up);n++;}catch(e){}}
+  return n;}
+{const _tv=bankTxView;bankTxView=function(redraw){proposeWhtLines().then(n=>{if(n) redraw();});return _tv.apply(this,arguments);};}
 
 
 // test hook (local development only)
