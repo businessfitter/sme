@@ -13465,8 +13465,9 @@ async function applyExcessFIFO(m,src){let left=excessLeft(m);if(left<=0.009) ret
     left=r2(left-amt);done.push({n:t.number,amt});}
   return done;}
 // after a payment that is more than the invoice: apply the excess straight away (FIFO)
-{const _rp=recordPayment;recordPayment=async function(inv,P){const r=await _rp.apply(this,arguments);try{const m=S.moves.find(x=>x===r)||r;if(m&&m.overpaid&&m.state==='posted'){const d=await applyExcessFIFO(m,inv);if(d.length&&typeof revToast==='function') revToast(`Excess applied to ${d.map(x=>x.n).join(', ')}.`);}}catch(e){console.warn(e);}return r;};}
-{const _sf=settleFromBank;settleFromBank=async function(inv,x,amt,apply){const r=await _sf.apply(this,arguments);try{const m=r||x.m;if(m&&m.overpaid&&m.state==='posted'){const d=await applyExcessFIFO(m,inv);if(d.length&&typeof revToast==='function') revToast(`Excess applied to ${d.map(z=>z.n).join(', ')}.`);}}catch(e){console.warn(e);}return r;};}
+const moveById=async id=>{for(let k=0;k<20;k++){const m=S.moves.find(x=>x.id===id);if(m) return m;await new Promise(r=>setTimeout(r,150));}return null;};
+{const _rp=recordPayment;recordPayment=async function(inv,P){const r=await _rp.apply(this,arguments);try{const m=r&&r.id?await moveById(r.id):r;if(m&&m.overpaid&&m.state==='posted'){const d=await applyExcessFIFO(m,inv);if(d.length&&typeof revToast==='function') revToast(`Excess applied to ${d.map(x=>x.n).join(', ')}.`);}}catch(e){console.warn(e);}return r;};}
+{const _sf=settleFromBank;settleFromBank=async function(inv,x,amt,apply){const r=await _sf.apply(this,arguments);try{const m=(r&&r.id&&!r.lines?await moveById(r.id):r)||x.m;if(m&&m.overpaid&&m.state==='posted'){const d=await applyExcessFIFO(m,inv);if(d.length&&typeof revToast==='function') revToast(`Excess applied to ${d.map(z=>z.n).join(', ')}.`);}}catch(e){console.warn(e);}return r;};}
 // the overpaid tag shows what is still unapplied; click to apply it if there are open invoices now
 invOverpaid=inv=>r2(S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.reversal_of&&m.overpaid&&m.overpaid.invoice_id===inv.id).reduce((t,m)=>t+excessLeft(m),0));
 {const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const tag=td.querySelector('.invover');const src=S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&m.overpaid&&m.overpaid.invoice_id===inv.id);
