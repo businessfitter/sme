@@ -12865,7 +12865,7 @@ async function custStatementPdf(name,from,to){await loadScript(JSPDF_URL,()=>win
   if(!R.tx.length) row(['','','No transactions in this period','','','']);
   row(['','','Totals for the period',money2(inv),money2(paid),''],{fill:1,bold:1});row(['','','Closing balance','','',money2(R.close)],{fill:1,bold:1});
   // aging band
-  if(y>H-150){d.addPage();y=letterhead(false);}y+=18;const ag=[['Current',A.cur],['1–30 days',A.b30],['31–60 days',A.b60],['61–90 days',A.b90],['Over 90 days',A.over],['Total due',r2(A.cur+A.b30+A.b60+A.b90+A.over)]];const aw=(W-2*M)/ag.length;
+  if(y>H-150){d.addPage();y=letterhead(false);}y+=18;const ag=[['Current',A.cur],['1–30 days',A.b30],['31–60 days',A.b60],['61–90 days',A.b90],['Over 90 days',A.over],...(Math.abs(A.onacct||0)>0.009?[['On account',A.onacct]]:[]),['Total due',r2(A.cur+A.b30+A.b60+A.b90+A.over+(A.onacct||0))]];const aw=(W-2*M)/ag.length;
   d.setFont('helvetica','bold');d.setFontSize(9);ink();d.text('Ageing of the amount due',M,y);y+=8;ag.forEach(([k,v],i)=>{const x=M+i*aw;i===ag.length-1?d.setFillColor(cr,cg,cb):d.setFillColor(246,248,250);d.rect(x+1,y,aw-2,38,'F');d.setFont('helvetica','normal');d.setFontSize(7.5);i===ag.length-1?d.setTextColor(255,255,255):grey();d.text(k,x+8,y+13);d.setFont('helvetica','bold');d.setFontSize(10);i===ag.length-1?d.setTextColor(255,255,255):(v>0.009&&i>=2?d.setTextColor(179,38,30):ink());d.text(money2(v),x+aw-8,y+30,{align:'right'});});y+=58;
   // how to pay
   const pay=[B.bank?`Bank: ${B.bank}`:'',B.iban?`IBAN: ${B.iban}`:'',B.swift?`SWIFT: ${B.swift}`:''].filter(Boolean);
@@ -12879,14 +12879,14 @@ function custStatementView(name,from,to,R,em){const A=custAging(name,to);const C
   const pdfB=h('button',{class:'btn primary sm',type:'button',onclick:async()=>{pdfB.disabled=true;try{await saveFile(file+'.pdf',await custStatementPdf(name,from,to));}catch(e){m.textContent=e.message;}finally{pdfB.disabled=false;}}},'PDF');
   const xlB=h('button',{class:'btn sm',type:'button',onclick:()=>exportXlsx(file+'.xlsx',{Statement:[[entDoc().name||''],[`Statement of account: ${name}`],[`${fmtDate(from)} to ${fmtDate(to)}, ${S.baseCur}`],[],...xrows,[],['Ageing','Current','1–30','31–60','61–90','Over 90'],['',A.cur,A.b30,A.b60,A.b90,A.over]]})},'Excel');
   const emB=em&&(em.billing_email||em.email)?h('button',{class:'btn sm',type:'button',onclick:async()=>{const how=await sendMail(em.billing_email||em.email,`Statement of account from ${entDoc().name}`,`Dear ${name},\n\nYour balance on ${fmtDate(to)} is ${S.baseCur} ${money2(R.close)}. The full statement is in your customer portal.`,`${location.origin}/`,'Open your customer portal','statement');m.textContent=how==='sent'?'Emailed.':'Your email program opened.';}},'Email'):null;
-  const tot=r2(A.cur+A.b30+A.b60+A.b90+A.over);
+  const tot=r2(A.cur+A.b30+A.b60+A.b90+A.over+(A.onacct||0));
   return h('div',{class:'card stack cst nopertable'},
     h('div',{class:'csthead'},h('div',{},h('div',{class:'mini mut'},'Statement for'),h('h3',{style:'margin:.1rem 0'},name),h('div',{class:'mini mut'},[C.address,C.trn?'TRN '+C.trn:'',C.email].filter(Boolean).join(' · ')||' ')),h('div',{class:'row'},pdfB,xlB,emB)),m,
     h('div',{class:'cstsum'},[['Opening balance',R.open],['Invoiced (debit)',inv],['Paid (credit)',paid],[R.close>=0?'Balance due':'In their favour',Math.abs(R.close),1]].map(([k,v,b])=>h('div',{class:'cstk'+(b?' main':'')},h('span',{},k),h('b',{},money2(v))))),
     h('div',{class:'tablewrap'},h('table',{class:'exptab csttab'},h('thead',{},h('tr',{},['Date','Reference','Details','Debit (invoiced)','Credit (paid)','Balance'].map((x,i)=>h('th',{class:i>=3?'num':''},x)))),
       h('tbody',{},h('tr',{class:'lgop'},h('td',{},fmtDate(from)),h('td',{}),h('td',{},'Opening balance'),h('td',{}),h('td',{}),h('td',{class:'num lgb'},money2(R.open))),R.tx.map(x=>h('tr',{},h('td',{class:'nowrap'},fmtDate(x.date)),h('td',{class:'code mini'},x.ref||''),h('td',{},x.desc||''),h('td',{class:'num'},x.charge?money2(x.charge):''),h('td',{class:'num'},x.pay?money2(x.pay):''),h('td',{class:'num lgb'},money2(x.bal))))),
       h('tfoot',{},h('tr',{},h('td',{colspan:3},'Totals for the period'),h('td',{class:'num'},money2(inv)),h('td',{class:'num'},money2(paid)),h('td',{})),h('tr',{class:'lgcl'},h('td',{colspan:3},`Closing balance at ${fmtDate(to)}`),h('td',{}),h('td',{}),h('td',{class:'num'},money2(R.close)))))),
-    h('div',{},h('div',{class:'mini mut',style:'margin-bottom:.35rem'},'Ageing of the amount due'),h('div',{class:'cstage'},[['Current',A.cur],['1–30 days',A.b30],['31–60 days',A.b60],['61–90 days',A.b90],['Over 90 days',A.over],['Total due',tot,1]].map(([k,v,b],i)=>h('div',{class:'cstab'+(b?' main':'')+(!b&&i>=2&&v>0.009?' late':'')},h('span',{},k),h('b',{},money2(v)))))));}
+    h('div',{},h('div',{class:'mini mut',style:'margin-bottom:.35rem'},'Ageing of the amount due'),h('div',{class:'cstage'},[['Current',A.cur],['1–30 days',A.b30],['31–60 days',A.b60],['61–90 days',A.b90],['Over 90 days',A.over],...(Math.abs(A.onacct||0)>0.009?[['On account (unapplied)',A.onacct]]:[]),['Total due',tot,1]].map(([k,v,b],i)=>h('div',{class:'cstab'+(b?' main':'')+(!b&&i>=2&&v>0.009?' late':'')},h('span',{},k),h('b',{},money2(v)))))));}
 // the customer portal's statement PDF uses the same layout when it is the company's own customer
 {const _sf=statementFile;statementFile=async function(P,from,to,fmt){if(fmt!=='excel'&&P&&P.kind==='customer'&&S.entity!=='all'&&S.invoices.some(i=>i.kind==='customer'&&norm(i.partner)===norm(P.partner))){return saveFile(fileSlug(`statement-${P.partner}-${to}`)+'.pdf',await custStatementPdf(P.partner,from,to));}return _sf.apply(this,arguments);};}
 
@@ -12959,6 +12959,57 @@ function bkMatchPanel(x,done,close){const isC=x.c.inflow,kind=isC?'customer':'su
           lines:isC?[{account:from,label:`From ${aname(from)||from}`,debit:amt,credit:0},{account:ctrl,label:nums||'On account',partner:ps.value,debit:0,credit:amt}]:[{account:ctrl,label:nums||'On account',partner:ps.value,debit:amt,credit:0},{account:from,label:`From ${aname(from)||from}`,debit:0,credit:amt}],settles:S2},{reason:'Bank line matched to '+(nums||'the account of '+ps.value)});}
       typeof revToast==='function'&&revToast(S2.length?`Matched to ${S2.length} ${isC?'invoice':'bill'}${S2.length>1?'s':''}.`:'Put on their account.');done();}catch(e){er.textContent=e.message;ok.disabled=false;}}},isC?'Match to invoices':'Match to bills');
   box.append(h('div',{class:'row',style:'align-items:flex-end'},h('label',{class:'field',style:'min-width:14rem'},isC?'Customer':'Supplier',ps),h('div',{class:'mini mut',style:'flex:1'},`Bank line ${money2(free)}${x.done?` (already matched ${money2(x.done)})`:''}. `,onCtrl?'It is on the '+(isC?'receivables':'payables')+' ledger; matching settles the invoices.':`It is booked to ${x.ctr.map(l=>`${l.account} ${aname(l.account)||''}`).join(', ')}. Matching moves it to the ${isC?'customer':'supplier'}’s ledger with a matching entry.`)),invBox,left,er,h('div',{class:'row'},ok,h('button',{class:'btn ghost sm',type:'button',onclick:close},'Cancel')));drawInv();return box;}
+
+// ===== One source of truth: statements of account read the same ledger lines as the sub-ledger, so sub-ledger, statement and invoices agree =====
+const ctrlTypeOf=kind=>kind==='customer'?'asset_receivable':'liability_payable';
+function ctrlAccts(kind){const t=ctrlTypeOf(kind);const L=Object.values(S.accounts).filter(a=>a.type===t&&!a.group).map(a=>a.id);if(!L.length) L.push(kind==='customer'?'1100':'2000');return new Set(L);}
+function partyLines(kind,partner){const C=ctrlAccts(kind);const p=norm(partner);const isC=kind==='customer';const out=[];
+  for(const m of posted()){(m.lines||[]).forEach(l=>{if(!C.has(l.account)) return;if(norm(l.partner||m.partner||'')!==p) return;const dr=+l.debit||0,cr=+l.credit||0;if(!dr&&!cr) return;
+    const inv=S.invoices.find(i=>i.move_id===m.id);const st=(m.settles||[]).map(x=>(S.invoices.find(i=>i.id===x.invoice_id)||{}).number).filter(Boolean);
+    let ref=m.name||'',desc=l.label||m.ref||'';
+    if(inv){ref=inv.number||ref;desc=inv.doc_type==='credit_note'?`Credit note${inv.reverses_number?' for '+inv.reverses_number:''}`:(isC?'Invoice':'Bill')+(inv.supplier_ref?` (${inv.supplier_ref})`:'');}
+    else if(m.journal==='OPEN') desc='Opening balance brought forward';
+    else if(st.length||m.source==='payment'||m.source==='bank_statement'||/^BNK/.test(m.journal||'')||m.source==='bank_match'){const how=m.payment?` by ${payModeName(m.payment.mode).toLowerCase()} ${m.payment.ref||''}`:m.source==='bank_statement'||m.bank_match_of?' (bank)':'';desc=`${isC?(dr?'Refund':'Payment received'):(dr?'Payment made':'Refund received')}${how}${st.length?' for '+st.join(', '):' on account'}`;}
+    out.push({date:m.date,ref,desc,charge:isC?dr:cr,pay:isC?cr:dr,move:m.id});});}
+  return out.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(b.charge-a.charge));}
+partnerTx=function(kind,partner){return partyLines(kind,partner).map(({move,...t})=>t);};
+custLedger=function(name,from,to){const rows=partyLines('customer',name);let open=0;rows.filter(r=>r.date<from).forEach(r=>open+=r.charge-r.pay);let bal=open;
+  const tx=rows.filter(r=>r.date>=from&&r.date<=to).map(r=>{bal+=r.charge-r.pay;return {...r,bal:r2(bal)};});return {open:r2(open),tx,close:r2(bal)};};
+// ageing ties to the balance: open invoices by age, plus anything on account (unapplied receipts or other entries)
+{const _ca=custAging;custAging=function(name,asof){const A=_ca(name,asof);const bal=custLedger(name,'1900-01-01',asof).close;const inv=r2(A.cur+A.b30+A.b60+A.b90+A.over);A.onacct=r2(bal-inv);return A;};}
+
+// ===== Who each receivable / payable line belongs to: the named party, else the invoices and payments linked to the entry =====
+const _mpCache=new WeakMap();
+function moveParts(m){const sig=[S.invoices.length,(m.settles||[]).length,(m.lines||[]).length,m.partner||'',(m.lines||[]).map(l=>l.partner||'').join('|')].join('#');const c=_mpCache.get(m);if(c&&c.sig===sig) return c.parts;
+  const parts=(m.lines||[]).map(()=>null);const invs=S.invoices.filter(i=>i.move_id===m.id&&i.status!=='cancelled');const invLeft=invs.map(i=>({i,left:Math.abs(+i.total_base||0)}));
+  const setLeft=(m.settles||[]).map(s=>({s,inv:S.invoices.find(i=>i.id===s.invoice_id),left:+s.amount||0})).filter(x=>x.inv);
+  (m.lines||[]).forEach((l,k)=>{const d=+l.debit||0,c=+l.credit||0;const p=l.partner||m.partner;if(p){parts[k]=[{party:p,d,c}];return;}
+    const t=typeOf(l.account);if(t!=='asset_receivable'&&t!=='liability_payable'){parts[k]=[{party:'',d,c}];return;}const kind=t==='asset_receivable'?'customer':'supplier';const isC=kind==='customer';
+    let rd=d,rc=c;const out=[];const take=(party,side,amt)=>{const have=side==='d'?rd:rc;const a=r2(Math.min(have,amt));if(a<=0.004) return 0;if(side==='d') rd=r2(rd-a);else rc=r2(rc-a);out.push({party,d:side==='d'?a:0,c:side==='c'?a:0});return a;};
+    invLeft.filter(x=>x.i.kind===kind&&x.left>0.004).forEach(x=>{const cn=x.i.doc_type==='credit_note';const side=isC?(cn?'c':'d'):(cn?'d':'c');x.left=r2(x.left-take(x.i.partner,side,x.left));});
+    setLeft.filter(x=>x.inv.kind===kind&&x.left>0.004).forEach(x=>{const side=isC?'c':'d';x.left=r2(x.left-take(x.inv.partner,side,x.left));});
+    if(rd>0.004||rc>0.004) out.push({party:'',d:rd,c:rc});parts[k]=out.length?out:[{party:'',d,c}];});
+  _mpCache.set(m,{sig,parts});return parts;}
+// sub-ledger lines on a main ledger, split by party
+slLines=function(code,to){const out=[];for(const m of posted()){if(m.date>to) continue;const P=moveParts(m);(m.lines||[]).forEach((l,i)=>{if(l.account!==code) return;P[i].forEach(pt=>{out.push({m,l:{...l,debit:pt.d,credit:pt.c},i,party:pt.party,n:pt.d-pt.c,split:P[i].length>1||(!l.partner&&!m.partner&&!!pt.party)});});});}
+  return out.sort((a,b)=>a.m.date<b.m.date?-1:a.m.date>b.m.date?1:0);};
+// ledger view: same split when a sub-ledger is chosen
+lgData=function(code,party,from,to){const a=S.accounts[code];const pl=LG_PL(a);const fy=fyStartOf(from);let op=0;const rows=[];
+  for(const m of posted()){if(m.date>to) continue;const P=moveParts(m);(m.lines||[]).forEach((l,i)=>{if(l.account!==code) return;const parts=(party==null||party==='*')?[{party:slParty(m,l)||((P[i].length===1&&P[i][0].party)||''),d:+l.debit||0,c:+l.credit||0}]:P[i].filter(x=>x.party===party);
+    parts.forEach(pt=>{const n=pt.d-pt.c;if(m.date<from){if(!pl||m.date>=fy) op+=n;}else rows.push({m,l:{...l,debit:pt.d,credit:pt.c},i,party:pt.party,d:pt.d,c:pt.c});});});}
+  rows.sort((x,y)=>x.m.date<y.m.date?-1:x.m.date>y.m.date?1:String(x.m.name||'').localeCompare(String(y.m.name||'')));
+  let bal=r2(op);rows.forEach(r=>{bal=r2(bal+r.d-r.c);r.bal=bal;});const D=r2(rows.reduce((t,r)=>t+r.d,0)),C=r2(rows.reduce((t,r)=>t+r.c,0));return {op:r2(op),rows,D,C,cl:bal};};
+// statements: the same parts
+partyLines=function(kind,partner){const C=ctrlAccts(kind);const p=norm(partner);const isC=kind==='customer';const out=[];
+  for(const m of posted()){const P=moveParts(m);(m.lines||[]).forEach((l,k)=>{if(!C.has(l.account)) return;P[k].forEach(pt=>{if(norm(pt.party)!==p) return;const dr=pt.d,cr=pt.c;if(!dr&&!cr) return;
+    const own=S.invoices.filter(i=>i.move_id===m.id&&norm(i.partner)===p);const st=(m.settles||[]).map(x=>S.invoices.find(i=>i.id===x.invoice_id)).filter(i=>i&&norm(i.partner)===p).map(i=>i.number);
+    let ref=m.name||'',desc=l.label||m.ref||'';const isCharge=isC?dr>0:cr>0;
+    if(own.length&&isCharge){ref=own.map(i=>i.number).join(', ');desc=own[0].doc_type==='credit_note'?'Credit note':(isC?'Invoice':'Bill')+(own[0].supplier_ref?` (${own[0].supplier_ref})`:'');}
+    else if(own.length&&own[0].doc_type==='credit_note'){ref=own[0].number;desc=`Credit note${own[0].reverses_number?' for '+own[0].reverses_number:''}`;}
+    else if(m.journal==='OPEN') desc='Opening balance brought forward';
+    else if(st.length||m.source==='payment'||m.source==='bank_statement'||/^BNK/.test(m.journal||'')||m.source==='bank_match'){const how=m.payment?` by ${payModeName(m.payment.mode).toLowerCase()} ${m.payment.ref||''}`:m.source==='bank_statement'||m.bank_match_of?' (bank)':'';desc=`${isC?(dr?'Refund':'Payment received'):(dr?'Payment made':'Refund received')}${how}${st.length?' for '+st.join(', '):' on account'}`;}
+    out.push({date:m.date,ref,desc,charge:isC?dr:cr,pay:isC?cr:dr,move:m.id});});});}
+  return out.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(b.charge-a.charge));};
 
 
 // test hook (local development only)
