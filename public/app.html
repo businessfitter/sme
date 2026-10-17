@@ -1723,6 +1723,7 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .icob{position:relative}.icob.hasm{color:var(--accent,#2457C5);border-color:color-mix(in srgb,var(--accent,#2457C5) 40%,var(--line))}
 .icobn{position:absolute;top:-.35rem;right:-.35rem;min-width:1rem;height:1rem;border-radius:999px;background:var(--accent,#2457C5);color:#fff;font-size:.62rem;font-weight:700;display:grid;place-items:center;padding:0 .2rem}
 .rcrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.6rem;align-items:center;padding:.6rem 0;border-top:1px solid var(--line)}
+.pwover{color:var(--warn)!important}.invover{margin-left:.3rem}
 
 </style>
 
@@ -12783,7 +12784,7 @@ async function matchBankToInv(inv,c,amount){const amt=r2(Math.min(amount,c.free,
   const settles=[...(m.settles||[]),{invoice_id:inv.id,amount:amt}];const up={settles,audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:`Applied ${money2(amt)} to ${inv.number}`}]};if(!m.partner) up.partner=inv.partner;
   await db.doc('moves/'+m.id).update(up);Object.assign(m,up);return amt;}
 // record a payment with its method and reference
-async function recordPayment(inv,P){const isC=inv.kind==='customer';const bal=invDue(inv,true);const due=r2(Math.min(+P.amount,bal));if(!(due>0)) throw new Error('Enter the amount.');
+async function recordPayment(inv,P){const isC=inv.kind==='customer';const bal=invDue(inv,true);const full=r2(+P.amount||0);if(!(full>0)) throw new Error('Enter the amount.');const due=full;const applied=r2(Math.min(full,bal));const over=r2(full-applied);
   const wht=isC&&+P.wht>0?r2(Math.min(+P.wht,due)):0;if(wht&&typeof whtEnsure==='function') await whtEnsure();
   const how=P.mode==='cheque'?`cheque ${P.ref}${P.drawn?' on '+P.drawn:''}`:P.mode==='cash'?`cash, receipt ${P.ref}`:`${payModeName(P.mode).toLowerCase()} ${P.ref}`;
   return submitMove({journal:P.mode==='cash'&&S.journals&&S.journals.CSH?'CSH':'BNK1',date:P.date,ref:`${isC?'Receipt':'Payment'} ${inv.number} ${inv.partner} (${how})`,partner:inv.partner,
@@ -12791,7 +12792,7 @@ async function recordPayment(inv,P){const isC=inv.kind==='customer';const bal=in
     wht:wht?{rate:whtCfg().rate,amount:wht,invoices:[inv.number]}:undefined,
     lines:isC?[{account:P.acc,label:`${inv.number} · ${payModeName(P.mode)} ${P.ref}`,debit:r2(due-wht),credit:0},...(wht?[{account:whtCfg().account,label:`Final tax withheld on ${inv.number}`,debit:wht,credit:0}]:[]),{account:'1100',label:inv.number,partner:inv.partner,debit:0,credit:due}]
       :[{account:'2000',label:inv.number,partner:inv.partner,debit:due,credit:0},{account:P.acc,label:`${inv.number} · ${payModeName(P.mode)} ${P.ref}`,debit:0,credit:due}],
-    settles:[{invoice_id:inv.id,amount:due}],source:'payment'},{reason:`${isC?'Received':'Paid'} by ${payModeName(P.mode).toLowerCase()}, reference ${P.ref}`});}
+    settles:applied>0?[{invoice_id:inv.id,amount:applied}]:[],overpaid:over>0?{invoice_id:inv.id,amount:over}:undefined,source:'payment'},{reason:`${isC?'Received':'Paid'} by ${payModeName(P.mode).toLowerCase()}, reference ${P.ref}`});}
 // the panel used by "Mark as paid" on the lists and by the payment form on an invoice
 function payPanel(inv,done,cancel){const isC=inv.kind==='customer';const due=invDue(inv,true);const box=h('div',{class:'paypanel',onclick:e=>e.stopPropagation()});const cands=bankCandidates(inv);
   const T=S._payT&&S._payT.id===inv.id?S._payT:(S._payT={id:inv.id,tab:cands.length?'bank':'record'});const er=h('div',{class:'err mini',role:'status'});
@@ -13017,7 +13018,7 @@ partyLines=function(kind,partner){const C=ctrlAccts(kind);const p=norm(partner);
     if(own.length&&isCharge){ref=own.map(i=>i.number).join(', ');desc=own[0].doc_type==='credit_note'?'Credit note':(isC?'Invoice':'Bill')+(own[0].supplier_ref?` (${own[0].supplier_ref})`:'');}
     else if(own.length&&own[0].doc_type==='credit_note'){ref=own[0].number;desc=`Credit note${own[0].reverses_number?' for '+own[0].reverses_number:''}`;}
     else if(m.journal==='OPEN') desc='Opening balance brought forward';
-    else if(st.length||m.source==='payment'||m.source==='bank_statement'||/^BNK/.test(m.journal||'')||m.source==='bank_match'){const how=m.payment?` by ${payModeName(m.payment.mode).toLowerCase()} ${m.payment.ref||''}`:m.source==='bank_statement'||m.bank_match_of?' (bank)':'';desc=`${isC?(dr?'Refund':'Payment received'):(dr?'Payment made':'Refund received')}${how}${st.length?' for '+st.join(', '):' on account'}`;}
+    else if(st.length||m.source==='payment'||m.source==='bank_statement'||/^BNK/.test(m.journal||'')||m.source==='bank_match'){const how=m.payment?` by ${payModeName(m.payment.mode).toLowerCase()} ${m.payment.ref||''}`:m.source==='bank_statement'||m.bank_match_of?' (bank)':'';desc=`${isC?(dr?'Refund':'Payment received'):(dr?'Payment made':'Refund received')}${how}${st.length?' for '+st.join(', '):' on account'}${m.overpaid&&+m.overpaid.amount>0?` (overpaid ${money2(+m.overpaid.amount)} kept on account)`:''}`;}
     out.push({date:m.date,ref,desc,charge:isC?dr:cr,pay:isC?cr:dr,move:m.id});});});}
   return out.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(b.charge-a.charge));};
 
@@ -13100,10 +13101,10 @@ function invBankLines(inv){const isC=inv.kind==='customer',ctrl=isC?'1100':'2000
     const same=norm(m.partner||'')===norm(inv.partner)||norm(m.ref||'').includes(norm(inv.partner).slice(0,8))||norm(m.ref||'').includes(norm(inv.number||''));
     out.push({m,c,ctr,free,done:c.amt-free,same});}
   return out.sort((a,b)=>(b.same-a.same)||(Math.abs(a.free-due)-Math.abs(b.free-due))||(a.m.date<b.m.date?1:-1)).slice(0,25);}
-async function settleFromBank(inv,x,amt){const isC=inv.kind==='customer',ctrl=isC?'1100':'2000';const S2=[{invoice_id:inv.id,amount:r2(amt)}];const onCtrl=x.ctr.length===1&&x.ctr[0].account===ctrl;
-  if(onCtrl){const up={settles:[...(x.m.settles||[]),...S2],partner:x.m.partner||inv.partner,audit:[...(x.m.audit||[]),{at:nowISO(),by:S.me,action:`Matched to ${inv.number}`}]};
+async function settleFromBank(inv,x,amt,apply){const isC=inv.kind==='customer',ctrl=isC?'1100':'2000';apply=r2(apply==null?amt:Math.min(apply,amt));const over=r2(amt-apply);const S2=apply>0?[{invoice_id:inv.id,amount:apply}]:[];const onCtrl=x.ctr.length===1&&x.ctr[0].account===ctrl;
+  if(onCtrl){const up={settles:[...(x.m.settles||[]),...S2],partner:x.m.partner||inv.partner,...(over>0?{overpaid:{invoice_id:inv.id,amount:over}}:{}),audit:[...(x.m.audit||[]),{at:nowISO(),by:S.me,action:`Matched to ${inv.number}`}]};
     up.lines=(x.m.lines||[]).map(l=>l.account===ctrl&&!l.partner?{...l,partner:inv.partner}:l);await db.doc('moves/'+x.m.id).update(up);Object.assign(x.m,up);return x.m;}
-  const from=x.ctr[0].account;return submitMove({journal:'MISC',date:x.m.date,ref:`Receipt ${inv.number} ${inv.partner} (bank ${x.m.name||x.m.ref||''})`,partner:inv.partner,bank_match_of:x.m.id,source:'bank_match',payment:{mode:'transfer',ref:x.m.ref||x.m.name||''},
+  const from=x.ctr[0].account;return submitMove({journal:'MISC',date:x.m.date,ref:`Receipt ${inv.number} ${inv.partner} (bank ${x.m.name||x.m.ref||''})`,partner:inv.partner,bank_match_of:x.m.id,source:'bank_match',overpaid:over>0?{invoice_id:inv.id,amount:over}:undefined,payment:{mode:'transfer',ref:x.m.ref||x.m.name||''},
     lines:isC?[{account:from,label:`From ${aname(from)||from}`,debit:amt,credit:0},{account:ctrl,label:inv.number,partner:inv.partner,debit:0,credit:amt}]:[{account:ctrl,label:inv.number,partner:inv.partner,debit:amt,credit:0},{account:from,label:`From ${aname(from)||from}`,debit:0,credit:amt}],settles:S2},{reason:'Matched to the bank line '+(x.m.name||'')});}
 // the window
 function paidWindow(inv,redraw,{match}={}){const isC=inv.kind==='customer';const due=invDue(inv,true);const lines=invBankLines(inv);const W_=isC&&typeof whtFor==='function'?whtFor(inv):null;
@@ -13117,9 +13118,9 @@ function paidWindow(inv,redraw,{match}={}){const isC=inv.kind==='customer';const
   const dateIn=h('input',{type:'date',value:P.date,onchange:e=>P.date=e.target.value});const amtIn=h('input',{type:'number',step:'0.01',min:'0',class:'num',value:P.amount,oninput:e=>{P.amount=e.target.value;if(W_){P.wht=r2(+P.amount*W_.rate/100);whtIn.value=P.wht;}sum();}});
   const whtIn=h('input',{type:'number',step:'0.01',min:'0',class:'num',value:P.wht,oninput:e=>{P.wht=e.target.value;sum();}});const refIn=h('input',{type:'text',maxlength:'60',oninput:e=>P.ref=e.target.value.trim()});
   const extra=h('div',{class:'row'});const total=h('div',{class:'pwsum'});
-  const sum=()=>{const a=+P.amount||0,w=+P.wht||0;total.textContent='';total.append(h('span',{},`Invoice ${money2(due)}`),h('span',{},`${isC?'Received':'Paid'} ${money2(r2(a-w))}`),w?h('span',{},`Tax withheld ${money2(w)}`):null,h('b',{},r2(due-a)>0.009?`Still open ${money2(r2(due-a))}`:'Fully paid'));};
+  const sum=()=>{const a=+P.amount||0,w=+P.wht||0;total.textContent='';total.append(h('span',{},`Invoice ${money2(due)}`),h('span',{},`${isC?'Received':'Paid'} ${money2(r2(a-w))}`),w?h('span',{},`Tax withheld ${money2(w)}`):null,h('b',{class:a-due>0.009?'pwover':''},r2(due-a)>0.009?`Still open ${money2(r2(due-a))}`:a-due>0.009?`Overpaid ${money2(r2(a-due))}: kept on ${inv.partner}’s account`:'Fully paid'));};
   function draw(){body.textContent='';const x=P.line!==''?lines[+P.line]:null;
-    if(x){P.amount=r2(Math.min(x.free+(+P.wht||0),due));amtIn.value=P.amount;sum();
+    if(x){P.amount=r2(x.free+(+P.wht||0));amtIn.value=P.amount;sum();
       body.append(h('div',{class:'pwbank'},h('div',{},h('b',{},`Bank ${fmtDate(x.m.date)}`),h('div',{class:'mini mut'},x.m.ref||x.m.name||''),h('div',{class:'mini mut'},`Account ${x.ctr.map(l=>l.account+' '+(aname(l.account)||'')).join(', ')} · available ${money2(x.free)}`)),h('span',{class:'pwamt'},money2(x.free))),
         h('div',{class:'row'},fld('Amount to apply',amtIn),W_?fld('Tax withheld',whtIn):null),total);return;}
     const refL=P.mode==='cheque'?'Cheque number':P.mode==='cash'?'Cash receipt number':P.mode==='card'?'Card slip / approval code':P.mode==='transfer'?'Transfer reference':'Reference';
@@ -13129,8 +13130,8 @@ function paidWindow(inv,redraw,{match}={}){const isC=inv.kind==='customer';const
   sel.onchange=()=>{P.line=sel.value;draw();};modeSel.value=P.mode;fillAcc();
   if(lines.length&&(match||lines[0].same)){P.line='0';sel.value='0';}
   const ok=h('button',{class:'btn primary',type:'button'},'Paid');let close;
-  ok.onclick=async()=>{er.textContent='';const a=r2(+P.amount||0);if(!(a>0)){er.textContent='Enter the amount.';return;}if(a-due>0.009){er.textContent=`More than the ${money2(due)} still open on the invoice.`;return;}ok.disabled=true;ok.textContent='Saving…';
-    try{let mv;if(P.line!==''){const x=lines[+P.line];const cashPart=r2(a-(+P.wht||0));if(cashPart-x.free>0.009) throw new Error(`The bank entry has only ${money2(x.free)} available.`);mv=await settleFromBank(inv,x,cashPart);const w=r2(+P.wht||0);if(w>0&&isC&&typeof whtCfg==='function'){if(typeof whtEnsure==='function') await whtEnsure();await submitMove({journal:'MISC',date:x.m.date,ref:`Tax withheld on ${inv.number} ${inv.partner}`,partner:inv.partner,source:'payment',wht:{rate:whtCfg().rate,amount:w,invoices:[inv.number]},lines:[{account:whtCfg().account,label:`Final tax withheld on ${inv.number}`,debit:w,credit:0},{account:'1100',label:inv.number,partner:inv.partner,debit:0,credit:w}],settles:[{invoice_id:inv.id,amount:w}]},{reason:'Tax withheld at source'});}}
+  ok.onclick=async()=>{er.textContent='';const a=r2(+P.amount||0);if(!(a>0)){er.textContent='Enter the amount.';return;}ok.disabled=true;ok.textContent='Saving…';
+    try{let mv;if(P.line!==''){const x=lines[+P.line];const cashPart=r2(a-(+P.wht||0));if(cashPart-x.free>0.009) throw new Error(`The bank entry has only ${money2(x.free)} available.`);mv=await settleFromBank(inv,x,cashPart,r2(due-(+P.wht||0)));const w=r2(+P.wht||0);if(w>0&&isC&&typeof whtCfg==='function'){if(typeof whtEnsure==='function') await whtEnsure();await submitMove({journal:'MISC',date:x.m.date,ref:`Tax withheld on ${inv.number} ${inv.partner}`,partner:inv.partner,source:'payment',wht:{rate:whtCfg().rate,amount:w,invoices:[inv.number]},lines:[{account:whtCfg().account,label:`Final tax withheld on ${inv.number}`,debit:w,credit:0},{account:'1100',label:inv.number,partner:inv.partner,debit:0,credit:w}],settles:[{invoice_id:inv.id,amount:w}]},{reason:'Tax withheld at source'});}}
       else{if(!P.ref) throw new Error('Enter the reference (transfer, cheque or cash receipt number).');if(!P.acc) throw new Error('Add a bank or cash account first.');mv=await recordPayment(inv,{...P,amount:a});}
       close();typeof revToast==='function'&&revToast(mv&&mv.state==='to_approve'?'Sent for approval. The receipt is ready once it is approved.':`${inv.number} marked as paid. The receipt is ready.`);setTimeout(redraw,500);}
     catch(e){er.textContent=e.message;ok.disabled=false;ok.textContent='Paid';}};
@@ -13139,7 +13140,7 @@ function paidWindow(inv,redraw,{match}={}){const isC=inv.kind==='customer';const
   draw();close=miniModal(isC?'Mark as paid':'Mark bill as paid',content);}
 
 // ---- receipt: PDF and email, from the payment entry
-const invPaysOf=inv=>S.moves.filter(m=>m.state==='posted'&&!m.reversal_of&&!m.reversed_by&&(m.settles||[]).some(x=>x.invoice_id===inv.id)).sort((a,b)=>a.date<b.date?1:-1);
+const invPaysOf=inv=>S.moves.filter(m=>m.state==='posted'&&!m.reversal_of&&!m.reversed_by&&((m.settles||[]).some(x=>x.invoice_id===inv.id)||(m.overpaid&&m.overpaid.invoice_id===inv.id))).sort((a,b)=>a.date<b.date?1:-1);
 function receiptNo(m){return 'RCT-'+String(m.name||m.id).replace(/^[A-Z]+\d*\//,'').replace(/\//g,'-');}
 async function receiptPdf(m){await loadScript(JSPDF_URL,()=>window.jspdf);const {jsPDF}=window.jspdf;const d=new jsPDF({unit:'pt',format:'a4'});_pdfLogo=null;
   const e=S.ent[S.entity]||{};const B=brandFor();const [cr,cg,cb]=hexRgb(B.color);const L=await coLogo();const W=595,M=48;const party=m.partner||'';const C=custInfo(party);
@@ -13179,6 +13180,10 @@ function receiptMenu(inv,anchorTd,redraw){const pays=invPaysOf(inv);if(!pays.len
     if(invPaysOf(inv).length){const rc=h('button',{type:'button',class:'icob ok','aria-label':'Receipt',title:'Receipt: download or email'});rc.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-2.5-1.6L13 21l-2.5-1.6L8 21l-2-1.3z"/><path d="M9 8h6M9 11.5h6M9 15h4"/></svg>';rc.onclick=e=>{e.stopPropagation();receiptMenu(inv,td,redraw);};icons.append(rc);}}catch(e){console.error(e);}return td;};}
 // the invoice's own "Payments" area keeps its receipts handy too
 {const _bm=invBankMap;invBankMap=function(inv){const el=_bm(inv);try{if(el&&invPaysOf(inv).length){el.querySelector('b')&&el.querySelector('b').after(h('button',{class:'btn sm',type:'button',style:'margin-left:.6rem',onclick:e=>{e.stopPropagation();receiptMenu(inv);}},'Receipts'));}}catch(e){}return el;};}
+
+// overpaid invoices say so on the list; the extra sits as a credit in the customer's sub-ledger
+const invOverpaid=inv=>r2(S.moves.filter(m=>m.state==='posted'&&!m.reversed_by&&!m.reversal_of&&m.overpaid&&m.overpaid.invoice_id===inv.id).reduce((t,m)=>t+(+m.overpaid.amount||0),0));
+{const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const o=invOverpaid(inv);if(o>0.009){const s=h('span',{class:'pill acc invover',title:`${money2(o)} more than the invoice was received. It is kept as a credit on ${inv.partner}’s account and is used against their next invoice.`},`Overpaid ${money2(o)} · on account`);const lbl=td.querySelector(':scope > span.mini');if(lbl) lbl.replaceWith(s);else td.append(s);}}catch(e){}return td;};}
 
 
 // test hook (local development only)
