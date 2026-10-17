@@ -1713,6 +1713,8 @@ body.onecompany header.topbar #tn-ws{display:none!important}
 .bkhide{display:none!important}.bktabs{margin-bottom:.2rem}
 .bktxctl .field{min-width:9rem}.bktxtab td.pos{color:var(--ok)}.bktxtab td.neg{color:var(--bad)}
 .bkmatchrow td{background:var(--sunk)}.bkmatch{padding:.4rem .2rem}.bkinvr{grid-template-columns:auto 1fr 8.5rem;background:var(--panel)}
+.invq{white-space:nowrap}.invicons{display:inline-flex;gap:.25rem;margin-right:.4rem;vertical-align:middle}.invicons .icob{width:1.9rem;height:1.9rem}
+.invrm{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;white-space:normal;max-width:24rem}
 
 </style>
 
@@ -13012,17 +13014,15 @@ partyLines=function(kind,partner){const C=ctrlAccts(kind);const p=norm(partner);
   return out.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(b.charge-a.charge));};
 
 // ===== After an action inside an opened row (invoice, entry, statement…), the row closes again so the list stays tidy =====
-(function(){let armedAt=0;const NOTOGGLE=/^(cancel|close|back|keep it|no|show|hide|more|less|add a line|preview)\b/i;
+(function(){let armedAt=0,sig0='',timer=null;const NOTOGGLE=/^(cancel|close|back|keep it|no|show|hide|more|less|add a line|preview|remove payment|edit invoice|delete invoice)\b/i;
+  const sig=()=>{try{return [S.moves.length,S.moves.reduce((t,m)=>t+((m.audit||[]).length)+((m.settles||[]).length),0),S.invoices.length,S.invoices.reduce((t,i)=>t+(i.status||'').length+((i.lines||[]).length),0),(S.statements||[]).length,((S.raw||{}).partners||[]).length,(S.rules||[]).length].join('|');}catch(e){return '';}};
+  function collapse(){armedAt=0;clearInterval(timer);const keep={};Object.keys(S.open||{}).forEach(k=>{if(k==='pack-latest') keep[k]=S.open[k];});S.open=keep;S._payT=null;
+    setTimeout(()=>{try{const sec=document.querySelector('#main > section:not([hidden])');if(!sec) return;sec.querySelectorAll('details[open]').forEach(d=>{if(!d.closest('.mmov')) d.open=false;});
+      if(sec.querySelector('tr.detail')){sec.querySelectorAll('tr.detail').forEach(d=>{const prev=d.previousElementSibling;if(prev&&prev.matches('tr.click')) prev.click();});}}catch(x){}},350);}
   document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('button');if(!b||b.disabled) return;
     if(b.getAttribute('role')==='tab'||b.closest('.seg,[role=tablist]')) return;if(NOTOGGLE.test((b.textContent||'').trim())) return;
-    if(b.closest('tr.detail, details[open], .paypanel, .bkmatchrow, .txpop, .mmov, .qpay')) armedAt=Date.now();},true);
-  function collapse(){if(!armedAt||Date.now()-armedAt>20000) return;armedAt=0;
-    const keep={};Object.keys(S.open||{}).forEach(k=>{if(/^pack-latest$/.test(k)) keep[k]=S.open[k];});S.open=keep;S._payT=null;
-    setTimeout(()=>{try{const sec=document.querySelector('#main > section:not([hidden])');if(!sec) return;sec.querySelectorAll('details[open]').forEach(d=>{if(!d.closest('.mmov')) d.open=false;});
-      if(sec.querySelector('tr.detail')&&typeof showTab==='function'&&S.tab){const y=window.scrollY;showTab(S.tab);window.scrollTo(0,y);}}catch(x){}},450);}
-  const wrapRef=r=>{if(!r||r._cw) return r;['set','update','delete'].forEach(f=>{const o=r[f];if(typeof o!=='function') return;r[f]=async function(...a){const x=await o.apply(this,a);try{collapse();}catch(e){}return x;};});r._cw=1;return r;};
-  const hook=()=>{if(!db||db._cw) return !!db;const d0=db.doc.bind(db);db.doc=(...a)=>wrapRef(d0(...a));const c0=db.collection.bind(db);db.collection=(...a)=>{const c=c0(...a);if(c&&!c._cw){const cd=c.doc.bind(c);c.doc=(...b)=>wrapRef(cd(...b));c._cw=1;}return c;};db._cw=1;return true;};
-  const t=setInterval(()=>{try{if(hook()) clearInterval(t);}catch(e){}},300);})();
+    if(!b.closest('tr.detail, details[open], .paypanel, .bkmatchrow, .txpop, .qpay')) return;
+    armedAt=Date.now();sig0=sig();clearInterval(timer);timer=setInterval(()=>{if(Date.now()-armedAt>15000){clearInterval(timer);armedAt=0;return;}if(sig()!==sig0) collapse();},400);},true);})();
 
 // ===== Removing a payment re-opens the invoice: reversed payments no longer settle, a reversal keeps the party, and an invoice never shows a negative balance =====
 settledFor=function(id,withPending){let s=0;for(const m of (withPending?postedOrPending():posted())){if(m.reversed_by||m.reversal_of) continue;for(const x of (m.settles||[])) if(x.invoice_id===id) s+=+x.amount||0;}return r2(s);};
@@ -13059,15 +13059,29 @@ invBankMap=function(inv){const isC=inv.kind==='customer';const all=S.moves.filte
   const tb=h('tbody',{},act.map(m=>{const x=m.settles.find(s=>s.invoice_id===inv.id);const amt=+x.amount||0;if(m.state==='posted') left=r2(left-amt);
     const rm=S.canWrite?h('button',{class:'btn ghost sm danger',type:'button'},'Remove payment'):null;
     if(rm) rm.onclick=()=>{const c=h('span',{class:'row',style:'gap:.3rem'},h('span',{class:'mini'},m.source==='bank_statement'?'Unmatch it from the bank line?':'Reverse this payment?'),h('button',{class:'btn sm danger',type:'button',onclick:async e=>{e.target.disabled=true;try{
-          if(m.state==='to_approve') await rejectMove(m);
-          else if(m.source==='bank_statement'&&!m.payment){const settles=(m.settles||[]).filter(s=>s.invoice_id!==inv.id);await db.doc('moves/'+m.id).update({settles,audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:`Unmatched from ${inv.number}`}]});m.settles=settles;}
-          else await reverseMove(m);typeof revToast==='function'&&revToast('Payment removed. The invoice is open again.');}catch(er){msg.textContent=er.message;e.target.disabled=false;}}},'Yes, remove'),h('button',{class:'btn ghost sm',type:'button',onclick:()=>c.replaceWith(rm)},'No'));rm.replaceWith(c);};
+          await invRemovePayment(inv,m);typeof revToast==='function'&&revToast('Payment removed. The invoice is open again.');}catch(er){msg.textContent=er.message;e.target.disabled=false;}}},'Yes, remove'),h('button',{class:'btn ghost sm',type:'button',onclick:()=>c.replaceWith(rm)},'No'));rm.replaceWith(c);};
     return h('tr',{},h('td',{class:'nowrap'},fmtDate(m.date)),h('td',{},label(m),h('div',{class:'mut'},m.name||''),m.state==='to_approve'?pill('Waiting for approval','warn'):null,m.wht?h('div',{class:'mut'},`incl. ${money2(m.wht.amount)} tax withheld`):null),h('td',{class:'num'},money2(amt)),h('td',{class:'num'},m.state==='posted'?(left>0.009?money2(left):'—'):''),h('td',{class:'acts'},rm));}));
   if(!act.length) tb.append(h('tr',{},h('td',{colspan:5,class:'mut'},'No payment counts against this invoice now.')));
   const due=invDue(inv,true);
   return h('div',{class:'stack invpays',style:'gap:.35rem'},h('b',{style:'font-weight:500'},isC?'Payments received for this invoice':'Payments made for this bill'),h('div',{class:'tablewrap'},h('table',{class:'mini invmap'},h('thead',{},h('tr',{},h('th',{},'Date'),h('th',{},'Payment'),h('th',{class:'num'},'Applied'),h('th',{class:'num'},'Still to pay'),h('th',{}))),tb)),msg,
     gone.length?h('div',{class:'mini mut'},`${gone.length} earlier payment${gone.length>1?'s were':' was'} reversed and no longer count${gone.length>1?'':'s'} (${gone.map(m=>m.name||fmtDate(m.date)).join(', ')}).`):null,
     act.some(m=>m.state==='posted')&&due>0.009?h('div',{class:'banner warn'},`Short paid: ${money2(due)} is still open on this invoice.`):null);};
+
+// remove one payment from an invoice: reject if waiting, unmatch a bank line, otherwise reverse the payment entry
+async function invRemovePayment(inv,m){if(m.state==='to_approve') return rejectMove(m);
+  if(m.source==='bank_statement'&&!m.payment){const settles=(m.settles||[]).filter(s=>s.invoice_id!==inv.id);await db.doc('moves/'+m.id).update({settles,audit:[...(m.audit||[]),{at:nowISO(),by:S.me,action:`Unmatched from ${inv.number}`}]});m.settles=settles;return;}
+  return reverseMove(m);}
+const invActivePays=inv=>S.moves.filter(m=>m.state!=='cancelled'&&!m.reversal_of&&!m.reversed_by&&(m.settles||[]).some(x=>x.invoice_id===inv.id)).sort((a,b)=>a.date<b.date?1:-1);
+// list row: quick icons for edit and remove payment next to the payment action
+{const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{if(inv.status==='cancelled'||!S.canWrite) return td;const icons=h('span',{class:'invicons'});
+    const ed=icoBtn('edit','Edit '+(inv.number||'invoice'),e=>{e.stopPropagation();S.open=S.open||{};S.open['inv-'+inv.id]=true;redraw();setTimeout(()=>{const b=[...document.querySelectorAll('#main > section:not([hidden]) tr.detail button')].find(x=>/^Edit (invoice|bill)/.test(x.textContent.trim()));if(b){b.click();b.scrollIntoView({block:'center'});}},120);});
+    icons.append(ed);
+    const pays=invActivePays(inv);if(pays.length){const rb=h('button',{type:'button',class:'icob no','aria-label':'Remove payment',title:`Remove payment (${pays.length} on this ${inv.kind==='customer'?'invoice':'bill'})`});rb.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
+      rb.onclick=e=>{e.stopPropagation();const m=pays[0];const amt=+(m.settles.find(s=>s.invoice_id===inv.id)||{}).amount||0;const er=h('span',{class:'err mini'});
+        const box=h('div',{class:'invrm',onclick:ev=>ev.stopPropagation()},h('span',{class:'mini'},`Remove the ${money2(amt)} payment of ${fmtDate(m.date)}${m.payment?` (${payModeName(m.payment.mode).toLowerCase()} ${m.payment.ref||''})`:''}?`),
+          h('button',{class:'btn sm danger',type:'button',onclick:async ev=>{ev.target.disabled=true;try{await invRemovePayment(inv,m);typeof revToast==='function'&&revToast('Payment removed. The invoice is open again.');setTimeout(redraw,500);}catch(x){er.textContent=x.message;ev.target.disabled=false;}}},'Remove'),
+          h('button',{class:'btn ghost sm',type:'button',onclick:()=>redraw()},'Keep'),er);td.textContent='';td.append(box);};icons.append(rb);}
+    td.prepend(icons);}catch(e){}return td;};}
 
 
 // test hook (local development only)
