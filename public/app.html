@@ -13563,6 +13563,19 @@ BK_ST.match_wait=['Matched · match waiting for approval','warn'];
 async function approvePendMatches(m){let n=0;for(const y of bkPendMatches(m)){await approveMove(y,y.lines);n++;}return n;}
 {const _iq=invQuick;invQuick=function(inv,redraw){const td=_iq(inv,redraw);try{const P=S.moves.filter(y=>y.bank_match_of&&y.state==='to_approve'&&(y.settles||[]).some(s=>s.invoice_id===inv.id));if(P.length&&S.canWrite){td.querySelectorAll('.invpend').forEach(z=>z.remove());const b=h('button',{type:'button',class:'pill warn invpend',title:'Approve the bank match so the invoice is settled'},`Bank match waiting · approve`);b.onclick=async e=>{e.stopPropagation();b.disabled=true;try{for(const y of P) await approveMove(y,y.lines);typeof revToast==='function'&&revToast('Bank match approved. The invoice is updated.');setTimeout(redraw,500);}catch(x){b.disabled=false;}};td.append(b);}}catch(e){}return td;};}
 
+// ===== Bank lines are never "reversed": removing one sends it back to Not identified. Lines reversed earlier are restored that way (the reversal is withdrawn) =====
+{const _rv=reverseMove;reverseMove=async function(m){if(m&&m.source==='bank_statement'){for(const y of S.moves.filter(z=>z.bank_match_of===m.id&&z.state!=='cancelled')){await db.doc('moves/'+y.id).update({state:'cancelled',removed_reason:'Bank line sent back to not identified',audit:[...(y.audit||[]),{at:nowISO(),by:S.me,action:'Removed: the bank line went back to not identified'}]});y.state='cancelled';}
+    return bankBackToUnidentified(m,'Removed from the books: back to not identified (bank lines are not reversed)');}return _rv.apply(this,arguments);};}
+async function bankRestoreReversed(){if(S._bkRev||!S.canWrite||S.entity==='all') return 0;S._bkRev=true;let n=0;const at=nowISO();
+  for(const m of S.moves.filter(x=>x.source==='bank_statement'&&x.reversed_by&&x.state==='posted')){try{const r=S.moves.find(y=>y.id===m.reversed_by||y.reversal_of===m.id);
+      if(r&&r.state!=='cancelled'){await db.doc('moves/'+r.id).update({state:'cancelled',removed_reason:'Reversal withdrawn: the bank line went back to not identified',audit:[...(r.audit||[]),{at,by:S.me,action:'Withdrawn: bank lines go back to not identified instead of being reversed'}]});r.state='cancelled';}
+      for(const y of S.moves.filter(z=>z.bank_match_of===m.id&&z.state!=='cancelled')){await db.doc('moves/'+y.id).update({state:'cancelled',removed_reason:'Bank line sent back to not identified',audit:[...(y.audit||[]),{at,by:S.me,action:'Removed with the bank line'}]});y.state='cancelled';}
+      await db.doc('moves/'+m.id).update({reversed_by:null});m.reversed_by=null;await bankBackToUnidentified(m,'Was reversed earlier: back to not identified and unapproved');n++;}catch(e){console.warn(e);}}
+  return n;}
+{const _tv=bankTxView;bankTxView=function(redraw){bankRestoreReversed().then(n=>{if(n){typeof revToast==='function'&&revToast(`${n} reversed bank line${n>1?'s are':' is'} back in Not identified.`);redraw();}});return _tv.apply(this,arguments);};}
+{const _iq=invQuick;invQuick=function(inv,redraw){if(!S._bkRev) bankRestoreReversed().then(n=>{if(n) setTimeout(redraw,300);});return _iq(inv,redraw);};}
+{const _b=BUILD.entries;BUILD.entries=(...a)=>{if(!S._bkRev) setTimeout(()=>bankRestoreReversed(),500);return _b(...a);};}
+
 
 // test hook (local development only)
 if(location.hostname==='localhost'){window.__dbg=c=>eval(c);}
