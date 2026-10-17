@@ -1634,6 +1634,24 @@ html body.tb2 .topbar :focus-visible{outline:2px solid #818CF8!important;outline
 .tbov{font-size:.68rem;font-weight:600;color:var(--accent,#2457C5);border:1px solid currentColor;border-radius:999px;padding:0 .4rem;margin-left:.45rem;vertical-align:middle}
 .tbzero{display:inline-flex;gap:.4rem;align-items:center;font-size:.85rem;color:var(--muted)}
 @media (max-width:1100px){.tbgrid{grid-template-columns:1fr}.tbpv{position:static}}
+/* trial balance mapping board */
+.tbsub{margin-right:auto}
+.tbcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr));gap:1rem;align-items:start}
+.tbcol{display:grid;gap:.6rem}.tbch{font-size:.8rem;font-weight:600;color:var(--muted);padding:0 .2rem}
+.tbbox{border:1px solid var(--line);border-radius:12px;background:var(--panel);transition:border-color .12s,box-shadow .12s,background .12s}
+.tbbox.s-pl{border-left:3px solid #2457C5}.tbbox.s-bs{border-left:3px solid #0F9488}.tbun .tbbox{border-left:3px solid var(--warn);background:var(--warn-soft)}
+.tbbh{display:flex;flex-wrap:wrap;align-items:baseline;gap:.15rem .5rem;padding:.55rem .75rem;border-bottom:1px solid var(--line)}.tbbh b{font-size:.88rem}.tbbh .mini{flex-basis:100%;order:3}
+.tbbt{margin-left:auto;font-weight:600;font-size:.85rem}.tbbn{min-width:1.4rem;text-align:center;background:var(--sunk);border-radius:999px;padding:0 .35rem}
+.tbbl{display:flex;flex-direction:column;gap:.3rem;padding:.5rem;min-height:2.6rem}
+.tbempty{border:1.5px dashed var(--line-2);border-radius:8px;padding:.5rem;text-align:center}
+.tbchip{display:flex;align-items:center;gap:.45rem;width:100%;text-align:left;font:inherit;font-size:.83rem;color:var(--ink);background:var(--sunk);border:1px solid transparent;border-radius:8px;padding:.35rem .55rem;cursor:grab}
+.tbchip:hover{border-color:var(--line-2)}.tbchip:focus-visible{outline:2px solid var(--accent,#2457C5);outline-offset:1px}
+.tbchip .tbcn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tbchip .tbcv{color:var(--muted);white-space:nowrap;font-size:.78rem}
+.tbchip.chg{background:var(--warn-soft);border-color:var(--warn)}.tbchip.re .tbcn::after{content:' ↺';color:var(--accent,#2457C5)}
+.tbchip.drag{opacity:.45}.tbchip.dim{opacity:.3}.tbchip.hit{border-color:var(--accent,#2457C5)}
+.tbmap.dragging .tbbox{opacity:.55}.tbmap.dragging.d-pl .tbbox.s-pl,.tbmap.dragging.d-bs .tbbox.s-bs{opacity:1}
+.tbbox.over{border-color:var(--accent,#2457C5);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#2457C5) 22%,transparent);background:color-mix(in srgb,var(--accent,#2457C5) 6%,var(--panel))}
+.tbmove{display:grid;gap:.35rem;padding:.35rem;border:1px solid var(--accent,#2457C5);border-radius:10px}.tbmove .tbchip{cursor:default}
 
 </style>
 
@@ -12367,7 +12385,8 @@ BUILD.tbal=()=>{const el=h('section',{class:'stack tbscreen'});
       :h('span',{class:'exprange'},h('input',{type:'date','aria-label':'From',value:a,onchange:e=>{P.from=e.target.value;refresh();}}),h('span',{class:'mini mut'},'to'),h('input',{type:'date','aria-label':'To',value:b,onchange:e=>{P.to=e.target.value;refresh();}}));
     const vw=h('div',{class:'seg',role:'tablist','aria-label':'Layout'},[['acc','By account'],['fs','Grouped as in the statements']].map(([k,l])=>h('button',{type:'button',role:'tab','aria-selected':String(P.view===k),onclick:()=>{P.view=k;refresh();}},l)));
     const st=closed?h('span',{class:'tbst ok'},`Closed · locked to ${fmtDate(lk)}`):h('span',{class:'tbst warn'},lk?`Not closed yet · books locked to ${fmtDate(lk)}`:'Not closed yet');
-    top.append(h('div',{class:'expper'},mode,pick,st),vw);
+    const sub=h('div',{class:'seg tbsub',role:'tablist','aria-label':'Trial balance view'},[['bal','Balances'],['map','Mapping']].map(([k,l])=>h('button',{type:'button',role:'tab','aria-selected':String((P.sub||'bal')===k),onclick:()=>{P.sub=k;refresh();}},l)));
+    top.append(sub,h('div',{class:'expper'},mode,pick,st),P.sub==='map'?h('span'):vw);
     if(S.entity==='all') body.append(h('div',{class:'banner info'},'Showing the group. Choose one company to change how its accounts are grouped.'));
     const D=tbData(a,b);const map=curMap();const caps=fsCaptions(fsBasis().framework||'ifrs');const capName=k=>(caps.find(c=>c[0]===k)||[k,'',k])[2];
     const accs=Object.values(S.accounts).filter(x=>!x.group&&(!x.deprecated||D[x.id])).sort((x,y)=>x.id<y.id?-1:1).filter(x=>{const v=D[x.id];return P.zero||(v&&(Math.abs(v.op)>0.004||v.d||v.c));});
@@ -12410,8 +12429,44 @@ BUILD.tbal=()=>{const el=h('section',{class:'stack tbscreen'});
       const all=h('input',{type:'checkbox','aria-label':'Select all',disabled:!can,onchange:e=>{L.forEach(x=>e.target.checked?sel.add(x.id):sel.delete(x.id));tb.querySelectorAll('td.ck input').forEach(c=>c.checked=e.target.checked);}});
       tw.append(h('table',{class:'exptab tbtab'},h('thead',{},h('tr',{},h('th',{class:'ck'},all),h('th',{},'Code'),h('th',{},'Account'),h('th',{class:'num'},'Opening'),h('th',{class:'num'},'Debit'),h('th',{class:'num'},'Credit'),h('th',{class:'num'},'Closing debit'),h('th',{class:'num'},'Closing credit'),h('th',{},'Line in the financial statements'))),tb,
         h('tfoot',{},h('tr',{},h('td',{colspan:3},'Total'),h('td',{}),h('td',{class:'num'},money2(T('d'))),h('td',{class:'num'},money2(T('c'))),h('td',{class:'num'},money2(cd)),h('td',{class:'num'},money2(cc)),h('td',{},Math.abs(cd-cc)<0.05?pill('Balanced','ok'):pill(`Out by ${money2(r2(cd-cc))}`,'bad'))))));}
+    if(P.sub==='map'){body.append(h('div',{class:'tbgrid'},tbMapBoard({D,map,caps,can,staged,refresh,save,undo,msg}),preview));return;}
     body.append(h('div',{class:'tbgrid'},h('div',{class:'card stack'},h('div',{class:'row'},q,zr,h('span',{style:'flex:1'}),moveTo,undo,save,pr),h('div',{class:'mini tbmsg',role:'status'}),msg,tw),preview));drawTable();}
   return {el,refresh};};
+
+// ---- Mapping board: each line item of the statements is a box; drag accounts between boxes (or use Move to on a chip)
+function tbMapBoard({D,map,caps,can,staged,refresh,save,undo,msg}){const M=S.tbM||(S.tbM={q:'',zero:true,open:null});
+  const isPL=a=>/^(income|expense)/.test(a.type||'');const lines=caps.filter(c=>c[3]!=='calc');const capSide=k=>(caps.find(c=>c[0]===k)||[])[1];
+  const accs=Object.values(S.accounts).filter(a=>!a.group&&!a.deprecated).sort((x,y)=>x.id<y.id?-1:1).filter(a=>M.zero||(D[a.id]&&(D[a.id].cl||D[a.id].d||D[a.id].c)));
+  const lineOf=a=>map[a.id]||fsMapAccount(a)||'';
+  const card=h('div',{class:'card stack tbmap'});
+  const q=h('input',{type:'search',placeholder:'Find an account','aria-label':'Find an account',value:M.q,oninput:e=>{M.q=e.target.value;mark();}});
+  const zr=h('label',{class:'tbzero'},h('input',{type:'checkbox',checked:M.zero,onchange:e=>{M.zero=e.target.checked;refresh();}}),'Include accounts with no balance');
+  card.append(h('div',{class:'row'},h('div',{style:'flex:1;min-width:14rem'},h('h3',{style:'margin:0'},'Map accounts to line items'),h('p',{class:'mini mut',style:'margin:.2rem 0 0'},can?'Drag an account into the line it belongs to, or click it and choose. Profit and loss accounts move between profit and loss lines, balance sheet accounts between balance sheet lines.':'You can view the mapping. Ask an owner or admin to change it.')),q,zr,undo,save),msg);
+  let dragId=null;
+  function chip(a){const v=D[a.id]?D[a.id].cl:0;const ch=!!staged[a.id];const re=lineOf(a)!==fsMapAccount(a);
+    const c=h('button',{type:'button',class:'tbchip'+(ch?' chg':'')+(re?' re':''),draggable:can?'true':'false','data-id':a.id,'data-q':norm(a.id+' '+a.name),title:`${a.id} ${a.name}${re?' · moved from its usual line':''}`,'aria-label':`${a.id} ${a.name}, ${money2(v)}. Press to move`},
+      h('span',{class:'code mini'},a.id),h('span',{class:'tbcn'},a.name),h('span',{class:'tbcv'},v?money2(Math.abs(v))+(v>0?' Dr':' Cr'):'–'));
+    c.ondragstart=e=>{dragId=a.id;e.dataTransfer.setData('text/plain',a.id);e.dataTransfer.effectAllowed='move';c.classList.add('drag');card.classList.add('dragging',isPL(a)?'d-pl':'d-bs');};
+    c.ondragend=()=>{dragId=null;c.classList.remove('drag');card.classList.remove('dragging','d-pl','d-bs');card.querySelectorAll('.tbbox.over').forEach(x=>x.classList.remove('over'));};
+    c.onclick=()=>{if(!can) return;M.open=M.open===a.id?null:a.id;drawBoxes();setTimeout(()=>{const s=card.querySelector('.tbmove select');if(s) s.focus();},0);};
+    if(M.open===a.id){const s=h('select',{'aria-label':'Move '+a.name+' to',onchange:e=>{if(e.target.value){staged[a.id]=e.target.value;M.open=null;refresh();}}},h('option',{value:''},'Move to…'),...lines.filter(([k,sd])=>sd===(isPL(a)?'pl':'bs')&&k!==lineOf(a)).map(([k,,l])=>h('option',{value:k},l)));
+      return h('div',{class:'tbmove'},c,s,h('button',{type:'button',class:'btn ghost sm',onclick:()=>{M.open=null;drawBoxes();}},'Close'));}
+    return c;}
+  const cols=h('div',{class:'tbcols'});
+  function box(k,side,label){const list=accs.filter(a=>lineOf(a)===k);const tot=r2(list.reduce((t,a)=>t+(D[a.id]?D[a.id].cl:0),0));
+    const b=h('div',{class:'tbbox s-'+side,'data-k':k},h('div',{class:'tbbh'},h('b',{},label),side==='pl'&&TB_HINT[k]&&TB_HINT[k]!==label?h('span',{class:'mini mut'},TB_HINT[k]):null,h('span',{class:'tbbt'},list.length?money2(Math.abs(tot)):''),h('span',{class:'tbbn mini mut'},String(list.length))),
+      h('div',{class:'tbbl'},list.length?list.map(chip):h('div',{class:'tbempty mini mut'},can?'Drop accounts here':'No accounts')));
+    if(can){b.ondragover=e=>{const a=S.accounts[dragId];if(!a||(isPL(a)?'pl':'bs')!==side) return;e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add('over');};
+      b.ondragleave=e=>{if(!b.contains(e.relatedTarget)) b.classList.remove('over');};
+      b.ondrop=e=>{e.preventDefault();b.classList.remove('over');const id=e.dataTransfer.getData('text/plain')||dragId;const a=S.accounts[id];if(!a||(isPL(a)?'pl':'bs')!==side) return;if(lineOf(a)===k) return;staged[id]=k;refresh();};}
+    return b;}
+  function drawBoxes(){cols.textContent='';
+    const un=accs.filter(a=>!lineOf(a)||!capSide(lineOf(a)));
+    if(un.length) cols.append(h('div',{class:'tbcol tbun'},h('div',{class:'tbch'},'Not mapped'),h('div',{class:'tbbox'},h('div',{class:'tbbl'},un.map(chip)))));
+    cols.append(h('div',{class:'tbcol'},h('div',{class:'tbch'},'Profit and loss'),...lines.filter(c=>c[1]==='pl').map(([k,s,l])=>box(k,s,l))),
+      h('div',{class:'tbcol'},h('div',{class:'tbch'},'Balance sheet'),...lines.filter(c=>c[1]==='bs').map(([k,s,l])=>box(k,s,l))));mark();}
+  function mark(){const qq=norm(M.q||'');cols.querySelectorAll('.tbchip').forEach(c=>{const hit=!qq||c.dataset.q.includes(qq);c.classList.toggle('dim',!hit);c.classList.toggle('hit',!!qq&&hit);});}
+  card.append(cols);drawBoxes();return card;}
 
 
 // test hook (local development only)
