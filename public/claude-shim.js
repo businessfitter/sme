@@ -561,6 +561,7 @@ ${info.can_create_org && info.mode !== 'single' ? '<button class="sw" type="butt
     chromeCss();
     const btn = document.createElement('button');
     btn.type = 'button'; btn.id = 'sx-co'; btn.title = 'Workspaces, plan and usage';
+    try { document.body.classList.toggle('multiws', orgs.length + invites.length > 1); } catch (e) {}
     btn.innerHTML = `<span class="n">${esc(org.name)}</span>${badge()}${invites.length ? '<span class="t warn" title="Invitations waiting">' + invites.length + ' invite' + (invites.length > 1 ? 's' : '') + '</span>' : ''}<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>`;
     btn.onclick = (e) => { e.stopPropagation(); togglePanel(); };
     const shown = (el) => !!el && el.offsetParent !== null;

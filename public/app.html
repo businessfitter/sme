@@ -1654,9 +1654,16 @@ html body.tb2 .topbar :focus-visible{outline:2px solid #818CF8!important;outline
 .tbmove{display:grid;gap:.35rem;padding:.35rem;border:1px solid var(--accent,#2457C5);border-radius:10px}.tbmove .tbchip{cursor:default}
 .tbcol,.tbbox,.tbgrid>*,.tbmap{min-width:0}
 /* slim top bar: no workspace pill, breadcrumb or workspace settings */
-header.topbar #sx-co,header.topbar #tn-app,header.topbar #tn-wsset{display:none!important}
+body:not(.multiws) header.topbar #sx-co,header.topbar #tn-app,header.topbar #tn-wsset{display:none!important}
 body.onecompany header.topbar #tn-ws{display:none!important}
 .acctpanel{max-width:44rem}.acctrow{display:flex;gap:1rem;align-items:center;justify-content:space-between;padding:.7rem 0;border-top:1px solid var(--line)}
+/* bank line: match the receipt to invoices */
+.txpop:has(.txinvr){width:22rem}
+.txinv{display:flex;flex-direction:column;gap:.3rem;max-height:15rem;overflow:auto}
+.txinvh{display:flex;justify-content:space-between;align-items:baseline;font-size:.8rem;font-weight:600;border-top:1px solid var(--line);padding-top:.45rem}
+.txinvr{display:grid;grid-template-columns:auto 1fr 6.5rem;gap:.45rem;align-items:center;padding:.3rem .35rem;border-radius:8px;background:var(--sunk);font-size:.84rem;margin:0}
+.txinvr:has(input:checked){background:color-mix(in srgb,var(--ok-soft) 70%,var(--panel))}
+.txinvn{display:flex;flex-direction:column;min-width:0}.txinvr input.num{width:100%;padding:.25rem .35rem;text-align:right}
 
 </style>
 
@@ -11750,14 +11757,24 @@ function txCell(m,ed,other,inflow,onAcc){const T=S.revT||(S.revT={});const st=T[
     const names=kind==='employee'?(S.employees||[]).filter(e=>e.active!==false).map(e=>e.name):(S.raw.partners||[]).filter(p=>p.kind===kind&&p.entity===S.entity&&!['deleted','rejected','blocked'].includes(p.status)).map(p=>p.name).sort();
     const ps=h('select',{'aria-label':kind==='customer'?'Customer':kind==='supplier'?'Supplier':'Employee',class:'txparty'},h('option',{value:''},kind==='customer'?'Choose the customer':kind==='supplier'?'Choose the supplier':'Choose the employee'),names.map(n=>h('option',{value:n},n)));ps.value=names.includes(st.partner)?st.partner:'';
     const hint=h('div',{class:'mini mut'});const showHint=()=>{if(kind==='employee'||!ps.value){hint.textContent='';return;}const due=openInvoices(kind).filter(i=>norm(i.partner)===norm(ps.value)).reduce((s,i)=>s+invDue(i,true),0);hint.textContent=due>0.009?`Open ${kind==='customer'?'invoices':'bills'}: ${money2(due)}. Applied oldest first; anything left stays on account.`:'Nothing open; it stays on their account for the next one.';};
-    ps.onchange=showHint;showHint();
+    const cashAmt=r2((m.lines||[]).filter(l=>cashCodes().includes(l.account)).reduce((t,l)=>t+(+l.debit||0)+(+l.credit||0),0));
+    const invBox=h('div',{class:'txinv'});
+    const drawInv=()=>{invBox.textContent='';if(kind==='employee'||!ps.value) return;const list=openInvoices(kind).filter(i=>norm(i.partner)===norm(ps.value)).sort((a,b)=>a.date<b.date?-1:1);if(!list.length) return;
+      const A=S._popAlloc&&S._popAlloc.m===m.id&&S._popAlloc.p===ps.value?S._popAlloc:(S._popAlloc={m:m.id,p:ps.value,rows:Object.fromEntries((st.partner===ps.value&&st.alloc?st.alloc:txSettles(kind,ps.value,cashAmt)).map(x=>[x.invoice_id,x.amount]))});
+      const left=h('div',{class:'mini'});const sync=()=>{const used=r2(Object.values(A.rows).reduce((t,v)=>t+(+v||0),0));const rest=r2(cashAmt-used);left.textContent=rest<-0.009?`${money2(-rest)} more than the ${inflow?'receipt':'payment'}: reduce an amount.`:rest>0.009?`${money2(rest)} stays on their account.`:'Fully matched.';left.className='mini '+(rest<-0.009?'err':'mut');};
+      invBox.append(h('div',{class:'txinvh'},h('span',{},`Match to ${kind==='customer'?'invoices':'bills'}`),h('span',{class:'mini mut'},`${inflow?'Receipt':'Payment'} ${money2(cashAmt)}`)));
+      list.forEach(i=>{const due=invDue(i,true);const on=A.rows[i.id]>0;const amt=h('input',{type:'number',step:'0.01',min:'0',max:String(due),class:'num','aria-label':'Amount for '+(i.number||'invoice'),value:on?A.rows[i.id]:'',disabled:!on,oninput:e=>{A.rows[i.id]=Math.min(due,r2(e.target.value));sync();}});
+        const ck=h('input',{type:'checkbox',checked:on,'aria-label':'Match '+(i.number||'invoice'),onchange:e=>{if(e.target.checked){const used=r2(Object.entries(A.rows).filter(([k])=>k!==i.id).reduce((t,[,v])=>t+(+v||0),0));A.rows[i.id]=r2(Math.max(0,Math.min(due,cashAmt-used)))||due;amt.disabled=false;amt.value=A.rows[i.id];}else{delete A.rows[i.id];amt.disabled=true;amt.value='';}sync();}});
+        invBox.append(h('label',{class:'txinvr'},ck,h('span',{class:'txinvn'},h('b',{},i.number||'Invoice'),h('span',{class:'mini mut'},`${fmtDate(i.date)} · due ${money2(due)}`)),amt));});
+      invBox.append(left);sync();};
+    ps.onchange=()=>{showHint();drawInv();};showHint();drawInv();
     const done=h('button',{class:'btn primary sm',type:'button'},'Done');const cancel=h('button',{class:'btn ghost sm',type:'button'},'Cancel');
-    const pop=h('div',{class:'txpop',role:'dialog','aria-label':kind==='customer'?'Which customer paid?':kind==='supplier'?'Which supplier?':'Which employee?'},h('div',{class:'txpt'},kind==='customer'?'Which customer paid?':kind==='supplier'?'Which supplier was paid?':'Which employee was paid?'),ps,hint,h('div',{class:'row'},done,cancel));
-    done.onclick=()=>{st.partner=ps.value;st.changed=true;S._popFor=null;pop.remove();drawP();};cancel.onclick=()=>{S._popFor=null;pop.remove();};ps.addEventListener('change',()=>{S._popPick=ps.value;});if(S._popPick&&names.includes(S._popPick)){ps.value=S._popPick;showHint();}
+    const pop=h('div',{class:'txpop',role:'dialog','aria-label':kind==='customer'?'Which customer paid?':kind==='supplier'?'Which supplier?':'Which employee?'},h('div',{class:'txpt'},kind==='customer'?'Which customer paid?':kind==='supplier'?'Which supplier was paid?':'Which employee was paid?'),ps,hint,invBox,h('div',{class:'row'},done,cancel));
+    done.onclick=()=>{const A=S._popAlloc;if(A&&A.m===m.id&&A.p===ps.value&&kind!=='employee'){const rows=Object.entries(A.rows).filter(([,v])=>+v>0).map(([k,v])=>({invoice_id:k,amount:r2(v)}));const used=r2(rows.reduce((t,x)=>t+x.amount,0));if(used-cashAmt>0.009){invBox.querySelector('.err')&&invBox.querySelector('.err').focus();return;}st.alloc=rows;}else st.alloc=null;st.partner=ps.value;st.changed=true;S._popFor=null;S._popAlloc=null;pop.remove();drawP();};cancel.onclick=()=>{S._popFor=null;pop.remove();};ps.addEventListener('change',()=>{S._popPick=ps.value;});if(S._popPick&&names.includes(S._popPick)){ps.value=S._popPick;showHint();}
     if(!names.length) pop.insertBefore(h('div',{class:'mini err'},kind==='employee'?'No employees yet.':`No registered ${kind}s yet. Register them first.`),ps);
     td.append(pop);setTimeout(()=>ps.focus(),0);};
   const drawP=()=>{pbox.textContent='';const kind=kindOf();if(!kind) return;
-    const chip=h('button',{type:'button',class:'txchip'+(st.partner?'':' empty'),onclick:openPop},st.partner?st.partner:(kind==='customer'?'Choose the customer':kind==='supplier'?'Choose the supplier':'Employee (optional)'));pbox.append(chip);};
+    const chip=h('button',{type:'button',class:'txchip'+(st.partner?'':' empty'),onclick:openPop},st.partner?st.partner+(st.alloc&&st.alloc.length?` · ${st.alloc.length} ${kind==='customer'?'invoice':'bill'}${st.alloc.length>1?'s':''}`:''):(kind==='customer'?'Choose the customer':kind==='supplier'?'Choose the supplier':'Employee (optional)'));pbox.append(chip);};
   sel.onchange=async()=>{st.t=sel.value;st.changed=true;msg.textContent='';if(st.t==='expense'||st.t==='other_in'||st.t==='other_out'||!st.t){drawP();return;}
     try{const acc=await txAccount(st.t);if(acc){ed[other.i]=acc;onAcc(acc);}}catch(e){msg.textContent=e.message;}drawP();if(kindOf()&&!st.partner&&st.t!=='salary') openPop();};
   drawP();td.append(sel,pbox,msg);if(S._popFor===m.id) setTimeout(()=>{if(td.isConnected) openPop();},0);return td;}
@@ -11765,7 +11782,7 @@ function txCell(m,ed,other,inflow,onAcc){const T=S.revT||(S.revT={});const st=T[
 async function txApply(m,lines){const st=(S.revT||{})[m.id];if(!st||!st.t||!st.changed) return;const cash=new Set(cashCodes());const amt=r2(lines.filter(l=>cash.has(l.account)).reduce((s,l)=>s+(+l.debit||0)+(+l.credit||0),0));
   if((st.t==='receipt'||st.t==='supplier')&&!st.partner) throw new Error(`Choose the ${st.t==='receipt'?'customer':'supplier'} for “${m.ref||'this line'}” first.`);
   const upd={tx_type:st.t};if(st.partner){upd.partner=st.partner;m.partner=st.partner;}
-  if(st.t==='receipt'||st.t==='supplier'){const s=txSettles(st.t==='receipt'?'customer':'supplier',st.partner,amt);upd.settles=s;m.settles=s;}
+  if(st.t==='receipt'||st.t==='supplier'){const s=st.alloc?st.alloc.filter(x=>S.invoices.some(i=>i.id===x.invoice_id)):txSettles(st.t==='receipt'?'customer':'supplier',st.partner,amt);upd.settles=s;m.settles=s;}
   await db.doc('moves/'+m.id).update(upd);Object.assign(m,upd);}
 {const _am=approveMove;approveMove=async function(m,lines){if(m&&m.source==='bank_statement') await txApply(m,lines||m.lines);return _am(m,lines);};}
 
